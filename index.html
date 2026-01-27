@@ -7,6 +7,16 @@
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Mencegah 'process is not defined' error di GitHub Pages
+        window.process = {
+            env: {
+                API_KEY: "",
+                SUPABASE_URL: "",
+                SUPABASE_ANON_KEY: ""
+            }
+        };
+    </script>
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -26,13 +36,11 @@
         }
 
         @media print {
-            /* 1. Aturan Dasar Halaman A4 */
             @page { 
                 size: A4 portrait;
                 margin: 0 !important; 
             }
 
-            /* 2. Hilangkan Elemen Web Non-Cetak */
             header, aside, nav, footer, .no-print, [role="navigation"], button { 
                 display: none !important; 
                 height: 0 !important;
@@ -40,7 +48,6 @@
                 padding: 0 !important;
             }
             
-            /* 3. Reset Seluruh Kontainer agar Menempel ke Atas */
             html, body, #root, .min-h-screen, main {
                 display: block !important;
                 margin: 0 !important;
@@ -50,7 +57,6 @@
                 overflow: visible !important;
             }
 
-            /* 4. Paksa Kontainer Utama Naik ke Baris Pertama */
             .print-only { 
                 display: block !important; 
                 visibility: visible !important;
@@ -59,7 +65,6 @@
                 width: 100% !important;
             }
 
-            /* Menghilangkan sisa margin dari Tailwind */
             .max-w-\[1400px\], .mx-auto, .space-y-8 {
                 max-width: 100% !important;
                 margin-top: 0 !important;
@@ -67,7 +72,6 @@
                 padding-top: 0 !important;
             }
 
-            /* 5. Tabel dan Tipografi yang Lebih Kecil & Rapi */
             table { 
                 border-collapse: collapse !important; 
                 width: 100% !important;
@@ -77,14 +81,12 @@
             th, td { 
                 border: 0.5pt solid black !important;
                 padding: 3pt 5pt !important; 
-                font-size: 7.5pt !important; /* Diperkecil dari 8.5pt */
+                font-size: 7.5pt !important;
                 color: black !important;
                 line-height: 1.2 !important;
             }
             
             tr { page-break-inside: avoid; }
-
-            /* Penyesuaian teks umum cetak */
             .print-text-sm { font-size: 7pt !important; }
             .print-text-base { font-size: 8pt !important; }
             .print-text-lg { font-size: 10pt !important; }
