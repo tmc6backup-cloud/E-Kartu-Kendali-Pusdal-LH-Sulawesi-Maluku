@@ -1,29 +1,21 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Ambil variabel environment dengan pengecekan objek 'process' yang aman
-const getEnv = (key: string) => {
-    try {
-        return typeof process !== 'undefined' ? process.env[key] : undefined;
-    } catch (e) {
-        return undefined;
-    }
-};
+// Get credentials from environment variables with specific fallbacks
+const supabaseUrl = process.env.SUPABASE_URL || 'https://syptvhtbxflhjgdepbqs.supabase.co';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR';
 
-const supabaseUrl = getEnv('SUPABASE_URL') || 'https://syptvhtbxflhjgdepbqs.supabase.co';
-const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY') || 'sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR';
+// Validate credentials before creating the client to avoid confusing fetch errors
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'YOUR_SUPABASE_URL') {
+    console.error("CRITICAL: Supabase URL or Anon Key is missing. Please check your environment variables.");
+}
 
-// Buat client hanya jika kredensial dasar tersedia, atau gunakan fallback dummy agar aplikasi tidak crash
-export const supabase = createClient(
-    supabaseUrl, 
-    supabaseAnonKey, 
-    {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-        },
-        global: {
-            headers: { 'x-application-name': 'e-kartu-kendali-suma' },
-        },
-    }
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+    },
+    global: {
+        headers: { 'x-application-name': 'e-kartu-kendali-suma' },
+    },
+});

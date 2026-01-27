@@ -1,8 +1,8 @@
 
 import React from 'react';
 
-// Menggunakan path relatif "./" agar terbaca di semua route dan kompatibel dengan subfolder GitHub Pages
-export const LOGO_URL = "./logo.png";
+// Menggunakan path absolut "/" agar terbaca di semua route (termasuk /requests/:id)
+export const LOGO_URL = "/logo.png";
 
 interface LogoProps {
   className?: string;
