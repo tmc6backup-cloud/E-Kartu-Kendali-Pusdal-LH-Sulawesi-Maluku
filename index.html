@@ -29,6 +29,20 @@
                 detail.scrollTop = detail.scrollHeight;
             }
         };
+
+        window.forceReset = async function() {
+            window.appLog("Memulai Pembersihan Total...");
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for(let reg of regs) await reg.unregister();
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for(let key of keys) await caches.delete(key);
+            }
+            window.appLog("Pembersihan selesai. Memuat ulang...");
+            location.href = location.pathname + '?t=' + Date.now();
+        };
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow: hidden; }
@@ -41,6 +55,7 @@
             border: 1px solid #e2e8f0; font-size: 10px;
         }
         .btn { background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; border: none; margin-top: 20px; }
+        .btn-red { background: #ef4444; margin-left: 10px; }
     </style>
 <script type="importmap">
 {
@@ -66,7 +81,10 @@
             <div class="spinner"></div>
             <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
             <div id="error-detail"></div>
-            <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">MUAT ULANG SISTEM</button>
+            <div>
+                <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">COBA LAGI</button>
+                <button id="reset-btn" onclick="window.forceReset()" class="btn btn-red" style="display:none;">PERBAIKI SISTEM</button>
+            </div>
         </div>
     </div>
 
@@ -83,7 +101,7 @@
         const BASE = getBase();
 
         async function start() {
-            window.appLog("Lokasi: " + BASE);
+            window.appLog("Inisialisasi di: " + BASE);
             
             if (!navigator.serviceWorker) {
                 window.appLog("Browser tidak mendukung Service Worker.", true);
@@ -91,24 +109,24 @@
             }
 
             try {
-                // Gunakan cache busting untuk sw.js
-                const reg = await navigator.serviceWorker.register(BASE + 'sw.js?t=' + Date.now(), { scope: BASE });
+                // Registrasi SW
+                const reg = await navigator.serviceWorker.register(BASE + 'sw.js?v=' + Date.now(), { scope: BASE });
                 
-                // Pantau perubahan status SW
+                // Jika sedang instalasi/waiting, pantau sampai aktif
                 if (reg.installing || reg.waiting) {
                     const sw = reg.installing || reg.waiting;
                     sw.onstatechange = () => {
                         if (sw.state === 'activated') {
-                            window.appLog("Engine siap. Menghubungkan...");
-                            location.reload();
+                            window.appLog("Engine Aktif. Mensinkronisasi...");
+                            setTimeout(() => location.reload(), 500);
                         }
                     };
                 }
 
-                // Jika sudah aktif tapi belum mengendalikan halaman
+                // Jika aktif tapi belum mengontrol halaman
                 if (reg.active && !navigator.serviceWorker.controller) {
-                    window.appLog("Mensinkronisasi Engine...");
-                    location.reload();
+                    window.appLog("Engine sudah ada, mengaktifkan koneksi...");
+                    setTimeout(() => location.reload(), 500);
                     return;
                 }
 
@@ -118,8 +136,9 @@
                 }
 
             } catch (err) {
-                window.appLog("Gagal Memasang Engine: " + err.message, true);
-                document.getElementById('retry-btn').style.display = 'block';
+                window.appLog("Kegagalan Engine: " + err.message, true);
+                document.getElementById('retry-btn').style.display = 'inline-block';
+                document.getElementById('reset-btn').style.display = 'inline-block';
             }
         }
 
@@ -127,11 +146,11 @@
             document.getElementById('status-text').innerText = "Memulai Antarmuka...";
             const script = document.createElement('script');
             script.type = 'module';
-            // Pastikan URL file index.tsx benar dan lewati cache browser
             script.src = BASE + 'index.tsx?v=' + Date.now();
-            script.onerror = (e) => {
-                window.appLog("Gagal memuat modul utama. Coba bersihkan cache browser.", true);
-                document.getElementById('retry-btn').style.display = 'block';
+            script.onerror = () => {
+                window.appLog("Gagal memuat modul UI. Harap tekan tombol PERBAIKI SISTEM.", true);
+                document.getElementById('retry-btn').style.display = 'inline-block';
+                document.getElementById('reset-btn').style.display = 'inline-block';
             };
             document.body.appendChild(script);
         }
