@@ -43,58 +43,59 @@
     <div id="root">
         <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 15px;">
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Inisialisasi Sistem...</p>
+            <p id="status-text" style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Menghubungkan Engine...</p>
         </div>
     </div>
 
     <script>
-        // Deteksi basis URL (penting jika di subfolder repo)
-        const base = window.location.pathname.endsWith('/') 
-            ? window.location.pathname 
-            : window.location.pathname.split('/').slice(0, -1).join('/') + '/';
+        // Deteksi basis URL yang lebih akurat untuk GitHub Pages
+        const path = window.location.pathname;
+        const base = path.substring(0, path.lastIndexOf('/') + 1);
 
         async function initApp() {
             const statusText = document.getElementById('status-text');
             
-            if ('serviceWorker' in navigator) {
-                try {
-                    statusText.innerText = "Menghubungkan Engine...";
-                    const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
-                    
-                    if (reg.active && navigator.serviceWorker.controller) {
-                        loadModule();
-                    } else {
-                        statusText.innerText = "Sinkronisasi Pertama (Mohon Tunggu)...";
-                        reg.onupdatefound = () => {
-                            const installingWorker = reg.installing;
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'activated') {
-                                    window.location.reload();
-                                }
-                            };
-                        };
-                        // Jika sudah ada controller tapi belum aktif
-                        if (reg.active) {
-                             setTimeout(loadModule, 1000);
-                        }
-                    }
-                } catch (err) {
-                    console.error('SW Error:', err);
+            if (!('serviceWorker' in navigator)) {
+                statusText.innerText = "Error: Browser Anda terlalu lama.";
+                return;
+            }
+
+            try {
+                const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
+                
+                // Jika sudah aktif dan mengontrol, langsung muat
+                if (reg.active && navigator.serviceWorker.controller) {
                     loadModule();
+                    return;
                 }
-            } else {
-                loadModule();
+
+                // Jika belum mengontrol (kunjungan pertama), tunggu aktivasi dan reload
+                statusText.innerText = "Sinkronisasi Pertama... (Halaman akan memuat ulang)";
+                
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+
+                // Force claim jika sudah ada SW yang terpasang tapi belum aktif
+                if (reg.waiting) {
+                    reg.waiting.postMessage('skipWaiting');
+                }
+            } catch (err) {
+                console.error('SW Registration Error:', err);
+                statusText.innerText = "Gagal memuat engine sistem.";
             }
         }
 
         function loadModule() {
             const statusText = document.getElementById('status-text');
-            statusText.innerText = "Memuat Modul...";
+            statusText.innerText = "Memuat Modul UI...";
+            
             const script = document.createElement('script');
             script.type = 'module';
-            script.src = base + 'index.tsx'; 
+            // Menambahkan timestamp agar browser tidak mengambil cache lama yang korup
+            script.src = base + 'index.tsx?v=' + Date.now(); 
             script.onerror = () => {
-                statusText.innerText = "Error: Pastikan browser mendukung Service Worker.";
+                statusText.innerText = "Gagal memuat komponen. Coba segarkan halaman (F5).";
                 statusText.style.color = "#ef4444";
             };
             document.body.appendChild(script);

@@ -5,10 +5,14 @@
     <meta charset="utf-8">
     <title>E-Kartu Kendali - Mengalihkan...</title>
     <script type="text/javascript">
-        // Jika user me-refresh halaman di rute tertentu, 
-        // arahkan kembali ke index.html dan biarkan HashRouter menangani sisanya.
-        var location = window.location;
-        location.replace(location.origin + location.pathname.split('/').slice(0, -1).join('/') + '/index.html');
+        // Deteksi jalur repo GitHub Pages
+        var pathSegments = window.location.pathname.split('/');
+        // Biasanya segmen pertama adalah nama repo pada GitHub Pages (user.github.io/repo-name/)
+        var repoName = pathSegments[1]; 
+        var root = window.location.origin + '/' + repoName + '/';
+        
+        // Redirect ke index.html di root repo
+        window.location.replace(root + 'index.html');
     </script>
 </head>
 <body>
