@@ -1,60 +1,50 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LogoProps {
   className?: string;
 }
 
 const Logo: React.FC<LogoProps> = ({ className }) => {
+  // Mendapatkan base path yang dihitung di index.html (contoh: '/nama-repo/' atau '/')
   const base = (window as any).APP_BASE || '/';
-  const sessionToken = useMemo(() => Date.now(), []);
-
-  // URL Logo Resmi KLHK sebagai jaminan tampilan (High Availability)
-  const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
-
-  const candidates = [
-    'logo.png',
-    'Logo.png',
-    'logo-baru.png',
-    'logo.jpg'
-  ];
+  const cleanBase = base.endsWith('/') ? base : base + '/';
   
-  const [candidateIndex, setCandidateIndex] = useState(0);
+  // Cache buster menggunakan timestamp untuk memaksa browser memuat file terbaru
+  // dan mengabaikan cache 404 (file tidak ditemukan) yang mungkin tersimpan sebelumnya.
+  const cacheBuster = `?t=${Date.now()}`;
+  
+  // URL absolut ke logo.png di root
+  const localLogoUrl = `${window.location.origin}${cleanBase}logo.png${cacheBuster}`;
+  
+  const [src, setSrc] = useState(localLogoUrl);
   const [isFallback, setIsFallback] = useState(false);
 
-  const getUrl = (filename: string) => {
-    const cleanBase = base.endsWith('/') ? base : base + '/';
-    return `${cleanBase}${filename}?v=${sessionToken}`;
-  };
+  // Logo resmi jika file lokal gagal total
+  const remoteFallback = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
+
+  useEffect(() => {
+    console.log(`[Logo Debug] Mencoba memuat logo dari: ${localLogoUrl}`);
+  }, [localLogoUrl]);
 
   const handleError = () => {
-    if (candidateIndex < candidates.length - 1) {
-      setCandidateIndex(prev => prev + 1);
-    } else {
+    if (!isFallback) {
+      console.warn("[Logo] File logo.png lokal gagal dimuat. Menggunakan fallback remote.");
+      setSrc(remoteFallback);
       setIsFallback(true);
     }
   };
 
-  // Reset state jika base path berubah (jarang terjadi tapi bagus untuk robustness)
-  useEffect(() => {
-    setCandidateIndex(0);
-    setIsFallback(false);
-  }, [base]);
-
   return (
-    <img 
-      src={isFallback ? fallbackLogo : getUrl(candidates[candidateIndex])} 
-      alt="Logo Pusdal LH Suma" 
-      className={className}
-      style={{ 
-        objectFit: 'contain', 
-        display: 'block',
-        minWidth: '20px',
-        minHeight: '20px'
-      }}
-      onError={handleError}
-      loading="eager"
-    />
+    <div className={`flex items-center justify-center overflow-hidden ${className}`}>
+      <img 
+        src={src} 
+        alt="Logo Instansi" 
+        className="w-full h-full object-contain"
+        onError={handleError}
+        style={{ display: 'block' }}
+      />
+    </div>
   );
 };
 
