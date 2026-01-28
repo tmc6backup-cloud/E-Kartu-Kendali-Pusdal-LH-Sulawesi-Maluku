@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface LogoProps {
   className?: string;
@@ -9,15 +9,21 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
   // Ambil base path dari global window yang dideteksi di index.html
   const base = (window as any).APP_BASE || '/';
   
-  // Daftar kemungkinan nama file yang sering digunakan
+  // Gunakan timestamp tunggal untuk sesi ini agar tidak re-load terus menerus 
+  // tapi cukup untuk melewati cache browser yang menyimpan error 404
+  const sessionToken = useMemo(() => Date.now(), []);
+
+  // Daftar kemungkinan nama file yang mungkin diunggah pengguna
   const candidates = [
-    'logo.png', 
-    'Logo.png', 
-    'logo.PNG', 
-    'Logo.PNG',
-    'logo.jpg', 
-    'logo.jpeg', 
+    'logo-1.png',
+    'logo-baru.png',
+    'logo_baru.png',
+    'logo baru.png',
+    'logo.jpg',
+    'logo.jpeg',
     'logo.svg',
+    'Logo.png',
+    'Logo-Baru.png',
     'logo.webp'
   ];
   
@@ -26,15 +32,17 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
 
   // Fungsi untuk membersihkan path dan menambahkan cache buster
   const getUrl = (filename: string) => {
-    // Pastikan tidak ada double slash kecuali di awal (protocol)
-    const combinedPath = (base + '/' + filename).replace(/\/+/g, '/');
-    // Tambahkan timestamp untuk menghindari cache jika user baru saja ganti file
-    return `${combinedPath}?v=${Date.now()}`;
+    // Bersihkan path: gabungkan base + filename dan hapus double slash //
+    const cleanBase = base.endsWith('/') ? base : base + '/';
+    const cleanFilename = filename.startsWith('/') ? filename.substring(1) : filename;
+    const combinedPath = (cleanBase + cleanFilename).replace(/\/+/g, '/');
+    
+    return `${combinedPath}?v=${sessionToken}`;
   };
 
   const [src, setSrc] = useState(getUrl(candidates[0]));
 
-  // Logo fallback jika semua file lokal gagal dimuat
+  // Logo fallback resmi jika semua file lokal di root gagal dimuat
   const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
 
   const handleError = () => {
@@ -42,19 +50,19 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
       const nextIndex = candidateIndex + 1;
       setCandidateIndex(nextIndex);
       setSrc(getUrl(candidates[nextIndex]));
-      console.log(`Logo: Gagal memuat ${candidates[candidateIndex]}, mencoba ${candidates[nextIndex]}`);
+      console.log(`Logo: Mencoba kandidat berikutnya: ${candidates[nextIndex]}`);
     } else {
       setHasError(true);
-      console.warn("Logo: Semua kandidat file lokal gagal dimuat, menggunakan fallback KLHK.");
+      console.warn("Logo: Semua file lokal tidak ditemukan. Menggunakan logo cadangan KLHK.");
     }
   };
 
-  // Sinkronisasi ulang jika base path berubah
+  // Reset jika base path berubah secara dinamis
   useEffect(() => {
     setCandidateIndex(0);
     setHasError(false);
     setSrc(getUrl(candidates[0]));
-  }, [base]);
+  }, [base, sessionToken]);
 
   return (
     <img 
@@ -65,8 +73,8 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
       style={{ 
         objectFit: 'contain', 
         display: 'block',
-        minWidth: '20px',
-        minHeight: '20px'
+        minWidth: '24px',
+        minHeight: '24px'
       }}
       onError={handleError}
     />
