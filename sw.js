@@ -1,14 +1,13 @@
 
 /**
  * Engine Transpiler - PUSDAL LH SUMA
- * Versi: 2.3.0 (Ultra-Stable Fallback)
+ * Versi: 2.3.1 (GitHub Pages Optimized)
  */
 
 const BABEL_SOURCES = [
   'https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js',
-  'https://unpkg.com/@babel/standalone@7.24.7/babel.min.js',
-  'https://esm.sh/@babel/standalone@7.24.7'
+  'https://unpkg.com/@babel/standalone@7.24.7/babel.min.js'
 ];
 
 let babelLoaded = false;
@@ -17,19 +16,17 @@ function loadBabel() {
   for (const src of BABEL_SOURCES) {
     if (babelLoaded) break;
     try {
-      // importScripts adalah sinkron di dalam SW
       importScripts(src);
       if (typeof Babel !== 'undefined') {
         babelLoaded = true;
-        console.log('[Engine] Babel Berhasil Dimuat dari: ' + src);
+        console.log('[Engine] Babel Berhasil Dimuat');
       }
     } catch (e) {
-      console.warn('[Engine] Gagal memuat dari ' + src + '. Mencoba sumber lain...');
+      console.warn('[Engine] Gagal memuat Babel dari: ' + src);
     }
   }
 }
 
-// Inisialisasi awal
 loadBabel();
 
 self.addEventListener('install', (e) => {
@@ -44,9 +41,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
   
-  // Deteksi file sumber (.tsx, .ts)
   const path = url.pathname;
   const fileName = path.split('/').pop() || '';
+  
+  // Deteksi apakah ini file source (TS/TSX)
   const isSource = path.endsWith('.tsx') || 
                    path.endsWith('.ts') || 
                    (fileName && !fileName.includes('.') && !path.includes('/@') && !path.includes('node_modules'));
@@ -55,36 +53,50 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         try {
-          // Pastikan Babel tersedia, jika belum coba muat ulang (lazy load)
           if (!babelLoaded) loadBabel();
 
           let fetchUrl = event.request.url;
+          let content = null;
+          let activePath = path;
+
+          // Jika tidak ada ekstensi, coba cari .tsx lalu .ts
           if (!fileName.includes('.')) {
-            const search = url.search || '';
-            fetchUrl = url.origin + path + '.tsx' + search;
+            const extensions = ['.tsx', '.ts'];
+            for (const ext of extensions) {
+              try {
+                const tryUrl = url.origin + path + ext + url.search;
+                const testRes = await fetch(tryUrl);
+                if (testRes.ok) {
+                  fetchUrl = tryUrl;
+                  content = await testRes.text();
+                  activePath = path + ext;
+                  break;
+                }
+              } catch (e) {}
+            }
           }
 
-          const response = await fetch(fetchUrl);
-          if (!response.ok) return response;
+          if (content === null) {
+            const response = await fetch(fetchUrl);
+            if (!response.ok) return response;
+            content = await response.text();
+          }
           
-          const text = await response.text();
-          
-          // Lewati jika ini bukan kode (misal halaman 404 HTML)
-          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-             return response;
+          if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html')) {
+             return new Response(content, { headers: { 'Content-Type': 'text/html' } });
           }
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Babel Engine tidak tersedia.");
+            throw new Error("Babel tidak tersedia.");
           }
 
-          const result = Babel.transform(text, {
+          const result = Babel.transform(content, {
             presets: [
               ['react', { runtime: 'automatic' }],
               ['typescript', { isTSX: true, allExtensions: true }],
               ['env', { modules: false }]
             ],
-            filename: path,
+            filename: activePath,
             sourceMaps: 'inline'
           }).code;
 
@@ -96,15 +108,7 @@ self.addEventListener('fetch', (event) => {
           });
         } catch (err) {
           console.error("[Engine Error]", err.message);
-          // Berikan script yang akan memicu reload di sisi client
-          return new Response(`
-            console.error("Engine Transpiler Fail: ${err.message}");
-            if (!window.engineErrorNotified) {
-              window.engineErrorNotified = true;
-              alert("Gagal memuat Mesin UI. Aplikasi akan mencoba memuat ulang secara otomatis.");
-              location.reload();
-            }
-          `, {
+          return new Response(`console.error("Engine Transpiler Fail: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });
         }
