@@ -23,6 +23,7 @@ const Dashboard: React.FC = () => {
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [useMockData, setUseMockData] = useState(false);
+    
     const [stats, setStats] = useState<any>({
         totalAmount: 0,
         pendingCount: 0,
@@ -59,20 +60,25 @@ const Dashboard: React.FC = () => {
         ]
     };
     
-    const isGlobalViewer = useMemo(() => 
-        ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'].includes(user?.role || '') ||
-        user?.department?.toUpperCase().includes("PUSDAL LH SUMA"),
-    [user]);
+    const isGlobalViewer = useMemo(() => {
+        if (!user) return false;
+        const role = user.role || '';
+        return ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'].includes(role) ||
+               (user.department || '').toUpperCase().includes("PUSDAL LH SUMA");
+    }, [user]);
 
     const fetchData = async () => {
         if (!user) return;
         setIsLoading(true);
         try {
             const dbStats = await dbService.getStats(user.role, user.full_name, user.department);
-            const isEmpty = !dbStats || 
-                          (dbStats.totalCount === 0 && dbStats.totalOfficeCeiling === 0 && dbStats.deptBudgets.length === 0);
+            
+            // Logika deteksi data kosong yang lebih akurat
+            const hasNoData = !dbStats || 
+                             (dbStats.totalCount === 0 && dbStats.totalOfficeCeiling === 0) ||
+                             (!dbStats.deptBudgets || dbStats.deptBudgets.length === 0);
 
-            if (isEmpty) {
+            if (hasNoData) {
                 setStats(MOCK_STATS);
                 setUseMockData(true);
                 setInsight("Dashboard menampilkan data simulasi karena database Anda belum terisi.");
@@ -115,7 +121,7 @@ const Dashboard: React.FC = () => {
                         <div key={index} className="flex items-center gap-3 text-[11px] font-bold py-1">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || entry.fill }}></div>
                             <span className="text-slate-500">{entry.name}:</span>
-                            <span className="text-slate-900">Rp {entry.value.toLocaleString('id-ID')}</span>
+                            <span className="text-slate-900">Rp {Number(entry.value).toLocaleString('id-ID')}</span>
                         </div>
                     ))}
                 </div>
@@ -140,8 +146,8 @@ const Dashboard: React.FC = () => {
                     <div className="flex items-center gap-4 text-center md:text-left">
                         <div className="p-3 bg-white/20 rounded-2xl"><Sparkles size={24} /></div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest">Database Masih Kosong</p>
-                            <p className="text-xs font-medium opacity-90">Tampilan saat ini adalah simulasi. Silakan isi data di menu Manajemen Pagu atau Buat Pengajuan.</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sistem Ready - Database Kosong</p>
+                            <p className="text-xs font-medium opacity-90">Tampilan di bawah adalah simulasi. Silakan isi data Pagu atau buat Pengajuan baru.</p>
                         </div>
                     </div>
                     <div className="flex gap-3">
@@ -155,7 +161,7 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         Dashboard Anggaran
-                        {isGlobalViewer && <div className="p-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-black">GLOBAL</div>}
+                        {isGlobalViewer && <div className="p-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-black">GLOBAL VIEW</div>}
                     </h1>
                     <p className="text-slate-500 font-semibold text-sm flex items-center gap-2 uppercase tracking-widest">
                         Status Terkini • {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}
@@ -197,12 +203,11 @@ const Dashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Trend Chart */}
                 <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm space-y-6">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         <TrendingUp size={18} className="text-blue-600" /> Trend Pengajuan Bulanan
                     </h3>
-                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4 border border-slate-100/50">
+                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={stats.monthlyTrend || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
@@ -221,27 +226,25 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Comparison Chart */}
                 <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm space-y-6">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         <BarChart3 size={18} className="text-emerald-600" /> Komparasi Pagu per Bidang
                     </h3>
-                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4 border border-slate-100/50">
+                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={stats.deptBudgets || []} layout="vertical" margin={{ left: 40, right: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                                 <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => `${val/1000000}jt`} />
                                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '800', fill: '#1e293b' }} width={120} />
                                 <Tooltip content={<CustomTooltip />} />
-                                <Bar dataKey="total" name="Alokasi Pagu" fill="#e2e8f0" radius={[0, 8, 8, 0]} barSize={12} animationDuration={1500} />
-                                <Bar dataKey="spent" name="Anggaran Terpakai" fill="#10b981" radius={[0, 8, 8, 0]} barSize={12} animationDuration={2000} />
+                                <Bar dataKey="total" name="Alokasi Pagu" fill="#e2e8f0" radius={[0, 8, 8, 0]} barSize={12} />
+                                <Bar dataKey="spent" name="Anggaran Terpakai" fill="#10b981" radius={[0, 8, 8, 0]} barSize={12} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
-            {/* Monitoring Global (Only for Admin/KPA/Validator) */}
             {isGlobalViewer && stats.deptBudgets && stats.deptBudgets.length > 0 && (
                 <div className="bg-slate-900 rounded-[48px] overflow-hidden shadow-2xl">
                     <div className="p-8 border-b border-white/5 flex items-center justify-between">
@@ -281,23 +284,23 @@ const Dashboard: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${dept.queue.pending > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue.pending}
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.pending || 0) > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-slate-600'}`}>
+                                                    {dept.queue?.pending || 0}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${dept.queue.reviewed_bidang > 0 ? 'bg-blue-500/20 text-blue-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue.reviewed_bidang}
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_bidang || 0) > 0 ? 'bg-blue-500/20 text-blue-500' : 'bg-white/5 text-slate-600'}`}>
+                                                    {dept.queue?.reviewed_bidang || 0}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${dept.queue.reviewed_program > 0 ? 'bg-indigo-500/20 text-indigo-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue.reviewed_program}
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_program || 0) > 0 ? 'bg-indigo-500/20 text-indigo-500' : 'bg-white/5 text-slate-600'}`}>
+                                                    {dept.queue?.reviewed_program || 0}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${dept.queue.reviewed_tu > 0 ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue.reviewed_tu}
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_tu || 0) > 0 ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-slate-600'}`}>
+                                                    {dept.queue?.reviewed_tu || 0}
                                                 </span>
                                             </td>
                                             <td className="px-8 py-6 text-right">

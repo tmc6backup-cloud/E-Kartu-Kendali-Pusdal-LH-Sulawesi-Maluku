@@ -6,32 +6,27 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ className }) => {
-  // Mendapatkan base path yang dihitung di index.html (contoh: '/nama-repo/' atau '/')
-  const base = (window as any).APP_BASE || '/';
-  const cleanBase = base.endsWith('/') ? base : base + '/';
-  
-  // Cache buster menggunakan timestamp untuk memaksa browser memuat file terbaru
-  // dan mengabaikan cache 404 (file tidak ditemukan) yang mungkin tersimpan sebelumnya.
-  const cacheBuster = `?t=${Date.now()}`;
-  
-  // URL absolut ke logo.png di root
-  const localLogoUrl = `${window.location.origin}${cleanBase}logo.png${cacheBuster}`;
-  
-  const [src, setSrc] = useState(localLogoUrl);
-  const [isFallback, setIsFallback] = useState(false);
+  // Karena logo.png ada di root bersama index.html, jalur "logo.png" secara teknis adalah yang paling benar.
+  // Tambahkan timestamp untuk menghindari cache 404 yang membandel.
+  const [src, setSrc] = useState(`logo.png?v=${Date.now()}`);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Logo resmi jika file lokal gagal total
-  const remoteFallback = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
-
-  useEffect(() => {
-    console.log(`[Logo Debug] Mencoba memuat logo dari: ${localLogoUrl}`);
-  }, [localLogoUrl]);
+  // Logo cadangan jika file lokal benar-benar tidak bisa diakses sama sekali.
+  const fallbackUrl = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
 
   const handleError = () => {
-    if (!isFallback) {
-      console.warn("[Logo] File logo.png lokal gagal dimuat. Menggunakan fallback remote.");
-      setSrc(remoteFallback);
-      setIsFallback(true);
+    if (retryCount === 0) {
+      // Jika "logo.png" gagal, coba jalur absolut menggunakan APP_BASE yang dideteksi index.html
+      const base = (window as any).APP_BASE || '/';
+      const cleanBase = base.endsWith('/') ? base : base + '/';
+      console.warn(`[Logo] Gagal memuat logo.png. Mencoba jalur absolut: ${cleanBase}logo.png`);
+      setSrc(`${cleanBase}logo.png?v=${Date.now()}`);
+      setRetryCount(1);
+    } else if (retryCount === 1) {
+      // Jika jalur absolut juga gagal, gunakan fallback remote
+      console.warn("[Logo] Semua jalur lokal gagal. Menggunakan logo cadangan KLHK.");
+      setSrc(fallbackUrl);
+      setRetryCount(2);
     }
   };
 
@@ -42,7 +37,7 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
         alt="Logo Instansi" 
         className="w-full h-full object-contain"
         onError={handleError}
-        style={{ display: 'block' }}
+        style={{ display: 'block', minWidth: '20px', minHeight: '20px' }}
       />
     </div>
   );
