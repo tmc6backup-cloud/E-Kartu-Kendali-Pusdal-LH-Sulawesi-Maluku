@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { dbService } from '../services/dbService';
-import { BudgetCeiling, BudgetRequest } from '../types';
+import { dbService } from '../services/dbService.ts';
+import { BudgetCeiling, BudgetRequest } from '../types.ts';
 import { 
     Wallet, 
     Save, 

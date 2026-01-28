@@ -16,9 +16,9 @@ import {
     Bar
 } from 'recharts';
 import { Clock, CheckCircle2, BrainCircuit, Database, PieChart as PieIcon, ArrowUpRight, AlertTriangle, Building2, LayoutPanelLeft, Wallet, FileText, Landmark, Coins, Briefcase, ListChecks, TrendingUp, Map, Layout, ShieldCheck, Loader2, RefreshCw } from 'lucide-react';
-import { getBudgetInsights } from '../services/geminiService';
-import { dbService } from '../services/dbService';
-import { AuthContext } from '../App';
+import { getBudgetInsights } from '../services/geminiService.ts';
+import { dbService } from '../services/dbService.ts';
+import { AuthContext } from '../App.tsx';
 
 const Dashboard: React.FC = () => {
     const { user } = useContext(AuthContext);

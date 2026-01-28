@@ -22,10 +22,10 @@ import {
     FileCheck,
     Briefcase
 } from 'lucide-react';
-import { AuthContext, isValidatorRole } from '../App';
-import { dbService } from '../services/dbService';
-import { BudgetRequest, BudgetStatus } from '../types';
-import Logo from '../components/Logo';
+import { AuthContext, isValidatorRole } from '../App.tsx';
+import { dbService } from '../services/dbService.ts';
+import { BudgetRequest, BudgetStatus } from '../types.ts';
+import Logo from '../components/Logo.tsx';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",

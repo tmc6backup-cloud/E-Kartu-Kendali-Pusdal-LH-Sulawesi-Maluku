@@ -1,10 +1,10 @@
 
 import React, { useContext, useEffect, useState, useRef } from 'react';
-import { AuthContext, isValidatorRole } from '../App';
+import { AuthContext, isValidatorRole } from '../App.tsx';
 import { Bell, Search, LogOut, X, Clock, CheckCircle2, AlertCircle, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { dbService } from '../services/dbService';
-import Logo from './Logo';
+import { dbService } from '../services/dbService.ts';
+import Logo from './Logo.tsx';
 
 interface RealNotification {
     id: string;

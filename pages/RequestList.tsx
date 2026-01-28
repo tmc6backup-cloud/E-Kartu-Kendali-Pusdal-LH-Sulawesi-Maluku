@@ -13,9 +13,9 @@ import {
     FileText,
     Edit2
 } from 'lucide-react';
-import { AuthContext, isValidatorRole } from '../App';
-import { dbService } from '../services/dbService';
-import { BudgetRequest } from '../types';
+import { AuthContext, isValidatorRole } from '../App.tsx';
+import { dbService } from '../services/dbService.ts';
+import { BudgetRequest } from '../types.ts';
 
 const StatusBadge = ({ status }: { status: string }) => {
     const config = {

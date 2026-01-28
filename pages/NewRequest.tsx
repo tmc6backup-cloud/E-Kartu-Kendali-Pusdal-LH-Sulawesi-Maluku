@@ -1,9 +1,9 @@
 
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AuthContext } from '../App';
-import { analyzeBudgetRequest } from '../services/geminiService';
-import { dbService } from '../services/dbService';
+import { AuthContext } from '../App.tsx';
+import { analyzeBudgetRequest } from '../services/geminiService.ts';
+import { dbService } from '../services/dbService.ts';
 import { 
     ArrowLeft, 
     Trash2, 
@@ -25,7 +25,7 @@ import {
     FileText,
     CheckCircle2
 } from 'lucide-react';
-import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types';
+import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
