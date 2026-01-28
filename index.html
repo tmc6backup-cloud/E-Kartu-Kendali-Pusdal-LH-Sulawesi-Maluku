@@ -24,19 +24,13 @@
                 line.style.color = isError ? '#ef4444' : '#64748b';
                 line.style.marginBottom = '6px';
                 line.style.fontSize = '10px';
-                line.innerText = (isError ? "✖ " : "✔ ") + msg;
+                line.innerText = (isError ? "✖ " : "> ") + msg;
                 detail.appendChild(line);
                 detail.scrollTop = detail.scrollHeight;
             }
         };
 
-        window.onerror = function(message) { 
-            if (message.includes("Unexpected token '<'")) {
-                window.appLog("Error: Browser menerima HTML, bukan JavaScript. Engine gagal melakukan konversi.", true);
-            } else {
-                window.appLog("Runtime: " + message, true);
-            }
-        };
+        window.onerror = function(message) { window.appLog("Runtime: " + message, true); };
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; }
@@ -44,11 +38,11 @@
         .spinner { width: 32px; height: 32px; border: 3px solid #f1f5f9; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         #error-detail { 
-            max-height: 200px; overflow-y: auto; background: #ffffff; padding: 16px; border-radius: 12px; 
+            max-height: 150px; overflow-y: auto; background: #ffffff; padding: 12px; border-radius: 12px; 
             font-family: monospace; text-align: left; width: 100%; max-width: 400px; margin-top: 15px;
-            border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0; font-size: 10px;
         }
-        .btn { background: #1e293b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; margin-top: 15px; }
+        .btn { background: #1e293b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 10px; font-weight: bold; cursor: pointer; border: none; margin-top: 15px; }
     </style>
 <script type="importmap">
 {
@@ -61,101 +55,92 @@
     "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
     "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
 </head>
 <body>
     <div id="root">
-        <div style="display: flex; flex-direction: column; align-items: center; padding: 20px; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; padding: 20px; text-align: center; width: 100%;">
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 15px; letter-spacing: 0.1em; text-transform: uppercase;">Menyiapkan Sistem...</p>
+            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 15px; letter-spacing: 0.1em; text-transform: uppercase;">Inisialisasi Engine</p>
             <div id="error-detail"></div>
-            <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">COBA LAGI</button>
+            <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">MUAT ULANG PAKSA</button>
         </div>
     </div>
 
     <script>
-        // Deteksi path dasar untuk GitHub Pages
         const getBase = () => {
-            const loc = window.location;
-            const path = loc.pathname;
-            // Jika path adalah /repo/subpath, ambil /repo/
+            const path = window.location.pathname;
             return path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1);
         };
 
-        const BASE_PATH = getBase();
+        const BASE = getBase();
 
-        async function start() {
-            window.appLog("Lokasi Aplikasi: " + BASE_PATH);
+        async function init() {
+            window.appLog("Deteksi Base Path: " + BASE);
             
-            if (!navigator.serviceWorker) {
-                window.appLog("Browser tidak didukung.", true);
+            if (!('serviceWorker' in navigator)) {
+                window.appLog("Browser Anda tidak mendukung teknologi modern (Service Worker).", true);
                 return;
             }
 
             try {
-                // Bersihkan Service Worker lama
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for(let r of regs) await r.unregister();
+                // Berikan timeout jika terlalu lama
+                const timer = setTimeout(() => {
+                    document.getElementById('retry-btn').style.display = 'block';
+                    window.appLog("Proses memakan waktu lama. Coba muat ulang.", false);
+                }, 8000);
 
-                window.appLog("Mendaftarkan Engine Baru...");
-                const swUrl = BASE_PATH + 'sw.js?v=' + Date.now();
-                const reg = await navigator.serviceWorker.register(swUrl, { scope: BASE_PATH });
-                
-                // Tunggu sampai SW benar-benar aktif
-                if (reg.installing) {
-                    window.appLog("Sedang memasang engine...");
-                    reg.installing.addEventListener('statechange', (e) => {
-                        if (e.target.state === 'activated') location.reload();
-                    });
-                } else if (reg.active && !navigator.serviceWorker.controller) {
-                    window.appLog("Engine aktif. Sinkronisasi...");
-                    location.reload();
-                } else if (navigator.serviceWorker.controller) {
-                    window.appLog("Engine Siap.");
+                window.appLog("Mendaftarkan Engine: " + BASE + "sw.js");
+                const reg = await navigator.serviceWorker.register(BASE + 'sw.js', { scope: BASE });
+
+                // Pantau perubahan controller
+                navigator.serviceWorker.oncontrollerchange = () => {
+                    window.appLog("Engine Terkoneksi. Memuat aplikasi...");
+                    clearTimeout(timer);
                     launch();
+                };
+
+                if (navigator.serviceWorker.controller) {
+                    window.appLog("Engine Aktif. Memuat Modul UI...");
+                    clearTimeout(timer);
+                    launch();
+                } else {
+                    // Jika baru diinstal, tunggu status 'activated'
+                    if (reg.installing || reg.waiting) {
+                        const worker = reg.installing || reg.waiting;
+                        window.appLog("Engine Sedang Dipasang...");
+                        worker.addEventListener('statechange', (e) => {
+                            if (e.target.state === 'activated') {
+                                window.appLog("Engine Terpasang. Melakukan sinkronisasi...");
+                                location.reload(); // Harus reload sekali untuk menghubungkan controller
+                            }
+                        });
+                    }
                 }
             } catch (err) {
-                window.appLog("Kegagalan Engine: " + err.message, true);
+                window.appLog("Gagal memuat engine: " + err.message, true);
                 document.getElementById('retry-btn').style.display = 'block';
             }
         }
 
-        async function launch() {
-            const status = document.getElementById('status-text');
-            status.innerText = "Memuat Modul UI...";
+        function launch() {
+            document.getElementById('status-text').innerText = "Memuat Antarmuka...";
             
-            const entryFile = BASE_PATH + "index.tsx";
-            window.appLog("Memuat file utama: " + entryFile);
-
-            // Verifikasi apakah file bisa diakses
-            try {
-                const check = await fetch(entryFile);
-                if (!check.ok) {
-                    window.appLog("File index.tsx tidak ditemukan (404). Pastikan file sudah di-upload ke GitHub.", true);
-                    document.getElementById('retry-btn').style.display = 'block';
-                    return;
-                }
-                const type = check.headers.get('content-type');
-                if (type && type.includes('text/html')) {
-                    window.appLog("Peringatan: Server mengirimkan HTML, bukan kode sumber. Cek struktur folder GitHub.", true);
-                }
-            } catch(e) {}
-
             const script = document.createElement('script');
             script.type = 'module';
-            script.src = entryFile + "?t=" + Date.now();
+            script.src = BASE + 'index.tsx?v=' + Date.now();
             script.onerror = () => {
-                window.appLog("Gagal memuat skrip modul. Cek koneksi atau cache.", true);
+                window.appLog("Gagal memuat modul UI (index.tsx). Cek jaringan.", true);
                 document.getElementById('retry-btn').style.display = 'block';
             };
             document.body.appendChild(script);
         }
 
-        start();
+        init();
     </script>
 </body>
 </html>
