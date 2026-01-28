@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import NewRequest from './pages/NewRequest';
-import RequestList from './pages/RequestList';
-import RequestDetail from './pages/RequestDetail';
-import UserManagement from './pages/UserManagement';
-import AdminPagu from './pages/AdminPagu';
-import LoginPage from './pages/LoginPage';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import { UserRole, Profile } from './types';
-import { dbService } from './services/dbService';
+import Dashboard from './pages/Dashboard.tsx';
+import NewRequest from './pages/NewRequest.tsx';
+import RequestList from './pages/RequestList.tsx';
+import RequestDetail from './pages/RequestDetail.tsx';
+import UserManagement from './pages/UserManagement.tsx';
+import AdminPagu from './pages/AdminPagu.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import Sidebar from './components/Sidebar.tsx';
+import Header from './components/Header.tsx';
+import { UserRole, Profile } from './types.ts';
+import { dbService } from './services/dbService.ts';
 
 interface AuthContextType {
     user: Profile | null;
