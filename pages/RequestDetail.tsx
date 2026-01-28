@@ -134,8 +134,8 @@ const RequestDetail: React.FC = () => {
                 <div className="flex items-center border-b-[1.5pt] border-black pb-1">
                     <Logo className="w-12 h-12 object-contain mr-3" />
                     <div className="flex-1 text-center">
-                        <h2 className="text-[8.5pt] font-bold uppercase leading-none">Kementerian Lingkungan Hidup dan Kehutanan</h2>
-                        <h3 className="text-[7.5pt] font-bold uppercase leading-none mt-1">Badan Pengendalian Lingkungan Hidup</h3>
+                        <h2 className="text-[8.5pt] font-bold uppercase leading-none">Kementerian Lingkungan Hidup/</h2>
+                        <h3 className="text-[7.5pt] font-bold uppercase leading-none mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
                         <h3 className="text-[8.5pt] font-black uppercase leading-none mt-1">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
                         <p className="text-[5.5pt] mt-1 leading-none italic">Jln. Perintis Kemerdekaan KM. 17, Makassar. Telp: (0411) 556677</p>
                     </div>
