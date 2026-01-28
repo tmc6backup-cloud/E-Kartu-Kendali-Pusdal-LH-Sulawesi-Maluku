@@ -1,10 +1,9 @@
 
 /**
  * Engine Transpiler - PUSDAL LH SUMA
- * Berfungsi mengubah kode TSX/TypeScript menjadi JavaScript di sisi client.
+ * Versi: 2.1.0 (Stable)
  */
 
-// Daftar CDN Babel untuk redundansi
 const BABEL_SOURCES = [
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.12/babel.min.js',
   'https://unpkg.com/@babel/standalone@7.23.12/babel.min.js',
@@ -13,78 +12,78 @@ const BABEL_SOURCES = [
 
 let babelLoaded = false;
 
-// Fungsi untuk memuat Babel dengan fallback
 function loadBabel() {
   for (const src of BABEL_SOURCES) {
     if (babelLoaded) break;
     try {
       importScripts(src);
       babelLoaded = true;
-      console.log('[Engine] Babel loaded from: ' + src);
+      console.log('[Engine] Babel loaded: ' + src);
     } catch (e) {
-      console.warn('[Engine] Failed to load Babel from ' + src + ', trying next...');
+      console.warn('[Engine] Failed source: ' + src);
     }
   }
 }
 
 loadBabel();
 
-self.addEventListener('install', (event) => {
-  // Langsung aktifkan tanpa menunggu tab ditutup
+self.addEventListener('install', (e) => {
+  console.log('[Engine] Memasang...');
   self.skipWaiting();
-  console.log('[Engine] Installing...');
 });
 
-self.addEventListener('activate', (event) => {
-  // Ambil kendali atas semua tab yang terbuka segera
-  event.waitUntil(clients.claim());
-  console.log('[Engine] Activated and Claimed.');
+self.addEventListener('activate', (e) => {
+  console.log('[Engine] Mengaktifkan...');
+  e.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
-  // Hanya proses file lokal dengan ekstensi .tsx atau .ts
-  if (url.origin === self.location.origin && (url.pathname.endsWith('.tsx') || url.pathname.endsWith('.ts'))) {
+  const isTarget = url.pathname.endsWith('.tsx') || url.pathname.endsWith('.ts');
+
+  if (url.origin === self.location.origin && isTarget) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then(async (response) => {
           if (!response.ok) return response;
 
           const text = await response.text();
           
-          // Pastikan tidak memproses file HTML (misal 404 redirect)
+          // Deteksi apakah server mengirim HTML (404)
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            return response;
+            console.error('[Engine] Menerima HTML untuk ' + url.pathname);
+            return new Response(`console.error("Engine Error: File ${url.pathname} tidak ditemukan di server (404).");`, {
+              headers: { 'Content-Type': 'application/javascript' }
+            });
           }
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            console.error('[Engine] Babel is not ready!');
-            return new Response('console.error("Engine Error: Babel failed to load. Please check your internet connection.");', {
+            return new Response(`console.error("Engine Error: Compiler Babel belum siap.");`, {
               headers: { 'Content-Type': 'application/javascript' }
             });
           }
 
           try {
-            const transformed = Babel.transform(text, {
+            const result = Babel.transform(text, {
               presets: [
-                ['react', { runtime: 'classic' }],
+                ['react', { runtime: 'automatic' }],
                 ['typescript', { isTSX: true, allExtensions: true }],
-                ['env', { modules: false }]
+                ['env', { modules: false, targets: { esmodules: true } }]
               ],
               filename: url.pathname,
               sourceMaps: 'inline'
             }).code;
 
-            return new Response(transformed, {
+            return new Response(result, {
               headers: { 
                 'Content-Type': 'application/javascript',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-store, no-cache, must-revalidate'
               }
             });
           } catch (err) {
-            console.error('[Engine] Compilation Error:', err);
-            return new Response(`console.error("Babel Error: ${err.message.replace(/"/g, "'")}");`, {
+            console.error('[Engine] Kompilasi Gagal:', err);
+            const cleanErr = err.message.replace(/"/g, "'");
+            return new Response(`console.error("Syntax Error: ${cleanErr}");`, {
               headers: { 'Content-Type': 'application/javascript' }
             });
           }
