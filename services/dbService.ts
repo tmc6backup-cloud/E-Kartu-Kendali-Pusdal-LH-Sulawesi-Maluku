@@ -137,6 +137,9 @@ export const dbService = {
                 supabase.from('budget_ceilings').select('department, amount, year, ro_code').eq('year', currentYear)
             ]);
 
+            if (requestsRes.error) console.warn("Requests Fetch Warning:", requestsRes.error.message);
+            if (ceilingsRes.error) console.warn("Ceilings Fetch Warning:", ceilingsRes.error.message);
+
             const data = requestsRes.data || [];
             const ceilingData = ceilingsRes.data || [];
             
@@ -249,7 +252,11 @@ export const dbService = {
             };
         } catch (err) {
             console.error("[Stats Error]", err);
-            return null;
+            // Return empty stats structure instead of null to prevent dashboard crash
+            return {
+                totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0,
+                totalOfficeCeiling: 0, monthlyTrend: [], categories: [], deptBudgets: []
+            };
         }
     }
 };

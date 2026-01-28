@@ -15,7 +15,7 @@ import {
     BarChart,
     Bar
 } from 'recharts';
-import { Clock, CheckCircle2, BrainCircuit, Database, PieChart as PieIcon, ArrowUpRight, AlertTriangle, Building2, LayoutPanelLeft, Wallet, FileText, Landmark, Coins, Briefcase, ListChecks, TrendingUp, Map, Layout, ShieldCheck, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle2, BrainCircuit, Database, PieChart as PieIcon, ArrowUpRight, AlertTriangle, Building2, LayoutPanelLeft, Wallet, FileText, Landmark, Coins, Briefcase, ListChecks, TrendingUp, Map, Layout, ShieldCheck, Loader2, RefreshCw } from 'lucide-react';
 import { getBudgetInsights } from '../services/geminiService';
 import { dbService } from '../services/dbService';
 import { AuthContext } from '../App';
@@ -48,28 +48,36 @@ const Dashboard: React.FC = () => {
         ['admin', 'kpa'].includes(user?.role || ''),
     [user]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!user) return;
-            setIsLoading(true);
-            try {
-                setConnectionError(false);
-                const dbStats = await dbService.getStats(user.role, user.full_name, user.department);
-                
-                if (!dbStats) {
-                    setConnectionError(true);
-                } else {
-                    setStats(dbStats);
-                    // Jalankan AI secara background
-                    fetchAiInsight(dbStats.totalAmount, dbStats.approvedAmount);
-                }
-            } catch (err) {
-                console.error("Dashboard Fetch Error:", err);
+    const fetchData = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        setConnectionError(false);
+        
+        // Timeout 15 detik untuk menghindari loading selamanya
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("TIMEOUT")), 15000)
+        );
+
+        try {
+            const dbStatsPromise = dbService.getStats(user.role, user.full_name, user.department);
+            const dbStats = await Promise.race([dbStatsPromise, timeoutPromise]) as any;
+            
+            if (!dbStats) {
                 setConnectionError(true);
-            } finally {
-                setIsLoading(false);
+            } else {
+                setStats(dbStats);
+                // Jalankan AI secara background
+                fetchAiInsight(dbStats.totalAmount, dbStats.approvedAmount);
             }
-        };
+        } catch (err: any) {
+            console.error("Dashboard Fetch Error:", err);
+            setConnectionError(true);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
     }, [user]);
 
@@ -85,33 +93,32 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const regionalData = useMemo(() => {
-        return (stats.deptBudgets || [])
-            .filter((d: any) => d.name.toLowerCase().includes('wilayah'))
-            .map((d: any) => ({
-                name: d.name.replace('Bidang ', ''),
-                pagu: d.total,
-                realisasi: d.spent,
-                persen: d.total > 0 ? ((d.spent / d.total) * 100).toFixed(1) : 0
-            }));
-    }, [stats.deptBudgets]);
-
-    const adminData = useMemo(() => {
-        return (stats.deptBudgets || [])
-            .filter((d: any) => d.name.toLowerCase().includes('tata usaha') || d.name.toLowerCase().includes('bagian'))
-            .map((d: any) => ({
-                name: d.name.replace('Bagian ', '').replace('Sub Bagian ', ''),
-                pagu: d.total,
-                realisasi: d.spent,
-                persen: d.total > 0 ? ((d.spent / d.total) * 100).toFixed(1) : 0
-            }));
-    }, [stats.deptBudgets]);
-
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-40">
                 <Loader2 className="animate-spin text-blue-600 mb-6 opacity-40" size={64} />
                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Menyusun Statistik Kantor...</p>
+                <p className="text-slate-300 text-[8px] mt-4 uppercase font-bold">Mohon tunggu sebentar (Max 15 detik)</p>
+            </div>
+        );
+    }
+
+    if (connectionError) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 text-center space-y-6">
+                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center shadow-inner">
+                    <AlertTriangle size={40} />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Gagal Memuat Statistik</h2>
+                    <p className="text-sm font-medium text-slate-500 max-w-md">Terjadi kendala saat mengambil data dari database atau koneksi internet terputus.</p>
+                </div>
+                <button 
+                    onClick={fetchData}
+                    className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl hover:bg-slate-800 transition-all"
+                >
+                    <RefreshCw size={16} /> Coba Muat Ulang
+                </button>
             </div>
         );
     }
@@ -124,36 +131,6 @@ const Dashboard: React.FC = () => {
     ];
 
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
-
-    const BudgetSubCard = ({ title, data, icon: Icon, colorClass, bgColorClass }: any) => (
-        <div className={`p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:border-${colorClass}-200 transition-colors`}>
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`w-8 h-8 ${bgColorClass} ${colorClass === 'blue' ? 'text-blue-600' : colorClass === 'emerald' ? 'text-emerald-600' : 'text-amber-600'} rounded-lg flex items-center justify-center`}>
-                    <Icon size={18} />
-                </div>
-                <h5 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">{title}</h5>
-            </div>
-            <div className="space-y-3">
-                <div>
-                    <p className="text-[8px] font-bold text-slate-400 uppercase">Pagu Alokasi</p>
-                    <p className="text-xs font-black text-slate-900 font-mono">Rp {data.total.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex justify-between items-center mb-1">
-                        <p className="text-[8px] font-black text-amber-500 uppercase">Terpakai</p>
-                        <p className="text-[10px] font-black text-amber-600 font-mono">Rp {data.spent.toLocaleString('id-ID')}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <p className="text-[8px] font-black text-blue-500 uppercase">Sisa</p>
-                        <p className={`text-[11px] font-black ${colorClass === 'blue' ? 'text-blue-700' : 'text-emerald-700'} font-mono`}>Rp {data.remaining.toLocaleString('id-ID')}</p>
-                    </div>
-                </div>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${colorClass === 'blue' ? 'bg-blue-600' : 'bg-emerald-600'} transition-all duration-1000`} style={{ width: `${data.total > 0 ? (100 - (data.remaining / data.total * 100)) : 0}%` }}></div>
-                </div>
-            </div>
-        </div>
-    );
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -175,18 +152,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition">
-            {connectionError && (
-                <div className="p-5 bg-red-50 border-2 border-red-100 rounded-[32px] flex items-center gap-5">
-                    <div className="w-12 h-12 bg-red-500 text-white rounded-2xl flex items-center justify-center shrink-0">
-                        <AlertTriangle size={24} />
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-bold text-red-800 uppercase tracking-tight">Gagal Memuat Data</h4>
-                        <p className="text-xs font-semibold text-red-600/80">Periksa koneksi internet atau ketersediaan tabel database di Supabase.</p>
-                    </div>
-                </div>
-            )}
-
             <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 uppercase">

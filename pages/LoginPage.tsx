@@ -1,5 +1,5 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../App.tsx';
 import { 
     User, 
@@ -15,13 +15,15 @@ import {
 import Logo from '../components/Logo.tsx';
 
 const LoginPage: React.FC = () => {
-    const { login } = useContext(AuthContext);
+    const { login, isLoggedIn } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Jika sudah login (misal dari auto-login localStorage), jangan tampilkan form
+    if (isLoggedIn) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,34 +37,13 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         try {
             await login(username.trim(), password);
-            setShowSuccess(true);
+            // Tidak perlu setShowSuccess(true) lagi karena App.tsx akan me-redirect secara otomatis
+            // saat state isLoggedIn berubah.
         } catch (err: any) {
             setError(err.message || "Gagal masuk ke sistem.");
-        } finally {
             setLoading(false);
         }
     };
-
-    if (showSuccess) {
-        return (
-            <div className="fixed inset-0 z-[200] bg-slate-50 flex flex-col items-center justify-center">
-                <div className="relative z-10 text-center space-y-8 animate-success-pop">
-                    <div className="relative inline-block">
-                        <div className="w-32 h-32 bg-white rounded-[40px] shadow-2xl flex items-center justify-center p-6 border border-slate-50">
-                            <Logo className="w-full h-full object-contain" />
-                        </div>
-                        <div className="absolute -top-2 -right-2 w-10 h-10 bg-emerald-500 text-white rounded-[14px] flex items-center justify-center shadow-xl animate-bounce">
-                            <CheckCircle2 size={20} />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Login Berhasil</h2>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Mempersiapkan Dashboard Anda...</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC]">
@@ -124,6 +105,7 @@ const LoginPage: React.FC = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     autoFocus
+                                    disabled={loading}
                                 />
                             </div>
                         </div>
@@ -138,6 +120,7 @@ const LoginPage: React.FC = () => {
                                     className="w-full pl-12 pr-12 py-4 bg-white border border-slate-200 rounded-2xl outline-none text-sm font-bold focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
                                 />
                                 <button 
                                     type="button"
@@ -154,8 +137,17 @@ const LoginPage: React.FC = () => {
                             disabled={loading}
                             className="w-full py-5 bg-slate-900 text-white rounded-3xl font-bold text-sm flex items-center justify-center gap-3 shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50"
                         >
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
-                            Masuk Sekarang
+                            {loading ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} />
+                                    Memverifikasi...
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowRight size={20} />
+                                    Masuk Sekarang
+                                </>
+                            )}
                         </button>
                     </form>
 
