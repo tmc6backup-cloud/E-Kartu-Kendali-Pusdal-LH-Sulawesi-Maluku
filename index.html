@@ -10,11 +10,14 @@
     <script>
         const getBase = () => {
             const path = window.location.pathname;
+            const hostname = window.location.hostname;
             const segments = path.split('/').filter(s => s.length > 0);
-            // Deteksi jika berjalan di GitHub Pages (URL mengandung username.github.io/repo-name)
-            if (window.location.hostname.includes('github.io') && segments.length > 0) {
+            
+            // Logika deteksi GitHub Pages yang lebih aman
+            if (hostname.includes('github.io') && segments.length > 0) {
                 return '/' + segments[0] + '/';
             }
+            // Untuk environment lain (local / custom domain)
             return '/';
         };
 
@@ -39,7 +42,7 @@
                 for(let key of keys) await caches.delete(key);
             }
             localStorage.clear();
-            location.reload();
+            location.reload(true);
         };
     </script>
     <style>
@@ -101,7 +104,10 @@
     </div>
     <script>
         async function start() {
-            if (!navigator.serviceWorker) return;
+            if (!navigator.serviceWorker) {
+                launch();
+                return;
+            }
             try {
                 const swPath = window.APP_BASE + 'sw.js';
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
@@ -109,7 +115,7 @@
                 else navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
             } catch (err) { 
                 console.error(err);
-                document.getElementById('reset-btn').style.display = 'block';
+                launch(); // Tetap jalankan aplikasi meskipun SW gagal
             }
         }
         function launch() {
