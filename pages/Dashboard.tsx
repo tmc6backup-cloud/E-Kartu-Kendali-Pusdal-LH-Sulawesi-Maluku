@@ -1,96 +1,135 @@
 
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import { 
-    XAxis, 
-    YAxis, 
-    CartesianGrid, 
-    Tooltip, 
-    ResponsiveContainer, 
-    AreaChart,
-    Area,
-    BarChart,
-    Bar
-} from 'recharts';
-import { Clock, CheckCircle2, BrainCircuit, TrendingUp, Building2, Wallet, FileText, ListChecks, Loader2, BarChart3, Sparkles } from 'lucide-react';
-import { getBudgetInsights } from '../services/geminiService.ts';
+    Building2, 
+    Wallet, 
+    Coins,
+    Briefcase,
+    Zap,
+    Info,
+    ArrowUpRight,
+    Loader2,
+    ShieldCheck,
+    LayoutGrid,
+    TrendingUp
+} from 'lucide-react';
 import { dbService } from '../services/dbService.ts';
 import { AuthContext } from '../App.tsx';
-import { Link } from 'react-router-dom';
+
+// Komponen Reusable untuk Kartu Bidang (Sesuai Referensi Gambar)
+const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = ({ deptData, isGlobalContext }) => {
+    const RO_CARDS = [
+        { code: 'EBA', label: 'DANA EBA', icon: <Building2 size={16} />, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
+        { code: 'EBB', label: 'DANA EBB', icon: <Coins size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+        { code: 'BDB', label: 'DANA BDB', icon: <Briefcase size={16} />, color: 'text-orange-500', bg: 'bg-orange-50', bar: 'bg-orange-500' },
+        { code: 'EBD', label: 'DANA EBD', icon: <Wallet size={16} />, color: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-600' },
+    ];
+
+    const totalSerapan = deptData.total > 0 ? (deptData.spent / deptData.total) * 100 : 0;
+
+    return (
+        <div className="bg-white border border-slate-100 rounded-[48px] p-8 md:p-12 shadow-sm space-y-12 transition-all hover:shadow-md">
+            {/* Header Bidang */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner">
+                        <Building2 size={28} />
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                            {deptData.name}
+                        </h2>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">STATUS DANA & REALISASI</p>
+                    </div>
+                </div>
+                
+                <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest">{totalSerapan.toFixed(1)}% SERAPAN</span>
+                </div>
+            </div>
+
+            {/* Grid Kartu Dana RO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {RO_CARDS.map((card) => {
+                    const key = card.code.toLowerCase();
+                    const data = deptData[key] || { total: 0, spent: 0, remaining: 0 };
+                    const percent = data.total > 0 ? (data.spent / data.total) * 100 : 0;
+
+                    return (
+                        <div key={card.code} className="bg-white border border-slate-100 rounded-[28px] p-6 space-y-6 group hover:border-blue-200 transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 ${card.bg} ${card.color} rounded-xl flex items-center justify-center`}>
+                                    {card.icon}
+                                </div>
+                                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{card.label}</h3>
+                            </div>
+
+                            <div className="space-y-0.5">
+                                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">Pagu Alokasi</p>
+                                <p className="text-base font-black text-slate-900 font-mono">Rp {data.total.toLocaleString('id-ID')}</p>
+                            </div>
+
+                            <div className="bg-slate-50/50 rounded-xl p-4 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[8px] font-black text-orange-400 uppercase">Terpakai</span>
+                                    <span className="text-[10px] font-black text-orange-500 font-mono">Rp {data.spent.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[8px] font-black text-blue-500 uppercase">Sisa</span>
+                                    <span className="text-[10px] font-black text-emerald-600 font-mono">Rp {data.remaining.toLocaleString('id-ID')}</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${card.bar} transition-all duration-1000`} 
+                                    style={{ width: `${Math.min(percent, 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Footer Saldo */}
+            <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-end gap-6">
+                <div className="space-y-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">TOTAL SISA SALDO BIDANG:</p>
+                    <p className="text-3xl font-black text-slate-900 font-mono tracking-tighter">
+                        Rp {(deptData.remaining || 0).toLocaleString('id-ID')}
+                    </p>
+                </div>
+
+                <div className="w-full md:w-64 space-y-2">
+                    <div className="flex justify-between items-end">
+                        <span className="text-[8px] font-black text-slate-300 uppercase">Status Kritis (90%+)</span>
+                        <span className="text-[8px] font-black text-slate-400 uppercase">{totalSerapan.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                            className={`h-full ${totalSerapan > 90 ? 'bg-red-500' : 'bg-slate-300'} transition-all`} 
+                            style={{ width: `${Math.min(totalSerapan, 100)}%` }}
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const Dashboard: React.FC = () => {
     const { user } = useContext(AuthContext);
-    const [insight, setInsight] = useState("");
-    const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [useMockData, setUseMockData] = useState(false);
-    
-    const [stats, setStats] = useState<any>({
-        totalAmount: 0,
-        pendingCount: 0,
-        approvedAmount: 0,
-        rejectedCount: 0,
-        totalCount: 0,
-        totalOfficeCeiling: 0,
-        categories: [],
-        monthlyTrend: [],
-        deptBudgets: []
-    });
-
-    const MOCK_STATS = {
-        totalAmount: 1250000000,
-        pendingCount: 12,
-        approvedAmount: 850000000,
-        rejectedCount: 2,
-        totalCount: 24,
-        totalOfficeCeiling: 5000000000,
-        monthlyTrend: [
-            { name: 'Jan', amount: 400000000 },
-            { name: 'Feb', amount: 300000000 },
-            { name: 'Mar', amount: 600000000 },
-            { name: 'Apr', amount: 200000000 },
-            { name: 'Mei', amount: 450000000 },
-            { name: 'Jun', amount: 550000000 },
-            { name: 'Jul', amount: 300000000 }
-        ],
-        deptBudgets: [
-            { name: 'Bidang Wilayah I', total: 1000000000, spent: 650000000, queue: { pending: 2, reviewed_bidang: 1, reviewed_program: 0, reviewed_tu: 1 } },
-            { name: 'Bidang Wilayah II', total: 1000000000, spent: 400000000, queue: { pending: 1, reviewed_bidang: 0, reviewed_program: 2, reviewed_tu: 0 } },
-            { name: 'Bagian Tata Usaha', total: 800000000, spent: 750000000, queue: { pending: 0, reviewed_bidang: 3, reviewed_program: 1, reviewed_tu: 1 } },
-            { name: 'Bidang Wilayah III', total: 1000000000, spent: 300000000, queue: { pending: 1, reviewed_bidang: 1, reviewed_program: 0, reviewed_tu: 0 } }
-        ]
-    };
-    
-    const isGlobalViewer = useMemo(() => {
-        if (!user) return false;
-        const role = user.role || '';
-        return ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'].includes(role) ||
-               (user.department || '').toUpperCase().includes("PUSDAL LH SUMA");
-    }, [user]);
+    const [stats, setStats] = useState<any>(null);
 
     const fetchData = async () => {
         if (!user) return;
         setIsLoading(true);
         try {
             const dbStats = await dbService.getStats(user.role, user.full_name, user.department);
-            
-            // Logika deteksi data kosong yang lebih akurat
-            const hasNoData = !dbStats || 
-                             (dbStats.totalCount === 0 && dbStats.totalOfficeCeiling === 0) ||
-                             (!dbStats.deptBudgets || dbStats.deptBudgets.length === 0);
-
-            if (hasNoData) {
-                setStats(MOCK_STATS);
-                setUseMockData(true);
-                setInsight("Dashboard menampilkan data simulasi karena database Anda belum terisi.");
-            } else {
-                setStats(dbStats);
-                setUseMockData(false);
-                if (dbStats.totalAmount > 0) fetchAiInsight(dbStats.totalAmount, dbStats.approvedAmount);
-            }
+            setStats(dbStats);
         } catch (err) {
             console.error("Dashboard error:", err);
-            setStats(MOCK_STATS);
-            setUseMockData(true);
         } finally {
             setIsLoading(false);
         }
@@ -100,225 +139,144 @@ const Dashboard: React.FC = () => {
         fetchData();
     }, [user]);
 
-    const fetchAiInsight = async (total: number, approved: number) => {
-        setIsInsightLoading(true);
-        try {
-            const text = await getBudgetInsights(total, approved);
-            setInsight(text || "Analisis data selesai.");
-        } catch (err) {
-            setInsight("Gunakan data dashboard untuk memantau performa anggaran.");
-        } finally {
-            setIsInsightLoading(false);
-        }
-    };
+    // Otoritas Global: Admin, KPA, Validator (Pimpinan/Pusat)
+    const isGlobalUser = useMemo(() => {
+        if (!user) return false;
+        const globalRoles = ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'];
+        return globalRoles.includes(user.role);
+    }, [user]);
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white p-4 border border-slate-200 rounded-2xl shadow-xl">
-                    <p className="text-[10px] font-black text-slate-900 uppercase mb-2 border-b pb-1">{label}</p>
-                    {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center gap-3 text-[11px] font-bold py-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || entry.fill }}></div>
-                            <span className="text-slate-500">{entry.name}:</span>
-                            <span className="text-slate-900">Rp {Number(entry.value).toLocaleString('id-ID')}</span>
-                        </div>
-                    ))}
-                </div>
-            );
-        }
-        return null;
-    };
+    // Otoritas Terbatas (Multi-Bidang): PIC
+    const isPicUser = useMemo(() => {
+        return user?.role?.startsWith('pic_');
+    }, [user]);
 
-    if (isLoading) {
+    if (isLoading || !stats) {
         return (
-            <div className="flex flex-col items-center justify-center py-40">
-                <Loader2 className="animate-spin text-blue-600 mb-6" size={48} />
-                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Sinkronisasi Dashboard...</p>
+            <div className="flex flex-col items-center justify-center h-[60vh]">
+                <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Memuat Dashboard Kantor...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 page-transition pb-20">
-            {useMockData && (
-                <div className="bg-gradient-to-r from-indigo-600 to-blue-700 text-white px-6 py-4 rounded-[28px] flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center gap-4 text-center md:text-left">
-                        <div className="p-3 bg-white/20 rounded-2xl"><Sparkles size={24} /></div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sistem Ready - Database Kosong</p>
-                            <p className="text-xs font-medium opacity-90">Tampilan di bawah adalah simulasi. Silakan isi data Pagu atau buat Pengajuan baru.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <Link to="/ceilings" className="shrink-0 bg-white text-indigo-600 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-lg">Set Pagu</Link>
-                        <Link to="/requests/new" className="shrink-0 bg-indigo-500 text-white border border-white/20 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-400 transition-all">Buat Pengajuan</Link>
-                    </div>
+        <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-12 page-transition">
+            
+            {/* Header Dashboard Status */}
+            <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 bg-white border border-slate-100 rounded-2xl text-blue-600 shadow-sm">
+                    <LayoutGrid size={24} />
                 </div>
-            )}
-
-            <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        Dashboard Anggaran
-                        {isGlobalViewer && <div className="p-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-black">GLOBAL VIEW</div>}
-                    </h1>
-                    <p className="text-slate-500 font-semibold text-sm flex items-center gap-2 uppercase tracking-widest">
-                        Status Terkini • {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}
-                    </p>
+                <div>
+                    <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">Status Alokasi Anggaran & Realisasi Kantor</h1>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Monitoring Pagu Seluruh Bidang Kerja Pusdal LH Suma</p>
                 </div>
+            </div>
 
-                <div className="w-full xl:max-w-xl">
-                    <div className="bg-white border border-slate-200 p-5 rounded-[32px] shadow-sm flex items-center gap-5 border-l-4 border-l-emerald-500">
-                        <div className="shrink-0 w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                            <BrainCircuit size={24} />
+            {/* Tampilan Kondisional */}
+            <div className="space-y-10">
+                {isGlobalUser ? (
+                    // ADMIN / KPA / VALIDATOR: Lihat per bidang (SEMUA)
+                    <div className="space-y-12">
+                        {/* Agregat Global Kantor */}
+                        <div className="bg-slate-900 rounded-[40px] p-8 md:p-12 text-white flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-emerald-400">
+                                    <ShieldCheck size={32} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-black uppercase tracking-tight">KONSOLIDASI PAGU KANTOR</h3>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Serapan: {((stats.globalROs.spent / stats.globalROs.total) * 100).toFixed(1)}%</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Sisa Saldo Kantor</p>
+                                <p className="text-4xl font-black font-mono text-emerald-400">Rp {stats.globalROs.remaining.toLocaleString('id-ID')}</p>
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 block mb-1">AI Strategic Insight</span>
-                            {isInsightLoading ? (
-                                <p className="text-[10px] italic text-slate-400">Menganalisis performa...</p>
+
+                        {/* List Seluruh Bidang */}
+                        {stats.deptBudgets.map((dept: any, idx: number) => (
+                            <DeptBudgetCard key={idx} deptData={dept} isGlobalContext />
+                        ))}
+                    </div>
+                ) : isPicUser ? (
+                    // PIC: Lihat hanya bidang-bidang yang ditugaskan (Bisa lebih dari satu)
+                    <div className="space-y-12">
+                        <div className="px-10 py-6 bg-blue-50 border border-blue-100 rounded-[32px] flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-blue-900">
+                                <ShieldCheck size={24} />
+                                <p className="text-xs font-black uppercase tracking-widest">Wilayah Kerja PIC Terdaftar</p>
+                            </div>
+                            <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">{user?.department}</span>
+                        </div>
+                        {(() => {
+                            const assignedDepts = user?.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+                            const myDeptsData = stats.deptBudgets?.filter((d: any) => assignedDepts.includes(d.name.toLowerCase()));
+                            
+                            return myDeptsData && myDeptsData.length > 0 ? (
+                                myDeptsData.map((dept: any, idx: number) => (
+                                    <DeptBudgetCard key={idx} deptData={dept} />
+                                ))
                             ) : (
-                                <p className="text-xs font-bold leading-relaxed text-slate-700 italic">"{insight}"</p>
-                            )}
-                        </div>
+                                <div className="bg-white p-20 rounded-[48px] text-center border border-dashed">
+                                    <Building2 size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <p className="text-[10px] font-black text-slate-300 uppercase">Tidak ada bidang yang ditugaskan untuk otoritas PIC Anda.</p>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                ) : (
+                    // KEPALA BIDANG / STAF: Hanya lihat satu bidang sendiri
+                    <div className="space-y-6">
+                        {(() => {
+                            const userDept = user?.department?.split(', ')[0] || '';
+                            const myDept = stats.deptBudgets?.find((d: any) => d.name.toLowerCase() === userDept.toLowerCase()) || stats.deptBudgets?.[0];
+                            return myDept ? <DeptBudgetCard deptData={myDept} /> : (
+                                <div className="bg-white p-20 rounded-[48px] text-center border border-dashed">
+                                    <Building2 size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <p className="text-[10px] font-black text-slate-300 uppercase">Data bidang tidak ditemukan.</p>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
+            </div>
+
+            {/* QUICK ACTIONS (Tetap Sama) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10">
+                <div className="bg-white border border-slate-100 rounded-[32px] p-8 flex items-center justify-between group cursor-pointer hover:border-slate-300 transition-all">
+                    <div>
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Daftar Berkas</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Monitoring status pengajuan</p>
+                    </div>
+                    <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+                        <ArrowUpRight size={20} />
+                    </div>
+                </div>
+
+                <div className="bg-blue-600 rounded-[32px] p-8 text-white flex items-center justify-between group cursor-pointer hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
+                    <div>
+                        <h4 className="text-xs font-black uppercase tracking-widest mb-1">Buat Usulan</h4>
+                        <p className="text-[10px] text-blue-100 font-bold uppercase">Ajukan anggaran baru</p>
+                    </div>
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-all">
+                        <Zap size={20} />
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-100 rounded-[32px] p-8 flex items-center justify-between group cursor-pointer hover:border-slate-300 transition-all">
+                    <div>
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Bantuan Sistem</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Panduan E-Kartu Kendali</p>
+                    </div>
+                    <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+                        <Info size={20} />
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Total Berkas', value: stats.totalCount || 0, sub: 'Unit Kerja', icon: <FileText />, color: 'text-slate-900', bg: 'bg-slate-100' },
-                    { label: 'Pagu Kantor', value: `Rp ${((stats.totalOfficeCeiling || 0)/1000000).toFixed(1)}jt`, sub: 'TA ' + new Date().getFullYear(), icon: <Wallet />, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Usulan Berjalan', value: `Rp ${((stats.totalAmount || 0)/1000000).toFixed(1)}jt`, sub: 'Proses Komitmen', icon: <Clock />, color: 'text-amber-600', bg: 'bg-amber-50' },
-                    { label: 'Realisasi Final', value: `Rp ${((stats.approvedAmount || 0)/1000000).toFixed(1)}jt`, sub: 'Sudah SPJ', icon: <CheckCircle2 />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                ].map((stat, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm flex items-center gap-5 hover:border-blue-200 transition-all group">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${stat.color} ${stat.bg}`}>{stat.icon}</div>
-                        <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                            <p className="text-xl font-black text-slate-900">{stat.value}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm space-y-6">
-                    <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        <TrendingUp size={18} className="text-blue-600" /> Trend Pengajuan Bulanan
-                    </h3>
-                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={stats.monthlyTrend || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} tickFormatter={(val) => `${val/1000000}jt`} />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Area type="monotone" dataKey="amount" name="Usulan Anggaran" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorAmt)" animationDuration={1500} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm space-y-6">
-                    <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        <BarChart3 size={18} className="text-emerald-600" /> Komparasi Pagu per Bidang
-                    </h3>
-                    <div className="h-[350px] min-h-[350px] w-full bg-slate-50/30 rounded-3xl overflow-hidden p-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats.deptBudgets || []} layout="vertical" margin={{ left: 40, right: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(val) => `${val/1000000}jt`} />
-                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '800', fill: '#1e293b' }} width={120} />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Bar dataKey="total" name="Alokasi Pagu" fill="#e2e8f0" radius={[0, 8, 8, 0]} barSize={12} />
-                                <Bar dataKey="spent" name="Anggaran Terpakai" fill="#10b981" radius={[0, 8, 8, 0]} barSize={12} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {isGlobalViewer && stats.deptBudgets && stats.deptBudgets.length > 0 && (
-                <div className="bg-slate-900 rounded-[48px] overflow-hidden shadow-2xl">
-                    <div className="p-8 border-b border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-emerald-400">
-                                <ListChecks size={24} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-white uppercase tracking-tight">Monitoring Antrian Global</h3>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Status Berkas Seluruh Unit Kerja</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-white/5">
-                                <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    <th className="px-8 py-5">Unit Kerja / Bidang</th>
-                                    <th className="px-4 py-5 text-center">Antrian Kabid</th>
-                                    <th className="px-4 py-5 text-center">Validasi Program</th>
-                                    <th className="px-4 py-5 text-center">Validasi TU</th>
-                                    <th className="px-4 py-5 text-center">Proses PPK</th>
-                                    <th className="px-8 py-5 text-right">Serapan</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {stats.deptBudgets.map((dept: any, idx: number) => {
-                                    const percent = dept.total > 0 ? (dept.spent / dept.total) * 100 : 0;
-                                    return (
-                                        <tr key={idx} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-white transition-colors">
-                                                        <Building2 size={16} />
-                                                    </div>
-                                                    <span className="text-[11px] font-black text-slate-300 uppercase tracking-tight">{dept.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.pending || 0) > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue?.pending || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_bidang || 0) > 0 ? 'bg-blue-500/20 text-blue-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue?.reviewed_bidang || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_program || 0) > 0 ? 'bg-indigo-500/20 text-indigo-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue?.reviewed_program || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${(dept.queue?.reviewed_tu || 0) > 0 ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-slate-600'}`}>
-                                                    {dept.queue?.reviewed_tu || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <div className="flex flex-col items-end gap-1.5">
-                                                    <span className="text-[10px] font-black text-emerald-400 font-mono">{percent.toFixed(1)}%</span>
-                                                    <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-emerald-500" style={{ width: `${percent}%` }}></div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

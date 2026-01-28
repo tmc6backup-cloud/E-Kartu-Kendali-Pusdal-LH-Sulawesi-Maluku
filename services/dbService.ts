@@ -123,13 +123,7 @@ export const dbService = {
     },
 
     getStats: async (role: string, userName: string, department?: string) => {
-        console.log("[Stats] Memulai pengambilan data...");
-        const isGlobal = ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'].includes(role);
         const currentYear = new Date().getFullYear();
-        const isPusdalGlobal = department?.toUpperCase().includes("PUSDAL LH SUMA");
-        const effectiveGlobal = isGlobal || isPusdalGlobal;
-
-        const userDepts = department ? department.split(', ').map(d => d.trim().toLowerCase()) : [];
         
         try {
             const [requestsRes, ceilingsRes] = await Promise.all([
@@ -137,48 +131,45 @@ export const dbService = {
                 supabase.from('budget_ceilings').select('department, amount, year, ro_code').eq('year', currentYear)
             ]);
 
-            if (requestsRes.error) console.warn("Requests Fetch Warning:", requestsRes.error.message);
-            if (ceilingsRes.error) console.warn("Ceilings Fetch Warning:", ceilingsRes.error.message);
-
             const data = requestsRes.data || [];
             const ceilingData = ceilingsRes.data || [];
             
-            console.log(`[Stats] Data diterima: ${data.length} pengajuan, ${ceilingData.length} pagu.`);
-
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const monthlyTrend = months.map(m => ({ name: m, amount: 0, realized: 0 }));
 
             const categoryMap: Record<string, number> = {};
             const departmentMap: Record<string, any> = {};
-            let totalOfficeCeiling = 0;
+            
+            // Inisialisasi Agregasi Global RO
+            const globalROs = {
+                eba: { total: 0, spent: 0 },
+                ebb: { total: 0, spent: 0 },
+                bdb: { total: 0, spent: 0 },
+                ebd: { total: 0, spent: 0 },
+                total: 0,
+                spent: 0
+            };
 
             // Inisialisasi Pagu
             ceilingData.forEach(c => {
                 const cDeptClean = c.department.trim();
-                const isAuthorized = effectiveGlobal || userDepts.includes(cDeptClean.toLowerCase());
-                
-                if (isAuthorized) {
-                    if (!departmentMap[cDeptClean]) {
-                        departmentMap[cDeptClean] = { 
-                            proposed: 0, realized: 0, ceiling: 0, 
-                            fba_ceiling: 0, fba_proposed: 0, bdh_ceiling: 0, bdh_proposed: 0,
-                            eba_ceiling: 0, eba_proposed: 0, ebb_ceiling: 0, ebb_proposed: 0,
-                            bdb_ceiling: 0, bdb_proposed: 0, ebd_ceiling: 0, ebd_proposed: 0,
-                            queue: { pending: 0, reviewed_bidang: 0, reviewed_program: 0, reviewed_tu: 0, approved: 0, reviewed_pic: 0, realized: 0 }
-                        };
-                    }
-                    const amt = Number(c.amount) || 0;
-                    departmentMap[cDeptClean].ceiling += amt;
-                    totalOfficeCeiling += amt;
-
-                    const ro = (c.ro_code || '').toUpperCase();
-                    if (ro.startsWith('FBA')) departmentMap[cDeptClean].fba_ceiling += amt;
-                    if (ro.startsWith('BDH')) departmentMap[cDeptClean].bdh_ceiling += amt;
-                    if (ro.startsWith('EBA')) departmentMap[cDeptClean].eba_ceiling += amt;
-                    if (ro.startsWith('EBB')) departmentMap[cDeptClean].ebb_ceiling += amt;
-                    if (ro.startsWith('BDB')) departmentMap[cDeptClean].bdb_ceiling += amt;
-                    if (ro.startsWith('EBD')) departmentMap[cDeptClean].ebd_ceiling += amt;
+                if (!departmentMap[cDeptClean]) {
+                    departmentMap[cDeptClean] = { 
+                        proposed: 0, realized: 0, ceiling: 0, 
+                        eba_ceiling: 0, eba_proposed: 0, ebb_ceiling: 0, ebb_proposed: 0,
+                        bdb_ceiling: 0, bdb_proposed: 0, ebd_ceiling: 0, ebd_proposed: 0,
+                        queue: { pending: 0, reviewed_bidang: 0, reviewed_program: 0, reviewed_tu: 0, approved: 0, reviewed_pic: 0, realized: 0 }
+                    };
                 }
+                const amt = Number(c.amount) || 0;
+                departmentMap[cDeptClean].ceiling += amt;
+                globalROs.total += amt;
+
+                const ro = (c.ro_code || '').toUpperCase();
+                if (ro.startsWith('EBA')) { departmentMap[cDeptClean].eba_ceiling += amt; globalROs.eba.total += amt; }
+                if (ro.startsWith('EBB')) { departmentMap[cDeptClean].ebb_ceiling += amt; globalROs.ebb.total += amt; }
+                if (ro.startsWith('BDB')) { departmentMap[cDeptClean].bdb_ceiling += amt; globalROs.bdb.total += amt; }
+                if (ro.startsWith('EBD')) { departmentMap[cDeptClean].ebd_ceiling += amt; globalROs.ebd.total += amt; }
             });
 
             // Agregasi Pengajuan
@@ -187,25 +178,15 @@ export const dbService = {
                 const currDeptStr = (curr.requester_department || 'LAINNYA').trim();
                 const matchedDeptKey = Object.keys(departmentMap).find(dk => dk.toLowerCase() === currDeptStr.toLowerCase());
 
-                const isAuthorized = effectiveGlobal || userDepts.includes(currDeptStr.toLowerCase());
+                acc.totalAmount += amt;
+                acc.totalCount += 1;
                 
-                if (isAuthorized) {
-                    acc.totalAmount += amt;
-                    acc.totalCount += 1;
-                    if (!['approved', 'rejected', 'reviewed_pic'].includes(curr.status)) acc.pendingCount += 1;
-                    if (['approved', 'reviewed_pic'].includes(curr.status) || curr.realization_date) acc.approvedAmount += amt;
-                    if (curr.status === 'rejected') acc.rejectedCount += 1;
-                    
-                    if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + amt;
+                if (['approved', 'reviewed_pic'].includes(curr.status)) acc.approvedAmount += amt;
+                if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + amt;
 
-                    if (curr.created_at) {
-                        const mIdx = new Date(curr.created_at).getMonth();
-                        if (monthlyTrend[mIdx]) monthlyTrend[mIdx].amount += amt;
-                    }
-                    if (curr.realization_date) {
-                        const mIdx = new Date(curr.realization_date).getMonth();
-                        if (monthlyTrend[mIdx]) monthlyTrend[mIdx].realized += amt;
-                    }
+                if (curr.created_at) {
+                    const mIdx = new Date(curr.created_at).getMonth();
+                    if (monthlyTrend[mIdx]) monthlyTrend[mIdx].amount += amt;
                 }
 
                 if (matchedDeptKey) {
@@ -215,15 +196,14 @@ export const dbService = {
 
                     if (status !== 'rejected') {
                         departmentMap[matchedDeptKey].proposed += amt;
+                        globalROs.spent += amt;
                         (curr.calculation_items || []).forEach((item: any) => {
                             const iAmt = Number(item.jumlah) || 0;
                             const ro = (item.ro_code || '').toUpperCase();
-                            if (ro.startsWith('FBA')) departmentMap[matchedDeptKey].fba_proposed += iAmt;
-                            if (ro.startsWith('BDH')) departmentMap[matchedDeptKey].bdh_proposed += iAmt;
-                            if (ro.startsWith('EBA')) departmentMap[matchedDeptKey].eba_proposed += iAmt;
-                            if (ro.startsWith('EBB')) departmentMap[matchedDeptKey].ebb_proposed += iAmt;
-                            if (ro.startsWith('BDB')) departmentMap[matchedDeptKey].bdb_proposed += iAmt;
-                            if (ro.startsWith('EBD')) departmentMap[matchedDeptKey].ebd_proposed += iAmt;
+                            if (ro.startsWith('EBA')) { departmentMap[matchedDeptKey].eba_proposed += iAmt; globalROs.eba.spent += iAmt; }
+                            if (ro.startsWith('EBB')) { departmentMap[matchedDeptKey].ebb_proposed += iAmt; globalROs.ebb.spent += iAmt; }
+                            if (ro.startsWith('BDB')) { departmentMap[matchedDeptKey].bdb_proposed += iAmt; globalROs.bdb.spent += iAmt; }
+                            if (ro.startsWith('EBD')) { departmentMap[matchedDeptKey].ebd_proposed += iAmt; globalROs.ebd.spent += iAmt; }
                         });
                     }
                 }
@@ -232,31 +212,30 @@ export const dbService = {
 
             return {
                 ...summary,
-                totalOfficeCeiling,
+                globalROs: {
+                    total: globalROs.total,
+                    spent: globalROs.spent,
+                    remaining: Math.max(0, globalROs.total - globalROs.spent),
+                    eba: { ...globalROs.eba, remaining: Math.max(0, globalROs.eba.total - globalROs.eba.spent) },
+                    ebb: { ...globalROs.ebb, remaining: Math.max(0, globalROs.ebb.total - globalROs.ebb.spent) },
+                    bdb: { ...globalROs.bdb, remaining: Math.max(0, globalROs.bdb.total - globalROs.bdb.spent) },
+                    ebd: { ...globalROs.ebd, remaining: Math.max(0, globalROs.ebd.total - globalROs.ebd.spent) },
+                },
                 monthlyTrend,
-                categories: Object.entries(categoryMap).map(([name, value]) => ({ name, value })),
                 deptBudgets: Object.entries(departmentMap).map(([name, d]) => ({
                     name,
-                    is_tu: name.toLowerCase().includes('tata usaha'),
                     total: d.ceiling,
                     spent: d.proposed,
                     remaining: Math.max(0, d.ceiling - d.proposed),
-                    queue: d.queue,
-                    fba: { total: d.fba_ceiling, spent: d.fba_proposed, remaining: Math.max(0, d.fba_ceiling - d.fba_proposed) },
-                    bdh: { total: d.bdh_ceiling, spent: d.bdh_proposed, remaining: Math.max(0, d.bdh_ceiling - d.bdh_proposed) },
                     eba: { total: d.eba_ceiling, spent: d.eba_proposed, remaining: Math.max(0, d.eba_ceiling - d.eba_proposed) },
                     ebb: { total: d.ebb_ceiling, spent: d.ebb_proposed, remaining: Math.max(0, d.ebb_ceiling - d.ebb_proposed) },
                     bdb: { total: d.bdb_ceiling, spent: d.bdb_proposed, remaining: Math.max(0, d.bdb_ceiling - d.bdb_proposed) },
                     ebd: { total: d.ebd_ceiling, spent: d.ebd_proposed, remaining: Math.max(0, d.ebd_ceiling - d.ebd_proposed) }
-                })).sort((a, b) => b.total - a.total)
+                }))
             };
         } catch (err) {
             console.error("[Stats Error]", err);
-            // Return empty stats structure instead of null to prevent dashboard crash
-            return {
-                totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0,
-                totalOfficeCeiling: 0, monthlyTrend: [], categories: [], deptBudgets: []
-            };
+            return { totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0, globalROs: {}, deptBudgets: [] };
         }
     }
 };
