@@ -20,6 +20,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
     </style>
 <script type="importmap">
 {
@@ -40,32 +41,22 @@
 </head>
 <body class="overflow-x-hidden">
     <div id="root">
-        <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 20px; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; text-align: center;">
             <div class="spinner"></div>
             <div id="status-container">
                 <p id="status-text" style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 8px;">Menghubungkan Engine...</p>
-                <p id="error-detail" style="font-size: 10px; color: #ef4444; max-width: 300px; font-weight: 500;"></p>
+                <p id="error-detail" style="font-size: 10px; color: #ef4444; max-width: 400px; font-weight: 500; line-height: 1.5;"></p>
             </div>
         </div>
     </div>
 
     <script>
-        // Mendapatkan base URL secara dinamis dari URL saat ini
+        // Logika deteksi base path yang lebih sederhana dan kuat
         const getBasePath = () => {
-            const loc = window.location;
-            const path = loc.pathname;
-            // Jika di root (misal username.github.io/)
-            if (path === '/' || path === '') return '/';
-            
-            // Jika di subfolder (misal username.github.io/repo-name/)
-            // Ambil segmen pertama
-            const segments = path.split('/').filter(Boolean);
-            if (segments.length > 0 && !path.endsWith('.html')) {
-                return '/' + segments[0] + '/';
-            }
-            
-            // Fallback: ambil folder dari file .html
-            return path.substring(0, path.lastIndexOf('/') + 1) || '/';
+            const path = window.location.pathname;
+            // Mengambil folder dari URL saat ini
+            const base = path.substring(0, path.lastIndexOf('/') + 1);
+            return base || '/';
         };
 
         const base = getBasePath();
@@ -77,26 +68,28 @@
             
             if (!('serviceWorker' in navigator)) {
                 statusText.innerText = "Browser Tidak Mendukung";
-                errorDetail.innerText = "Gunakan Chrome atau Edge versi terbaru.";
+                errorDetail.innerText = "Gunakan Chrome, Edge, atau Safari versi terbaru.";
                 return;
             }
 
             try {
-                // Registrasi dengan jalur absolut untuk menghindari 404
-                const swUrl = new URL('sw.js', window.location.origin + base).href;
-                console.log('Attempting to register SW at:', swUrl);
+                // Memastikan sw.js dipanggil dari lokasi yang benar
+                const swUrl = base + 'sw.js';
+                console.log('Registering SW at:', swUrl);
                 
                 const reg = await navigator.serviceWorker.register(swUrl, { scope: base });
-                console.log('SW Registered successfully with scope:', reg.scope);
+                console.log('SW Registered scope:', reg.scope);
                 
                 if (navigator.serviceWorker.controller) {
                     loadModule();
                 } else {
-                    statusText.innerText = "Mengaktifkan Sistem...";
+                    statusText.innerText = "Engine Berhasil Dipasang...";
+                    // Tunggu kontroler berubah (saat SW mengambil kendali pertama kali)
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         window.location.reload();
                     });
 
+                    // Paksa aktivasi jika sudah terpasang
                     if (reg.waiting) {
                         reg.waiting.postMessage('skipWaiting');
                     } else if (reg.installing) {
@@ -108,7 +101,7 @@
             } catch (err) {
                 console.error('CRITICAL SW ERROR:', err);
                 statusText.innerText = "Gagal Memuat Engine";
-                errorDetail.innerText = "Penyebab: " + err.message + ". Pastikan file sw.js ada di root repositori dan gunakan HTTPS.";
+                errorDetail.innerHTML = "Penyebab: " + err.message + "<br><br><button onclick='window.location.reload()' style='background:#f1f5f9; padding:8px 16px; border-radius:8px; color:#1e293b; font-weight:bold; margin-top:10px;'>Coba Lagi</button>";
                 statusText.style.color = "#ef4444";
             }
         }
@@ -119,6 +112,7 @@
             
             const script = document.createElement('script');
             script.type = 'module';
+            // Gunakan jalur absolut untuk index.tsx agar tidak 404
             script.src = base + 'index.tsx?v=' + Date.now(); 
             script.onerror = (e) => {
                 console.error('Module Load Error:', e);

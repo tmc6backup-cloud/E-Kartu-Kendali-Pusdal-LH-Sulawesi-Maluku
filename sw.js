@@ -1,6 +1,11 @@
 
 // Service Worker Engine Transpiler
-importScripts('https://unpkg.com/@babel/standalone/babel.min.js');
+// Menggunakan cdnjs yang biasanya lebih stabil untuk Service Workers
+try {
+  importScripts('https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.12/babel.min.js');
+} catch (e) {
+  console.error('[SW] Gagal memuat Babel Standalone:', e);
+}
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -10,7 +15,6 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(self.clients.claim());
 });
 
-// Menangani pesan skipWaiting jika dipanggil dari index.html
 self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') {
     self.skipWaiting();
@@ -23,8 +27,6 @@ self.addEventListener('fetch', (event) => {
   if (url.origin === self.location.origin) {
     const path = url.pathname;
     const isTsx = path.endsWith('.tsx') || path.endsWith('.ts');
-    
-    // Jika browser meminta file tanpa ekstensi (saat import), coba arahkan ke .tsx
     const noExtension = !path.split('/').pop().includes('.');
 
     if (isTsx || noExtension) {
@@ -38,12 +40,11 @@ self.addEventListener('fetch', (event) => {
 
             const response = await fetch(fetchUrl);
             if (!response.ok) {
-                // Jika .tsx gagal, coba .ts jika tanpa ekstensi
-                if (noExtension) {
-                    const tsRes = await fetch(url.toString() + '.ts');
-                    if (tsRes.ok) return transform(await tsRes.text(), url.pathname + '.ts');
-                }
-                return response;
+              if (noExtension) {
+                const tsRes = await fetch(url.toString() + '.ts');
+                if (tsRes.ok) return transform(await tsRes.text(), url.pathname + '.ts');
+              }
+              return response;
             }
 
             const text = await response.text();
@@ -59,20 +60,36 @@ self.addEventListener('fetch', (event) => {
 });
 
 function transform(code, filename) {
-  const transformed = Babel.transform(code, {
-    presets: [
-      ['env', { modules: false }],
-      ['react', { runtime: 'classic' }],
-      'typescript'
-    ],
-    filename: filename,
-    sourceMaps: 'inline'
-  }).code;
+  // Pastikan Babel sudah terdefinisi sebelum digunakan
+  if (typeof Babel === 'undefined') {
+    console.error('[SW] Babel belum siap. Mengirimkan kode mentah.');
+    return new Response(code, {
+      headers: { 'Content-Type': 'application/javascript' }
+    });
+  }
 
-  return new Response(transformed, {
-    headers: { 
-      'Content-Type': 'application/javascript',
-      'Cache-Control': 'no-cache'
-    }
-  });
+  try {
+    const transformed = Babel.transform(code, {
+      presets: [
+        ['env', { modules: false }],
+        ['react', { runtime: 'classic' }],
+        'typescript'
+      ],
+      filename: filename,
+      sourceMaps: 'inline'
+    }).code;
+
+    return new Response(transformed, {
+      headers: { 
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'no-cache'
+      }
+    });
+  } catch (err) {
+    console.error('[SW] Transpile Error at ' + filename + ':', err);
+    // Kembalikan error agar mudah di-debug di console browser
+    return new Response(`console.error("Transpile Error: ${err.message}");`, {
+      headers: { 'Content-Type': 'application/javascript' }
+    });
+  }
 }
