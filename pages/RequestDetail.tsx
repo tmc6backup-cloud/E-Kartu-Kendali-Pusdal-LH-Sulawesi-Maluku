@@ -46,7 +46,6 @@ const RequestDetail: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [validatorNote, setValidatorNote] = useState("");
     
-    // State for Realization/SPJ uploads
     const [uploading, setUploading] = useState<string | null>(null);
     const [spjFiles, setSpjFiles] = useState({
         sppd: null as File | null,
@@ -109,7 +108,6 @@ const RequestDetail: React.FC = () => {
                 sppd_url: sppdUrl,
                 report_url: reportUrl,
                 spj_url: spjUrl,
-                // Automatically move status to PIC verification after upload if all required files are present
                 status: 'approved' 
             });
 
@@ -190,22 +188,26 @@ const RequestDetail: React.FC = () => {
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:mt-0 print:pt-0">
-            <div className="print-only border-b-[1.5pt] border-black pb-3 mb-3 print:mt-0">
-                <div className="flex items-center gap-6">
-                    <Logo className="w-20 h-20 object-contain" />
-                    <div className="flex-1 text-center pr-10">
-                        <h2 className="text-[10pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup / </h2>
-                        <h3 className="text-[10pt] font-bold uppercase leading-tight">Badan Pengendalian Lingkungan Hidup RI </h3>
-                        <h3 className="text-[9.5pt] font-black uppercase mt-1 leading-tight">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
-                        <p className="text-[6.5pt] mt-0.5 italic">Jln. Perintis Kemerdekaan KM. 17, Makassar. Email: sekretariat@pusdalsuma.go.id</p>
+        <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:mt-0 print:pt-0 print:bg-white print:text-black">
+            {/* Header / Kop Surat Resmi */}
+            <div className="print-only mb-6 print:block">
+                <div className="flex items-center justify-center border-b-[3px] border-black pb-2 mb-1">
+                    <div className="flex items-center gap-6 w-full max-w-4xl px-4">
+                        <Logo className="w-24 h-24 object-contain" />
+                        <div className="flex-1 text-center">
+                            <h2 className="text-[12pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup dan Kehutanan</h2>
+                            <h3 className="text-[11pt] font-bold uppercase leading-tight">Badan Pengendalian Lingkungan Hidup</h3>
+                            <h3 className="text-[11pt] font-black uppercase mt-1 leading-tight">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
+                            <p className="text-[8pt] mt-1 italic leading-tight">Jln. Perintis Kemerdekaan KM. 17, Makassar, Sulawesi Selatan. <br/> Telp: (0411) 556677 | Email: sekretariat@pusdalsuma.go.id</p>
+                        </div>
                     </div>
                 </div>
+                <div className="border-b-[1px] border-black h-1"></div>
             </div>
 
-            <div className="print-only text-center mb-5 print:mb-3">
-                <h2 className="text-[11pt] font-black underline uppercase">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
-                <p className="text-[7.5pt] font-bold mt-0.5 tracking-tighter">ID: {request.id.toUpperCase()}</p>
+            <div className="print-only text-center mb-8">
+                <h2 className="text-[13pt] font-black underline uppercase tracking-tight">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
+                <p className="text-[8pt] font-bold mt-1">NOMOR DOKUMEN: {request.id.substring(0, 13).toUpperCase()}</p>
             </div>
 
             <div className="flex items-center justify-between no-print">
@@ -220,101 +222,9 @@ const RequestDetail: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
-                <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-3 print:mt-0">
+                <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-4 print:mt-0">
                     
-                    {/* FORM PERTANGGUNGJAWABAN (Hanya untuk Pengaju saat Berkas Approved) */}
-                    {isRequester && request.status === 'approved' && (
-                        <div className="bg-emerald-900 p-8 rounded-[48px] shadow-2xl space-y-8 no-print border-4 border-emerald-500/20 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-emerald-500/20 transition-all duration-1000"></div>
-                            <div className="flex items-center justify-between relative z-10">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 bg-emerald-500 rounded-[24px] flex items-center justify-center text-white shadow-lg shadow-emerald-900/40">
-                                        <Briefcase size={32} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-white uppercase tracking-tight">Kelengkapan Dokumen SPJ</h3>
-                                        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Silakan unggah bukti pelaksanaan kegiatan Anda</p>
-                                    </div>
-                                </div>
-                                <div className="px-5 py-2 bg-emerald-800 text-emerald-200 border border-emerald-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                                    Status: Menunggu SPJ
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-                                {/* SPPD (Hanya jika bukan Peralatan Kantor) */}
-                                {!isEquipmentCategory && (
-                                    <div className={`p-6 rounded-[32px] border-2 border-dashed transition-all ${request.sppd_url ? 'bg-emerald-800/50 border-emerald-500' : 'bg-white/5 border-white/20 hover:border-emerald-500'}`}>
-                                        <div className="flex flex-col items-center text-center space-y-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white">
-                                                <FileText size={20} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-white uppercase">Lampiran SPPD</p>
-                                                <p className="text-[8px] font-bold text-emerald-300 uppercase mt-1">Sertifikat / Surat Tugas</p>
-                                            </div>
-                                            <label className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[9px] font-black uppercase cursor-pointer transition-all flex items-center justify-center gap-2">
-                                                <UploadCloud size={14} /> {spjFiles.sppd ? 'Terpilih' : 'Unggah'}
-                                                <input type="file" className="hidden" onChange={(e) => setSpjFiles({...spjFiles, sppd: e.target.files?.[0] || null})} />
-                                            </label>
-                                            {request.sppd_url && <a href={request.sppd_url} target="_blank" className="text-[8px] text-emerald-400 font-black uppercase underline">Lihat File Saat Ini</a>}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Laporan (Hanya jika bukan Peralatan Kantor) */}
-                                {!isEquipmentCategory && (
-                                    <div className={`p-6 rounded-[32px] border-2 border-dashed transition-all ${request.report_url ? 'bg-emerald-800/50 border-emerald-500' : 'bg-white/5 border-white/20 hover:border-emerald-500'}`}>
-                                        <div className="flex flex-col items-center text-center space-y-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white">
-                                                <CheckCircle2 size={20} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-white uppercase">Laporan Kegiatan</p>
-                                                <p className="text-[8px] font-bold text-emerald-300 uppercase mt-1">Narasi & Dokumentasi</p>
-                                            </div>
-                                            <label className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[9px] font-black uppercase cursor-pointer transition-all flex items-center justify-center gap-2">
-                                                <UploadCloud size={14} /> {spjFiles.report ? 'Terpilih' : 'Unggah'}
-                                                <input type="file" className="hidden" onChange={(e) => setSpjFiles({...spjFiles, report: e.target.files?.[0] || null})} />
-                                            </label>
-                                            {request.report_url && <a href={request.report_url} target="_blank" className="text-[8px] text-emerald-400 font-black uppercase underline">Lihat File Saat Ini</a>}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Kuitansi / SPJ (Wajib untuk semua) */}
-                                <div className={`p-6 rounded-[32px] border-2 border-dashed transition-all ${request.spj_url ? 'bg-emerald-800/50 border-emerald-500' : 'bg-white/5 border-white/20 hover:border-emerald-500'} ${isEquipmentCategory ? 'md:col-span-3' : ''}`}>
-                                    <div className="flex flex-col items-center text-center space-y-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white">
-                                            <Coins size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-white uppercase">Kuitansi / Bukti SPJ</p>
-                                            <p className="text-[8px] font-bold text-emerald-300 uppercase mt-1">Invoice / Nota / Kuitansi</p>
-                                        </div>
-                                        <label className={`py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-[9px] font-black uppercase cursor-pointer transition-all flex items-center justify-center gap-2 ${isEquipmentCategory ? 'w-1/2' : 'w-full'}`}>
-                                            <UploadCloud size={14} /> {spjFiles.spj ? 'Terpilih' : 'Unggah'}
-                                            <input type="file" className="hidden" onChange={(e) => setSpjFiles({...spjFiles, spj: e.target.files?.[0] || null})} />
-                                        </label>
-                                        {request.spj_url && <a href={request.spj_url} target="_blank" className="text-[8px] text-emerald-400 font-black uppercase underline">Lihat File Saat Ini</a>}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-6 border-t border-white/10 flex justify-end relative z-10">
-                                <button 
-                                    onClick={handleSpjUpload} 
-                                    disabled={uploading === 'saving'}
-                                    className="px-10 py-4 bg-white text-emerald-900 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:bg-emerald-50 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
-                                >
-                                    {uploading === 'saving' ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                    Simpan & Ajukan Verifikasi SPJ
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Panel Validasi (Hanya Web untuk Validator) */}
+                    {/* Panel Validasi (No Print) */}
                     {canValidate && (
                         <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl space-y-6 no-print">
                             <div className="flex items-center justify-between border-b border-white/10 pb-6">
@@ -342,88 +252,88 @@ const RequestDetail: React.FC = () => {
                     )}
 
                     <div className="bg-white p-10 md:p-14 rounded-[56px] border border-slate-200 shadow-sm print:border-none print:p-0 print:rounded-none">
-                        <div className="space-y-12 print:space-y-3">
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 print:gap-1">
-                                <div className="flex-1">
-                                    <span className="px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-lg border border-blue-100 no-print">{request.category}</span>
-                                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase tracking-tight mt-8 leading-[1.1] print:text-[11pt] print:mt-0 print:mb-1">{request.title}</h2>
-                                </div>
+                        <div className="space-y-10 print:space-y-4">
+                            <div>
+                                <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase tracking-tight leading-[1.1] print:text-[12pt] print:mb-2">{request.title}</h2>
+                                <div className="w-full h-px bg-slate-100 print:bg-black/40 print:h-[1.5pt] print:my-2"></div>
                             </div>
-                            
-                            <div className="w-full h-px bg-slate-100 print:bg-black/20 print:my-1"></div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 print:grid-cols-3 print:gap-2">
-                                <div className="space-y-2 print:space-y-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest print:text-black print:text-[6.5pt]">Unit Kerja / Bidang</p>
-                                    <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">{request.requester_department}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4">
+                                <div className="space-y-4 print:space-y-1.5">
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Kategori</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {request.category}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Unit Kerja</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {request.requester_department}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Lokasi</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {request.location}</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-2 print:space-y-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest print:text-black print:text-[6.5pt]">Pelaksanaan & Durasi</p>
-                                    <p className="text-sm font-black text-slate-800 uppercase leading-snug print:text-[8pt]">
-                                        {request.location}, <span className="mx-1 text-slate-300 print:text-black">/</span> {formatDate(request.execution_date)}
-                                        {request.execution_end_date && <span className="block mt-0.5 print:mt-0">S.D {formatDate(request.execution_end_date)}</span>}
-                                        {request.execution_duration && (
-                                            <span className="block text-[10px] text-blue-600 font-black uppercase mt-1 print:text-black print:text-[6.5pt] print:mt-0">
-                                                LAMA KEGIATAN: {request.execution_duration}
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                                <div className="space-y-2 print:space-y-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest print:text-black print:text-[6.5pt]">Pengusul</p>
-                                    <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">{request.requester_name}</p>
+                                <div className="space-y-4 print:space-y-1.5">
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Tgl Pelaksanaan</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {formatDate(request.execution_date)}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Durasi</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {request.execution_duration}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 print:gap-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28 print:text-black print:text-[8pt] print:w-32">Pengusul</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase print:text-[8pt]">: {request.requester_name}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-none print:mt-1 print:rounded-none">
-                        <div className="p-8 md:p-10 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/30 print:bg-transparent print:p-0 print:pb-1 print:border-none">
-                            <h3 className="text-sm font-black uppercase tracking-widest print:text-[7.5pt]">Rincian Komponen Anggaran</h3>
-                            <div className="px-6 py-3 bg-slate-900 text-white rounded-2xl print:bg-transparent print:text-black print:p-0">
-                                <span className="text-lg font-black font-mono print:text-[8.5pt]">Total: Rp {request.amount.toLocaleString('id-ID')}</span>
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-none print:mt-4 print:rounded-none">
+                        <div className="p-8 md:p-10 border-b border-slate-100 flex items-center justify-between no-print">
+                            <h3 className="text-sm font-black uppercase tracking-widest">Rincian Komponen Anggaran</h3>
+                            <div className="px-6 py-3 bg-slate-900 text-white rounded-2xl">
+                                <span className="text-lg font-black font-mono">Total: Rp {request.amount.toLocaleString('id-ID')}</span>
                             </div>
                         </div>
-                        <div className="overflow-x-visible print:mt-0.5">
-                            <table className="w-full text-left border-collapse print:border-[0.5pt] print:border-black">
-                                <thead className="bg-slate-50 print:bg-gray-50">
+                        <div className="overflow-x-visible">
+                            <table className="w-full text-left border-collapse print:border-[1pt] print:border-black">
+                                <thead className="bg-slate-50 print:bg-white">
                                     <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest print:text-black border-b border-slate-100 print:border-black">
-                                        <th className="px-6 py-4 print:py-1 w-[22%]">Struktur / Kode Akun</th>
-                                        <th className="px-6 py-4 print:py-1 w-[35%]">Uraian & Spesifikasi</th>
-                                        <th className="px-6 py-4 print:py-1 w-[13%] text-center">Volume</th>
-                                        <th className="px-6 py-4 print:py-1 w-[15%] text-right">Satuan</th>
-                                        <th className="px-6 py-4 print:py-1 w-[15%] text-right">Jumlah</th>
+                                        <th className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black print:text-[8pt] w-[20%]">Struktur / Akun</th>
+                                        <th className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black print:text-[8pt] w-[40%]">Uraian Detail</th>
+                                        <th className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black print:text-[8pt] text-center w-[12%]">Volume</th>
+                                        <th className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black print:text-[8pt] text-right w-[14%]">Harga Satuan</th>
+                                        <th className="px-6 py-4 print:py-2 print:px-3 print:text-[8pt] text-right w-[14%]">Jumlah</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 print:divide-black">
                                     {request.calculation_items?.map((item, idx) => (
-                                        <tr key={idx} className="print:border-b-[0.5pt] print:border-black">
-                                            <td className="px-6 py-4 print:py-1 border-r border-slate-100 print:border-black">
-                                                <p className="text-[10px] font-black text-slate-900 print:text-[7pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p>
-                                                <p className="text-[9px] font-bold text-blue-600 print:text-black print:text-[6.5pt]">{item.kode_akun}</p>
+                                        <tr key={idx} className="print:border-b-[1pt] print:border-black">
+                                            <td className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black">
+                                                <p className="text-[10px] font-black text-slate-900 print:text-[8pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p>
+                                                <p className="text-[9px] font-bold text-blue-600 print:text-black print:text-[7pt]">{item.kode_akun}</p>
                                             </td>
-                                            <td className="px-6 py-4 print:py-1 border-r border-slate-100 print:border-black">
-                                                <p className="text-xs font-bold uppercase print:text-[7.5pt] leading-tight">{item.title}</p>
-                                                {item.detail_barang && (
-                                                    <p className="text-[9px] text-slate-500 font-semibold mt-0.5 print:text-[6pt] print:text-black italic leading-tight">
-                                                        Spesifikasi: {item.detail_barang}
-                                                    </p>
-                                                )}
+                                            <td className="px-6 py-4 print:py-2 print:px-3 border-r print:border-black">
+                                                <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
+                                                {item.detail_barang && <p className="text-[9px] text-slate-400 mt-1 italic print:text-black print:text-[7pt]">Ket: {item.detail_barang}</p>}
                                             </td>
-                                            <td className="px-6 py-4 text-center print:py-1 border-r border-slate-100 print:border-black text-xs font-black print:text-[7.5pt]">
+                                            <td className="px-6 py-4 text-center print:py-2 print:px-3 border-r print:border-black text-xs font-black print:text-[8pt]">
                                                 {item.volkeg} {item.satkeg}
                                             </td>
-                                            <td className="px-6 py-4 text-right print:py-1 border-r border-slate-100 print:border-black text-xs print:text-[7.5pt]">
-                                                Rp {item.hargaSatuan.toLocaleString('id-ID')}
+                                            <td className="px-6 py-4 text-right print:py-2 print:px-3 border-r print:border-black text-xs print:text-[8pt]">
+                                                {item.hargaSatuan.toLocaleString('id-ID')}
                                             </td>
-                                            <td className="px-6 py-4 text-right print:py-1 text-sm font-black font-mono print:text-[7.5pt]">
-                                                Rp {item.jumlah.toLocaleString('id-ID')}
+                                            <td className="px-6 py-4 text-right print:py-2 print:px-3 text-sm font-black font-mono print:text-[8pt]">
+                                                {item.jumlah.toLocaleString('id-ID')}
                                             </td>
                                         </tr>
                                     ))}
-                                    <tr className="bg-slate-50/50 print:bg-transparent">
-                                        <td colSpan={4} className="px-6 py-5 text-right text-[10px] font-black uppercase border-r border-slate-100 print:border-black print:text-[7.5pt] print:py-1.5">TOTAL KESELURUHAN</td>
-                                        <td className="px-6 py-5 text-right text-base font-black font-mono text-blue-600 print:text-black print:text-[8.5pt] print:py-1.5">
+                                    <tr className="bg-slate-900 text-white print:bg-white print:text-black">
+                                        <td colSpan={4} className="px-6 py-5 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[9pt] print:py-2">TOTAL KESELURUHAN (IDR)</td>
+                                        <td className="px-6 py-5 text-right text-lg font-black font-mono print:text-[10pt] print:py-2">
                                             Rp {request.amount.toLocaleString('id-ID')}
                                         </td>
                                     </tr>
@@ -432,121 +342,106 @@ const RequestDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm space-y-4 print:border-none print:mt-3 print:p-0 print:rounded-none">
-                        <h3 className="text-xs font-black uppercase tracking-widest print:text-[7.5pt]">Justifikasi Kebutuhan</h3>
-                        <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 print:bg-transparent print:border-none print:p-0 print:mt-0.5">
-                             <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase whitespace-pre-wrap print:text-black print:text-[7.5pt]">{request.description || "TIDAK ADA DESKRIPSI."}</p>
-                        </div>
+                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm space-y-4 print:border-none print:mt-4 print:p-0">
+                        <h3 className="text-xs font-black uppercase tracking-widest print:text-[9pt] print:underline">Justifikasi Kebutuhan:</h3>
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase whitespace-pre-wrap print:text-black print:text-[8pt] print:leading-normal">
+                            {request.description || "TIDAK ADA DESKRIPSI."}
+                        </p>
                     </div>
 
-                    <div className="print-only mt-6 border-[0.5pt] border-black p-3 rounded-md">
-                        <h3 className="text-[8.5pt] font-black uppercase mb-3 border-b border-black pb-1">Lembar Kendali Validasi & Pengesahan</h3>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="border border-black p-2 rounded flex flex-col items-center justify-center text-center">
-                                <p className="text-[6.5pt] font-black uppercase text-gray-500">Validasi Program</p>
-                                <div className="h-10 flex items-center justify-center">
-                                    {isStepCompleted('reviewed_program') ? (
-                                        <div className="text-emerald-700 font-bold text-[7pt] border-2 border-emerald-700 px-2 py-0.5 rotate-[-5deg] uppercase">TERVERIFIKASI</div>
-                                    ) : (
-                                        <p className="text-[6pt] italic text-gray-300">Belum Diverifikasi</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="border border-black p-2 rounded flex flex-col items-center justify-center text-center">
-                                <p className="text-[6.5pt] font-black uppercase text-gray-500">Validasi Tata Usaha</p>
-                                <div className="h-10 flex items-center justify-center">
-                                    {isStepCompleted('reviewed_tu') ? (
-                                        <div className="text-indigo-700 font-bold text-[7pt] border-2 border-indigo-700 px-2 py-0.5 rotate-[-5deg] uppercase">TERVERIFIKASI</div>
-                                    ) : (
-                                        <p className="text-[6pt] italic text-gray-300">Belum Diverifikasi</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="border border-black p-2 rounded flex flex-col items-center justify-center text-center bg-gray-50">
-                                <p className="text-[6.5pt] font-black uppercase text-blue-700">Pengesahan PPK</p>
-                                <div className="h-10 flex items-center justify-center">
-                                    {isStepCompleted('approved') ? (
-                                        <div className="text-blue-900 font-black text-[8pt] border-[3px] border-blue-900 px-3 py-1 rotate-[-3deg] uppercase bg-white">DISETUJUI PPK</div>
-                                    ) : (
-                                        <p className="text-[6pt] italic text-gray-300">Belum Disahkan</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                    {/* Lembar Kendali Validasi (Print Only) */}
+                    <div className="print-only mt-10 print:block">
+                        <table className="w-full border-collapse border-[1pt] border-black text-center">
+                            <thead className="bg-gray-100">
+                                <tr className="text-[9pt] font-black uppercase">
+                                    <th className="border-[1pt] border-black py-2 w-1/3">VALIDASI PROGRAM</th>
+                                    <th className="border-[1pt] border-black py-2 w-1/3">VALIDASI TATA USAHA</th>
+                                    <th className="border-[1pt] border-black py-2 w-1/3">PENGESAHAN PPK</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="h-24">
+                                    <td className="border-[1pt] border-black relative">
+                                        {isStepCompleted('reviewed_program') && (
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-70">
+                                                <div className="border-[2pt] border-emerald-800 text-emerald-800 px-3 py-1 font-black text-[10pt] rotate-[-12deg] uppercase">TERVERIFIKASI</div>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="border-[1pt] border-black relative">
+                                        {isStepCompleted('reviewed_tu') && (
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-70">
+                                                <div className="border-[2pt] border-blue-800 text-blue-800 px-3 py-1 font-black text-[10pt] rotate-[-12deg] uppercase">TERVERIFIKASI</div>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="border-[1pt] border-black relative">
+                                        {isStepCompleted('approved') && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="border-[3pt] border-red-900 text-red-900 px-4 py-1.5 font-black text-[11pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                                <tr className="text-[8pt] font-bold uppercase">
+                                    <td className="border-[1pt] border-black py-1">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td>
+                                    <td className="border-[1pt] border-black py-1">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td>
+                                    <td className="border-[1pt] border-black py-1">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div className="print-only mt-8 print:mt-6">
-                        <div className="grid grid-cols-2 gap-10 text-center text-[8pt]">
-                            <div className="space-y-12 print:space-y-10">
-                                <div><p className="mb-0.5">Mengetahui,</p><p className="font-bold uppercase leading-tight">Kepala {request.requester_department}</p></div>
-                                <p className="font-bold underline uppercase">( ..................................................... )</p>
+                    {/* Footer Signature */}
+                    <div className="print-only mt-12">
+                        <div className="grid grid-cols-2 gap-20 text-center text-[9pt]">
+                            <div className="space-y-20">
+                                <div>
+                                    <p className="mb-0.5 font-bold">Mengetahui,</p>
+                                    <p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p>
+                                </div>
+                                <div>
+                                    <p className="font-black underline uppercase">( ..................................................... )</p>
+                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
+                                </div>
                             </div>
-                            <div className="space-y-12 print:space-y-10">
-                                <div><p className="mb-0.5">Makassar, {new Date(request.execution_date).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}</p><p className="font-bold uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div>
-                                <p className="font-bold underline uppercase">( {request.requester_name} )</p>
+                            <div className="space-y-20">
+                                <div>
+                                    <p className="mb-0.5 font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}</p>
+                                    <p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p>
+                                </div>
+                                <div>
+                                    <p className="font-black underline uppercase">( {request.requester_name} )</p>
+                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Sidebar Info (No Print) */}
                 <div className="xl:col-span-1 space-y-8 no-print">
-                    {/* Daftar Dokumen Pertanggungjawaban (Jika sudah diunggah) */}
-                    {request.status === 'approved' || request.status === 'reviewed_pic' ? (
-                         <div className="bg-white p-8 rounded-[40px] border border-emerald-100 shadow-sm space-y-6">
-                            <h4 className="text-[11px] font-black text-emerald-900 uppercase tracking-widest text-center">Berkas Pertanggungjawaban</h4>
-                            <div className="space-y-3">
-                                {request.spj_url && (
-                                    <a href={request.spj_url} target="_blank" className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all">
-                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-emerald-600"><Coins size={16} /></div>
-                                        <span className="text-[9px] font-black uppercase text-emerald-800">Kuitansi / SPJ</span>
-                                    </a>
-                                )}
-                                {request.report_url && (
-                                    <a href={request.report_url} target="_blank" className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all">
-                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-emerald-600"><CheckCircle2 size={16} /></div>
-                                        <span className="text-[9px] font-black uppercase text-emerald-800">Laporan Kegiatan</span>
-                                    </a>
-                                )}
-                                {request.sppd_url && (
-                                    <a href={request.sppd_url} target="_blank" className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all">
-                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-emerald-600"><FileText size={16} /></div>
-                                        <span className="text-[9px] font-black uppercase text-emerald-800">Lampiran SPPD</span>
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    ) : null}
-
                     {isUserValidator && request.attachment_url && (
                         <div className="bg-white p-8 rounded-[40px] border border-blue-100 shadow-sm space-y-6">
                             <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest text-center">Berkas Lampiran</h4>
-                            <div className="p-5 bg-blue-50/50 rounded-[32px] border border-blue-100 flex flex-col items-center text-center space-y-4">
-                                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-50">
-                                    <FileText size={24} />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-900 uppercase">Lampiran Berkas Dukung</p>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase">KAK / RAB / Bukti Dukung Lainnya</p>
-                                </div>
-                                <a 
-                                    href={request.attachment_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="w-full py-3 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
-                                >
-                                    <Eye size={14} /> Lihat Berkas
-                                </a>
-                            </div>
+                            <a 
+                                href={request.attachment_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                            >
+                                <Eye size={14} /> Lihat Berkas
+                            </a>
                         </div>
                     )}
 
                     <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm sticky top-24">
-                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest text-center mb-10">Progress Perjalanan</h4>
+                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest text-center mb-10">Status Terkini</h4>
                         <div className="space-y-0 relative ml-4">
                             <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-slate-100"></div>
                             {detailedSteps.map((step, idx) => (
                                 <div key={idx} className="relative flex items-start gap-5 pb-8 last:pb-0">
-                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${request.status === step.s || (step.s === 'approved' && isApprovedOrBeyond) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>{step.icon}</div>
+                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isStepCompleted(step.s) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>{step.icon}</div>
                                     <div className="flex-1 -mt-1"><p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p><p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p></div>
                                 </div>
                             ))}
