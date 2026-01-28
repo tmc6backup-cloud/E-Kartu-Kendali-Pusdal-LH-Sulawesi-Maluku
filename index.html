@@ -11,13 +11,12 @@
         const getBase = () => {
             const path = window.location.pathname;
             const hostname = window.location.hostname;
-            const segments = path.split('/').filter(s => s.length > 0);
-            
-            // Logika deteksi GitHub Pages yang lebih aman
-            if (hostname.includes('github.io') && segments.length > 0) {
-                return '/' + segments[0] + '/';
+            // Jika di GitHub Pages
+            if (hostname.includes('github.io')) {
+                const segments = path.split('/').filter(s => s.length > 0);
+                return segments.length > 0 ? '/' + segments[0] + '/' : '/';
             }
-            // Untuk environment lain (local / custom domain)
+            // Jika di localhost atau custom domain
             return '/';
         };
 
@@ -31,19 +30,6 @@
                 SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
             }
         };
-
-        window.forceReset = async function() {
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for(let reg of regs) await reg.unregister();
-            }
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                for(let key of keys) await caches.delete(key);
-            }
-            localStorage.clear();
-            location.reload(true);
-        };
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow: hidden; height: 100vh; width: 100vw; }
@@ -51,30 +37,6 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #f1f5f9; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         #root { height: 100%; width: 100%; }
         .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; }
-        
-        @media screen {
-            .print-only { display: none !important; }
-        }
-        @media print {
-            @page {
-                size: A4;
-                margin: 0.5cm;
-            }
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { 
-                overflow: visible !important; 
-                height: auto !important; 
-                width: auto !important; 
-                background: white !important; 
-                color: black !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            #root { height: auto !important; }
-            main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
-            .page-transition { animation: none !important; transform: none !important; }
-        }
     </style>
 <script type="importmap">
 {
@@ -99,26 +61,10 @@
         <div class="loader-wrapper">
             <div class="spinner"></div>
             <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Inisialisasi Sistem...</p>
-            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444; color: white; padding: 10px 20px; border-radius: 12px; margin-top: 15px; font-weight: bold;">MUAT ULANG ASET</button>
         </div>
     </div>
     <script>
         async function start() {
-            if (!navigator.serviceWorker) {
-                launch();
-                return;
-            }
-            try {
-                const swPath = window.APP_BASE + 'sw.js';
-                const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
-                if (navigator.serviceWorker.controller) launch();
-                else navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-            } catch (err) { 
-                console.error(err);
-                launch(); // Tetap jalankan aplikasi meskipun SW gagal
-            }
-        }
-        function launch() {
             const script = document.createElement('script');
             script.type = 'module';
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 interface LogoProps {
   className?: string;
@@ -9,55 +9,51 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
   const base = (window as any).APP_BASE || '/';
   const sessionToken = useMemo(() => Date.now(), []);
 
-  // Daftar kandidat nama file logo yang paling mungkin diunggah
+  // URL Logo Resmi KLHK sebagai jaminan tampilan (High Availability)
+  const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
+
   const candidates = [
     'logo.png',
     'Logo.png',
     'logo-baru.png',
-    'logo_baru.png',
-    'logo.jpg',
-    'logo.svg',
-    'logo.webp',
-    'logo-1.png'
+    'logo.jpg'
   ];
   
   const [candidateIndex, setCandidateIndex] = useState(0);
-  const [hasError, setHasError] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
 
   const getUrl = (filename: string) => {
     const cleanBase = base.endsWith('/') ? base : base + '/';
-    const cleanFilename = filename.startsWith('/') ? filename.substring(1) : filename;
-    const combinedPath = (cleanBase + cleanFilename).replace(/\/+/g, '/');
-    return `${combinedPath}?v=${sessionToken}`;
+    return `${cleanBase}${filename}?v=${sessionToken}`;
   };
-
-  const [src, setSrc] = useState(getUrl(candidates[0]));
-
-  const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
 
   const handleError = () => {
     if (candidateIndex < candidates.length - 1) {
-      const nextIndex = candidateIndex + 1;
-      setCandidateIndex(nextIndex);
-      setSrc(getUrl(candidates[nextIndex]));
+      setCandidateIndex(prev => prev + 1);
     } else {
-      setHasError(true);
+      setIsFallback(true);
     }
   };
 
+  // Reset state jika base path berubah (jarang terjadi tapi bagus untuk robustness)
   useEffect(() => {
     setCandidateIndex(0);
-    setHasError(false);
-    setSrc(getUrl(candidates[0]));
-  }, [base, sessionToken]);
+    setIsFallback(false);
+  }, [base]);
 
   return (
     <img 
-      src={hasError ? fallbackLogo : src} 
-      alt="Logo" 
+      src={isFallback ? fallbackLogo : getUrl(candidates[candidateIndex])} 
+      alt="Logo Pusdal LH Suma" 
       className={className}
-      style={{ objectFit: 'contain', display: 'block' }}
+      style={{ 
+        objectFit: 'contain', 
+        display: 'block',
+        minWidth: '20px',
+        minHeight: '20px'
+      }}
       onError={handleError}
+      loading="eager"
     />
   );
 };
