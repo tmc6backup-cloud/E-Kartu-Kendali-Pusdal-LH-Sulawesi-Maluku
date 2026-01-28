@@ -1,7 +1,7 @@
 
 /**
  * Engine Transpiler - PUSDAL LH SUMA
- * Versi: 2.3.1 (GitHub Pages Optimized)
+ * Versi: 2.3.2 (GitHub Pages Production)
  */
 
 const BABEL_SOURCES = [
@@ -19,10 +19,10 @@ function loadBabel() {
       importScripts(src);
       if (typeof Babel !== 'undefined') {
         babelLoaded = true;
-        console.log('[Engine] Babel Berhasil Dimuat');
+        console.log('[Engine] Babel Loaded via ' + src);
       }
     } catch (e) {
-      console.warn('[Engine] Gagal memuat Babel dari: ' + src);
+      console.warn('[Engine] Failed to load Babel from: ' + src);
     }
   }
 }
@@ -44,10 +44,10 @@ self.addEventListener('fetch', (event) => {
   const path = url.pathname;
   const fileName = path.split('/').pop() || '';
   
-  // Deteksi apakah ini file source (TS/TSX)
+  // Deteksi file source (TS/TSX) atau modul tanpa ekstensi
   const isSource = path.endsWith('.tsx') || 
                    path.endsWith('.ts') || 
-                   (fileName && !fileName.includes('.') && !path.includes('/@') && !path.includes('node_modules'));
+                   (fileName && !fileName.includes('.') && !path.includes('/@') && !path.includes('node_modules') && !path.includes('/api/'));
 
   if (isLocal && isSource) {
     event.respondWith(
@@ -55,18 +55,19 @@ self.addEventListener('fetch', (event) => {
         try {
           if (!babelLoaded) loadBabel();
 
-          let fetchUrl = event.request.url;
           let content = null;
           let activePath = path;
+          let fetchUrl = event.request.url;
 
-          // Jika tidak ada ekstensi, coba cari .tsx lalu .ts
+          // Jika tanpa ekstensi, coba cari file fisiknya secara berurutan
           if (!fileName.includes('.')) {
             const extensions = ['.tsx', '.ts'];
             for (const ext of extensions) {
               try {
                 const tryUrl = url.origin + path + ext + url.search;
                 const testRes = await fetch(tryUrl);
-                if (testRes.ok) {
+                // Pastikan response oke dan bukan halaman 404 HTML milik GitHub
+                if (testRes.ok && !testRes.headers.get('content-type')?.includes('text/html')) {
                   fetchUrl = tryUrl;
                   content = await testRes.text();
                   activePath = path + ext;
@@ -82,12 +83,13 @@ self.addEventListener('fetch', (event) => {
             content = await response.text();
           }
           
+          // Cegah Babel memproses halaman HTML (jika terjadi error redirect)
           if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html')) {
              return new Response(content, { headers: { 'Content-Type': 'text/html' } });
           }
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Babel tidak tersedia.");
+            throw new Error("Transpiler Engine not ready.");
           }
 
           const result = Babel.transform(content, {
@@ -108,7 +110,7 @@ self.addEventListener('fetch', (event) => {
           });
         } catch (err) {
           console.error("[Engine Error]", err.message);
-          return new Response(`console.error("Engine Transpiler Fail: ${err.message}");`, {
+          return new Response(`console.error("Engine Fail: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });
         }

@@ -5,9 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL || 'https://syptvhtbxflhjgdepbqs.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR';
 
-// Validate credentials before creating the client to avoid confusing fetch errors
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'YOUR_SUPABASE_URL') {
-    console.error("CRITICAL: Supabase URL or Anon Key is missing. Please check your environment variables.");
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('YOUR_SUPABASE')) {
+    console.error("CRITICAL: Supabase credentials are missing or invalid.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -19,3 +18,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         headers: { 'x-application-name': 'e-kartu-kendali-suma' },
     },
 });
+
+// Test Connection Helper (Optional for debugging)
+supabase.from('profiles').select('id', { count: 'exact', head: true })
+    .then(({ error }) => {
+        if (error) console.warn("Supabase Connection Check:", error.message);
+        else console.log("Supabase Connection: OK");
+    });

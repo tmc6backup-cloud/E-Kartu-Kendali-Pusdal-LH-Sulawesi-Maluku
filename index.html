@@ -108,40 +108,40 @@
                 return;
             }
 
-            // Daftarkan listener untuk mendeteksi kapan SW mengambil alih kontrol
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.appLog("Engine telah sinkron. Memuat ulang modul...");
-                location.reload();
-            });
-
             try {
                 const reg = await navigator.serviceWorker.register(BASE + 'sw.js?v=' + Date.now(), { scope: BASE });
                 
-                // Jika Service Worker baru terdeteksi
-                reg.onupdatefound = () => {
-                    const installingWorker = reg.installing;
-                    installingWorker.onstatechange = () => {
-                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            window.appLog("Update tersedia. Menyegarkan...");
-                        }
-                    };
-                };
-
-                // CRITICAL: Jika halaman tidak dikontrol oleh Service Worker, kita harus memaksanya
-                if (!navigator.serviceWorker.controller) {
-                    window.appLog("Engine sedang dipersiapkan. Mohon tunggu...");
-                    // Tunggu sebentar lalu reload jika controller masih null
-                    setTimeout(() => {
-                        if (!navigator.serviceWorker.controller) location.reload();
-                    }, 1000);
+                // Pastikan SW mengklaim kontrol klien
+                if (reg.active && !navigator.serviceWorker.controller) {
+                    window.appLog("Sinkronisasi Engine...");
+                    location.reload();
                     return;
                 }
 
-                window.appLog("Engine Terhubung. Memuat Modul UI...");
-                launch();
+                // Tunggu sampai controller benar-benar siap
+                if (navigator.serviceWorker.controller) {
+                    window.appLog("Engine Terhubung.");
+                    launch();
+                } else {
+                    // Jika baru pertama kali instal
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'activated') location.reload();
+                        });
+                    });
+                    
+                    // Fallback jika controller null tapi SW aktif
+                    setTimeout(() => {
+                        if (!navigator.serviceWorker.controller) {
+                            window.appLog("Menunggu koordinasi Engine...");
+                            location.reload();
+                        }
+                    }, 1500);
+                }
 
             } catch (err) {
-                window.appLog("Kegagalan Engine: " + err.message, true);
+                window.appLog("Gagal Memulai: " + err.message, true);
                 document.getElementById('retry-btn').style.display = 'inline-block';
                 document.getElementById('reset-btn').style.display = 'inline-block';
             }
@@ -152,8 +152,8 @@
             const script = document.createElement('script');
             script.type = 'module';
             script.src = BASE + 'index.tsx?v=' + Date.now();
-            script.onerror = () => {
-                window.appLog("Gagal memuat modul UI. Harap tekan tombol PERBAIKI SISTEM.", true);
+            script.onerror = (e) => {
+                window.appLog("Gagal memuat modul UI. Gunakan tombol 'PERBAIKI SISTEM'.", true);
                 document.getElementById('retry-btn').style.display = 'inline-block';
                 document.getElementById('reset-btn').style.display = 'inline-block';
             };
