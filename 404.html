@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>E-Kartu Kendali - Mengalihkan...</title>
+    <script type="text/javascript">
+        // Jika user me-refresh halaman di rute tertentu, 
+        // arahkan kembali ke index.html dan biarkan HashRouter menangani sisanya.
+        var location = window.location;
+        location.replace(location.origin + location.pathname.split('/').slice(0, -1).join('/') + '/index.html');
+    </script>
+</head>
+<body>
+    Mengarahkan kembali ke aplikasi...
+</body>
+</html>

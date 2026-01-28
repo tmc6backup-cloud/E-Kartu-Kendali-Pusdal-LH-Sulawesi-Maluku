@@ -7,117 +7,100 @@
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Kredensial Environment
+        window.process = {
+            env: {
+                API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
+                SUPABASE_URL: "https://syptvhtbxflhjgdepbqs.supabase.co",
+                SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
+            }
+        };
+    </script>
     <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            letter-spacing: -0.01em;
-        }
-        
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f8fafc;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-
-        @media print {
-            /* 1. Aturan Dasar Halaman A4 */
-            @page { 
-                size: A4 portrait;
-                margin: 0 !important; 
-            }
-
-            /* 2. Hilangkan Elemen Web Non-Cetak */
-            header, aside, nav, footer, .no-print, [role="navigation"], button { 
-                display: none !important; 
-                height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
-            /* 3. Reset Seluruh Kontainer agar Menempel ke Atas */
-            html, body, #root, .min-h-screen, main {
-                display: block !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                height: auto !important;
-                background: white !important;
-                overflow: visible !important;
-            }
-
-            /* 4. Paksa Kontainer Utama Naik ke Baris Pertama */
-            .print-only { 
-                display: block !important; 
-                visibility: visible !important;
-                margin: 0 !important;
-                padding: 0.8cm 1.2cm 0.8cm 1.2cm !important; 
-                width: 100% !important;
-            }
-
-            /* Menghilangkan sisa margin dari Tailwind */
-            .max-w-\[1400px\], .mx-auto, .space-y-8 {
-                max-width: 100% !important;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
-                padding-top: 0 !important;
-            }
-
-            /* 5. Tabel dan Tipografi yang Lebih Kecil & Rapi */
-            table { 
-                border-collapse: collapse !important; 
-                width: 100% !important;
-                margin-top: 4pt !important;
-            }
-
-            th, td { 
-                border: 0.5pt solid black !important;
-                padding: 3pt 5pt !important; 
-                font-size: 7.5pt !important; /* Diperkecil dari 8.5pt */
-                color: black !important;
-                line-height: 1.2 !important;
-            }
-            
-            tr { page-break-inside: avoid; }
-
-            /* Penyesuaian teks umum cetak */
-            .print-text-sm { font-size: 7pt !important; }
-            .print-text-base { font-size: 8pt !important; }
-            .print-text-lg { font-size: 10pt !important; }
-        }
-        
-        .print-only { display: none; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .page-transition {
-            animation: fadeIn 0.4s ease-out;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0"
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1"
   }
 }
 </script>
 </head>
-<body class="bg-[#F8FAFC] text-slate-900 overflow-x-hidden">
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+<body class="overflow-x-hidden">
+    <div id="root">
+        <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 15px;">
+            <div class="spinner"></div>
+            <p id="status-text" style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Inisialisasi Sistem...</p>
+        </div>
+    </div>
+
+    <script>
+        // Deteksi basis URL (penting jika di subfolder repo)
+        const base = window.location.pathname.endsWith('/') 
+            ? window.location.pathname 
+            : window.location.pathname.split('/').slice(0, -1).join('/') + '/';
+
+        async function initApp() {
+            const statusText = document.getElementById('status-text');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    statusText.innerText = "Menghubungkan Engine...";
+                    const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
+                    
+                    if (reg.active && navigator.serviceWorker.controller) {
+                        loadModule();
+                    } else {
+                        statusText.innerText = "Sinkronisasi Pertama (Mohon Tunggu)...";
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'activated') {
+                                    window.location.reload();
+                                }
+                            };
+                        };
+                        // Jika sudah ada controller tapi belum aktif
+                        if (reg.active) {
+                             setTimeout(loadModule, 1000);
+                        }
+                    }
+                } catch (err) {
+                    console.error('SW Error:', err);
+                    loadModule();
+                }
+            } else {
+                loadModule();
+            }
+        }
+
+        function loadModule() {
+            const statusText = document.getElementById('status-text');
+            statusText.innerText = "Memuat Modul...";
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = base + 'index.tsx'; 
+            script.onerror = () => {
+                statusText.innerText = "Error: Pastikan browser mendukung Service Worker.";
+                statusText.style.color = "#ef4444";
+            };
+            document.body.appendChild(script);
+        }
+
+        initApp();
+    </script>
 </body>
 </html>
