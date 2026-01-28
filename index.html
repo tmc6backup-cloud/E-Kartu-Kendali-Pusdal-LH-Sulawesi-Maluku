@@ -15,12 +15,47 @@
                 SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
             }
         };
+
+        // Logger untuk membantu debugging di layar
+        window.appLog = function(msg, isError = false) {
+            console.log(msg);
+            const detail = document.getElementById('error-detail');
+            if (detail) {
+                const line = document.createElement('div');
+                line.style.color = isError ? '#ef4444' : '#64748b';
+                line.style.marginBottom = '4px';
+                line.innerText = "> " + msg;
+                detail.appendChild(line);
+            }
+        };
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            window.appLog("Runtime Error: " + message, true);
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            window.appLog("Promise Rejected: " + event.reason, true);
+        });
     </script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        #error-detail { 
+            max-height: 200px; 
+            overflow-y: auto; 
+            background: #f1f5f9; 
+            padding: 12px; 
+            border-radius: 12px; 
+            font-family: monospace; 
+            font-size: 9px; 
+            text-align: left;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+        }
     </style>
 <script type="importmap">
 {
@@ -41,68 +76,63 @@
 </head>
 <body class="overflow-x-hidden">
     <div id="root">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; text-align: center; width: 100%;">
             <div class="spinner"></div>
-            <div id="status-container">
-                <p id="status-text" style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 8px;">Menghubungkan Engine...</p>
-                <p id="error-detail" style="font-size: 10px; color: #ef4444; max-width: 400px; font-weight: 500; line-height: 1.5;"></p>
+            <div id="status-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 8px;">Inisialisasi Sistem...</p>
+                <div id="error-detail"></div>
+                <button id="retry-btn" onclick="window.location.reload()" style="display:none; margin-top:15px; background:#1e293b; color:white; padding:8px 20px; border-radius:10px; font-size:10px; font-weight:bold; cursor:pointer;">MUAT ULANG PAKSA</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Logika deteksi base path yang lebih sederhana dan kuat
         const getBasePath = () => {
             const path = window.location.pathname;
-            // Mengambil folder dari URL saat ini
             const base = path.substring(0, path.lastIndexOf('/') + 1);
             return base || '/';
         };
 
         const base = getBasePath();
-        console.log('Detected Base Path:', base);
 
         async function initApp() {
-            const statusText = document.getElementById('status-text');
-            const errorDetail = document.getElementById('error-detail');
+            window.appLog("Mendeteksi Base Path: " + base);
             
             if (!('serviceWorker' in navigator)) {
-                statusText.innerText = "Browser Tidak Mendukung";
-                errorDetail.innerText = "Gunakan Chrome, Edge, atau Safari versi terbaru.";
+                window.appLog("Browser tidak mendukung Service Worker!", true);
                 return;
             }
 
             try {
-                // Memastikan sw.js dipanggil dari lokasi yang benar
-                const swUrl = base + 'sw.js';
-                console.log('Registering SW at:', swUrl);
+                const swUrl = base + 'sw.js?v=' + Date.now();
+                window.appLog("Mendaftarkan Engine: " + swUrl);
                 
                 const reg = await navigator.serviceWorker.register(swUrl, { scope: base });
-                console.log('SW Registered scope:', reg.scope);
                 
                 if (navigator.serviceWorker.controller) {
+                    window.appLog("Engine Aktif. Memuat Modul UI...");
                     loadModule();
                 } else {
-                    statusText.innerText = "Engine Berhasil Dipasang...";
-                    // Tunggu kontroler berubah (saat SW mengambil kendali pertama kali)
+                    window.appLog("Engine dipasang pertama kali. Menunggu aktivasi...");
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        window.appLog("Engine siap. Menyegarkan halaman...");
                         window.location.reload();
                     });
 
-                    // Paksa aktivasi jika sudah terpasang
                     if (reg.waiting) {
                         reg.waiting.postMessage('skipWaiting');
                     } else if (reg.installing) {
                         reg.installing.addEventListener('statechange', (e) => {
-                            if (e.target.state === 'activated') window.location.reload();
+                            if (e.target.state === 'activated') {
+                                window.appLog("Engine aktif. Menyegarkan...");
+                                window.location.reload();
+                            }
                         });
                     }
                 }
             } catch (err) {
-                console.error('CRITICAL SW ERROR:', err);
-                statusText.innerText = "Gagal Memuat Engine";
-                errorDetail.innerHTML = "Penyebab: " + err.message + "<br><br><button onclick='window.location.reload()' style='background:#f1f5f9; padding:8px 16px; border-radius:8px; color:#1e293b; font-weight:bold; margin-top:10px;'>Coba Lagi</button>";
-                statusText.style.color = "#ef4444";
+                window.appLog("Gagal Registrasi Engine: " + err.message, true);
+                document.getElementById('retry-btn').style.display = 'block';
             }
         }
 
@@ -112,13 +142,14 @@
             
             const script = document.createElement('script');
             script.type = 'module';
-            // Gunakan jalur absolut untuk index.tsx agar tidak 404
             script.src = base + 'index.tsx?v=' + Date.now(); 
+            
+            script.onload = () => window.appLog("Skrip index.tsx berhasil dimuat.");
             script.onerror = (e) => {
-                console.error('Module Load Error:', e);
-                statusText.innerText = "Gagal Memuat Komponen UI";
-                document.getElementById('error-detail').innerText = "Coba tekan Ctrl+F5 untuk membersihkan cache.";
+                window.appLog("Gagal memuat file index.tsx. Cek koneksi atau struktur folder.", true);
+                document.getElementById('retry-btn').style.display = 'block';
             };
+            
             document.body.appendChild(script);
         }
 

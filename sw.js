@@ -1,8 +1,9 @@
 
-// Service Worker Engine Transpiler
-// Menggunakan cdnjs yang biasanya lebih stabil untuk Service Workers
+// Engine Transpiler untuk Browser
+const BABEL_URL = 'https://unpkg.com/@babel/standalone/babel.min.js';
+
 try {
-  importScripts('https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.12/babel.min.js');
+  importScripts(BABEL_URL);
 } catch (e) {
   console.error('[SW] Gagal memuat Babel Standalone:', e);
 }
@@ -24,33 +25,22 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
+  // Hanya proses file dari origin yang sama
   if (url.origin === self.location.origin) {
     const path = url.pathname;
     const isTsx = path.endsWith('.tsx') || path.endsWith('.ts');
-    const noExtension = !path.split('/').pop().includes('.');
-
-    if (isTsx || noExtension) {
+    
+    if (isTsx) {
       event.respondWith(
         (async () => {
           try {
-            let fetchUrl = url.toString();
-            if (noExtension) {
-              fetchUrl += '.tsx';
-            }
-
-            const response = await fetch(fetchUrl);
-            if (!response.ok) {
-              if (noExtension) {
-                const tsRes = await fetch(url.toString() + '.ts');
-                if (tsRes.ok) return transform(await tsRes.text(), url.pathname + '.ts');
-              }
-              return response;
-            }
+            const response = await fetch(event.request);
+            if (!response.ok) return response;
 
             const text = await response.text();
-            return transform(text, fetchUrl);
+            return transform(text, url.toString());
           } catch (err) {
-            console.error('[SW] Fetch/Transform Error:', err);
+            console.error('[SW] Fetch Error:', err);
             return fetch(event.request);
           }
         })()
@@ -60,9 +50,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 function transform(code, filename) {
-  // Pastikan Babel sudah terdefinisi sebelum digunakan
   if (typeof Babel === 'undefined') {
-    console.error('[SW] Babel belum siap. Mengirimkan kode mentah.');
     return new Response(code, {
       headers: { 'Content-Type': 'application/javascript' }
     });
@@ -71,9 +59,9 @@ function transform(code, filename) {
   try {
     const transformed = Babel.transform(code, {
       presets: [
-        ['env', { modules: false }],
-        ['react', { runtime: 'classic' }],
-        'typescript'
+        'react',
+        'typescript',
+        ['env', { modules: false }]
       ],
       filename: filename,
       sourceMaps: 'inline'
@@ -86,9 +74,10 @@ function transform(code, filename) {
       }
     });
   } catch (err) {
-    console.error('[SW] Transpile Error at ' + filename + ':', err);
-    // Kembalikan error agar mudah di-debug di console browser
-    return new Response(`console.error("Transpile Error: ${err.message}");`, {
+    console.error('[SW] Transform Error:', err);
+    // Kembalikan skrip yang mencetak error ke console browser agar terlihat di Console
+    const errorMsg = `console.error("Gagal Kompilasi file ${filename}: ${err.message.replace(/"/g, "'")}");`;
+    return new Response(errorMsg, {
       headers: { 'Content-Type': 'application/javascript' }
     });
   }
