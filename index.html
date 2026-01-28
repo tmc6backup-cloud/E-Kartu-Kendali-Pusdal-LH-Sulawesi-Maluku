@@ -66,7 +66,7 @@
             <div class="spinner"></div>
             <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
             <div id="error-detail"></div>
-            <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">MUAT ULANG</button>
+            <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">MUAT ULANG SISTEM</button>
         </div>
     </div>
 
@@ -83,7 +83,7 @@
         const BASE = getBase();
 
         async function start() {
-            window.appLog("Inisialisasi di: " + BASE);
+            window.appLog("Lokasi: " + BASE);
             
             if (!navigator.serviceWorker) {
                 window.appLog("Browser tidak mendukung Service Worker.", true);
@@ -91,46 +91,46 @@
             }
 
             try {
-                // Berikan cache busting pada sw.js agar perubahan selalu terbaca
-                const reg = await navigator.serviceWorker.register(BASE + 'sw.js?v=' + Date.now(), { scope: BASE });
+                // Gunakan cache busting untuk sw.js
+                const reg = await navigator.serviceWorker.register(BASE + 'sw.js?t=' + Date.now(), { scope: BASE });
                 
-                // Menangani aktivasi Service Worker
+                // Pantau perubahan status SW
                 if (reg.installing || reg.waiting) {
                     const sw = reg.installing || reg.waiting;
                     sw.onstatechange = () => {
                         if (sw.state === 'activated') {
-                            window.appLog("Engine Aktif. Melakukan sinkronisasi...");
+                            window.appLog("Engine siap. Menghubungkan...");
                             location.reload();
                         }
                     };
                 }
 
-                // Memastikan Service Worker mengendalikan halaman
+                // Jika sudah aktif tapi belum mengendalikan halaman
                 if (reg.active && !navigator.serviceWorker.controller) {
-                    window.appLog("Menghubungkan Engine...");
+                    window.appLog("Mensinkronisasi Engine...");
                     location.reload();
                     return;
                 }
 
                 if (navigator.serviceWorker.controller) {
-                    window.appLog("Engine Terhubung. Memuat Modul UI...");
+                    window.appLog("Engine Terhubung. Memulai UI...");
                     launch();
                 }
 
             } catch (err) {
-                window.appLog("Kegagalan Engine: " + err.message, true);
+                window.appLog("Gagal Memasang Engine: " + err.message, true);
                 document.getElementById('retry-btn').style.display = 'block';
             }
         }
 
         function launch() {
-            document.getElementById('status-text').innerText = "Memuat Antarmuka...";
+            document.getElementById('status-text').innerText = "Memulai Antarmuka...";
             const script = document.createElement('script');
             script.type = 'module';
-            // Menghapus ekstensi .tsx di URL jika perlu, tapi sw.js kita menangani .tsx
+            // Pastikan URL file index.tsx benar dan lewati cache browser
             script.src = BASE + 'index.tsx?v=' + Date.now();
-            script.onerror = () => {
-                window.appLog("Gagal memuat modul UI (index.tsx). Pastikan file ada di root folder.", true);
+            script.onerror = (e) => {
+                window.appLog("Gagal memuat modul utama. Coba bersihkan cache browser.", true);
                 document.getElementById('retry-btn').style.display = 'block';
             };
             document.body.appendChild(script);

@@ -1,36 +1,60 @@
 
 /**
  * Engine Transpiler - PUSDAL LH SUMA
+ * Versi: 2.2.0 (Stable Multi-CDN)
  */
 
-const BABEL_URL = 'https://unpkg.com/@babel/standalone@7.23.12/babel.min.js';
+const BABEL_SOURCES = [
+  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.12/babel.min.js',
+  'https://unpkg.com/@babel/standalone@7.23.12/babel.min.js',
+  'https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.12/babel.min.js'
+];
 
-try {
-  importScripts(BABEL_URL);
-} catch (e) {
-  console.error("SW: Gagal memuat Babel");
+let babelLoaded = false;
+
+// Mencoba memuat Babel dari berbagai sumber CDN
+function loadBabel() {
+  for (const src of BABEL_SOURCES) {
+    if (babelLoaded) break;
+    try {
+      importScripts(src);
+      babelLoaded = true;
+      console.log('[Engine] Babel Berhasil Dimuat: ' + src);
+    } catch (e) {
+      console.warn('[Engine] Gagal memuat Babel dari: ' + src);
+    }
+  }
 }
 
-self.addEventListener('install', (e) => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+loadBabel();
+
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(self.clients.claim());
+});
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
   
-  // Tangani file .tsx, .ts, atau impor tanpa ekstensi yang merujuk ke file lokal
+  // Deteksi file .tsx, .ts, atau impor tanpa ekstensi
+  const fileName = url.pathname.split('/').pop();
   const isSource = url.pathname.endsWith('.tsx') || 
                    url.pathname.endsWith('.ts') || 
-                   (!url.pathname.includes('.') && !url.pathname.startsWith('/@') && !url.pathname.includes('node_modules'));
+                   (fileName && !fileName.includes('.') && !url.pathname.startsWith('/@'));
 
   if (isLocal && isSource) {
     event.respondWith(
       (async () => {
         try {
-          // Coba ambil file dengan ekstensi .tsx jika tidak ada titik di path
           let fetchUrl = event.request.url;
-          if (!url.pathname.includes('.')) {
-            fetchUrl += '.tsx';
+          // Tambahkan ekstensi .tsx jika tidak ada titik di nama file
+          if (!fileName.includes('.')) {
+            const search = url.search || '';
+            fetchUrl = url.origin + url.pathname + '.tsx' + search;
           }
 
           const response = await fetch(fetchUrl);
@@ -38,13 +62,16 @@ self.addEventListener('fetch', (event) => {
           
           const text = await response.text();
           
-          // Abaikan jika ternyata isinya HTML (biasanya redirect 404)
+          // Pastikan bukan file HTML (seperti halaman 404)
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
              return response;
           }
 
-          if (typeof Babel === 'undefined') {
-            return new Response(text, { headers: { 'Content-Type': 'application/javascript' } });
+          if (!babelLoaded || typeof Babel === 'undefined') {
+            console.error('[Engine] Babel tidak tersedia. Pastikan koneksi internet stabil.');
+            return new Response(`console.error("Engine Error: Babel gagal dimuat. Harap segarkan halaman.");`, {
+              headers: { 'Content-Type': 'application/javascript' }
+            });
           }
 
           const result = Babel.transform(text, {
@@ -58,11 +85,14 @@ self.addEventListener('fetch', (event) => {
           }).code;
 
           return new Response(result, {
-            headers: { 'Content-Type': 'application/javascript' }
+            headers: { 
+              'Content-Type': 'application/javascript',
+              'Cache-Control': 'no-cache'
+            }
           });
         } catch (err) {
-          console.error("Transpiler Error:", err);
-          return new Response(`console.error("Engine Transpiler Error: ${err.message}");`, {
+          console.error("[Engine] Kompilasi Gagal:", err);
+          return new Response(`console.error("Transpiler Error: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });
         }
