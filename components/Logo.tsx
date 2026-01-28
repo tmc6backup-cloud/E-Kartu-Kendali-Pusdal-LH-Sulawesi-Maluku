@@ -31,11 +31,11 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
     if (retryCount === 0) {
       // Jika logo.png gagal, coba Logo.png (kapital)
       setRetryCount(1);
-      setImgSrc(getLogoUrl('Logo.png'));
+      setImgSrc(getLogoUrl('logo.png'));
     } else if (retryCount === 1) {
       // Jika masih gagal, coba logo.PNG
       setRetryCount(2);
-      setImgSrc(getLogoUrl('logo.PNG'));
+      setImgSrc(getLogoUrl('logo.png'));
     } else {
       // Jika semua gagal, gunakan fallback online
       setHasError(true);
