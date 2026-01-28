@@ -8,6 +8,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
+        const getBase = () => {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(s => s.length > 0);
+            if (window.location.hostname.includes('github.io') && segments.length > 0) {
+                return '/' + segments[0] + '/';
+            }
+            return '/';
+        };
+
+        const BASE = getBase();
+        window.APP_BASE = BASE; // Ekspos ke React
+
         window.process = {
             env: {
                 API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
@@ -89,19 +101,8 @@
     </div>
 
     <script>
-        const getBase = () => {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(s => s.length > 0);
-            if (window.location.hostname.includes('github.io') && segments.length > 0) {
-                return '/' + segments[0] + '/';
-            }
-            return '/';
-        };
-
-        const BASE = getBase();
-
         async function start() {
-            window.appLog("Inisialisasi di: " + BASE);
+            window.appLog("Inisialisasi di: " + window.APP_BASE);
             
             if (!navigator.serviceWorker) {
                 window.appLog("Browser tidak mendukung Service Worker.", true);
@@ -109,21 +110,18 @@
             }
 
             try {
-                const reg = await navigator.serviceWorker.register(BASE + 'sw.js?v=' + Date.now(), { scope: BASE });
+                const reg = await navigator.serviceWorker.register(window.APP_BASE + 'sw.js?v=' + Date.now(), { scope: window.APP_BASE });
                 
-                // Pastikan SW mengklaim kontrol klien
                 if (reg.active && !navigator.serviceWorker.controller) {
                     window.appLog("Sinkronisasi Engine...");
                     location.reload();
                     return;
                 }
 
-                // Tunggu sampai controller benar-benar siap
                 if (navigator.serviceWorker.controller) {
                     window.appLog("Engine Terhubung.");
                     launch();
                 } else {
-                    // Jika baru pertama kali instal
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
@@ -131,7 +129,6 @@
                         });
                     });
                     
-                    // Fallback jika controller null tapi SW aktif
                     setTimeout(() => {
                         if (!navigator.serviceWorker.controller) {
                             window.appLog("Menunggu koordinasi Engine...");
@@ -151,7 +148,7 @@
             document.getElementById('status-text').innerText = "Memulai Antarmuka...";
             const script = document.createElement('script');
             script.type = 'module';
-            script.src = BASE + 'index.tsx?v=' + Date.now();
+            script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             script.onerror = (e) => {
                 window.appLog("Gagal memuat modul UI. Gunakan tombol 'PERBAIKI SISTEM'.", true);
                 document.getElementById('retry-btn').style.display = 'inline-block';

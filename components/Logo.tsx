@@ -1,8 +1,14 @@
 
 import React from 'react';
 
-// Menggunakan path absolut "/" agar terbaca di semua route (termasuk /requests/:id)
-export const LOGO_URL = "/logo.png";
+// Ambil base path yang dideteksi di index.html
+const getLogoUrl = () => {
+  const base = (window as any).APP_BASE || '/';
+  // Hapus double slash jika ada
+  return (base + 'logo.png').replace(/\/+/g, '/');
+};
+
+export const LOGO_URL = getLogoUrl();
 
 interface LogoProps {
   className?: string;

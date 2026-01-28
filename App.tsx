@@ -54,7 +54,9 @@ const App: React.FC = () => {
         const savedUser = localStorage.getItem('e_anggaran_user');
         if (savedUser) {
             try {
-                setUser(JSON.parse(savedUser));
+                const parsed = JSON.parse(savedUser);
+                console.log("[Auth] Auto-login detected for:", parsed.full_name);
+                setUser(parsed);
                 setIsLoggedIn(true);
             } catch (e) {
                 localStorage.removeItem('e_anggaran_user');
@@ -63,6 +65,7 @@ const App: React.FC = () => {
     }, []);
 
     const login = async (username: string, password: string) => {
+        console.log("[Auth] Memulai proses verifikasi...");
         const u = username.trim();
         const p = password.trim();
         if (!u || !p) throw new Error("Nama dan Password wajib diisi.");
@@ -72,18 +75,34 @@ const App: React.FC = () => {
         
         try {
             const existingProfile = await dbService.getProfile(userId);
-            if (!existingProfile) throw new Error("Akun tidak ditemukan. Hubungi Admin.");
-            if (existingProfile.password !== p) throw new Error("Password salah.");
+            if (!existingProfile) {
+                console.warn("[Auth] User ID tidak ditemukan:", userId);
+                throw new Error("Akun tidak ditemukan. Hubungi Admin.");
+            }
+            if (existingProfile.password !== p) {
+                console.warn("[Auth] Password salah untuk:", userId);
+                throw new Error("Password salah.");
+            }
 
             const profileToLogin = { ...existingProfile };
             delete profileToLogin.password;
+            
+            console.log("[Auth] Login Berhasil. Menyimpan session...");
             localStorage.setItem('e_anggaran_user', JSON.stringify(profileToLogin));
+            
+            // Set state secara berurutan
             setUser(profileToLogin);
             setIsLoggedIn(true);
-        } catch (err: any) { throw err; }
+            
+            console.log("[Auth] State diperbarui. Mengalihkan ke Dashboard...");
+        } catch (err: any) { 
+            console.error("[Auth Error]", err.message);
+            throw err; 
+        }
     };
 
     const logout = () => {
+        console.log("[Auth] Logout initiated.");
         setUser(null);
         setIsLoggedIn(false);
         localStorage.removeItem('e_anggaran_user');
@@ -93,7 +112,7 @@ const App: React.FC = () => {
         <AuthContext.Provider value={{ user, isLoggedIn, login, logout }}>
             <HashRouter>
                 <Routes>
-                    <Route path="/login" element={!isLoggedIn ? <LoginPage /> : <Navigate to="/" />} />
+                    <Route path="/login" element={!isLoggedIn ? <LoginPage /> : <Navigate to="/" replace />} />
                     <Route path="/*" element={
                         isLoggedIn ? (
                             <div className="flex min-h-screen bg-slate-50">
@@ -107,14 +126,14 @@ const App: React.FC = () => {
                                             <Route path="/requests/new" element={<NewRequest />} />
                                             <Route path="/requests/edit/:id" element={<NewRequest />} />
                                             <Route path="/requests/:id" element={<RequestDetail />} />
-                                            <Route path="/users" element={user?.role === 'admin' ? <UserManagement /> : <Navigate to="/" />} />
-                                            <Route path="/ceilings" element={user?.role === 'admin' ? <AdminPagu /> : <Navigate to="/" />} />
-                                            <Route path="*" element={<Navigate to="/" />} />
+                                            <Route path="/users" element={user?.role === 'admin' ? <UserManagement /> : <Navigate to="/" replace />} />
+                                            <Route path="/ceilings" element={user?.role === 'admin' ? <AdminPagu /> : <Navigate to="/" replace />} />
+                                            <Route path="*" element={<Navigate to="/" replace />} />
                                         </Routes>
                                     </main>
                                 </div>
                             </div>
-                        ) : <Navigate to="/login" />
+                        ) : <Navigate to="/login" replace />
                     } />
                 </Routes>
             </HashRouter>
