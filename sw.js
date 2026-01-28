@@ -17,48 +17,56 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
-  const isSource = url.pathname.endsWith('.tsx') || url.pathname.endsWith('.ts');
+  
+  // Tangani file .tsx, .ts, atau impor tanpa ekstensi yang merujuk ke file lokal
+  const isSource = url.pathname.endsWith('.tsx') || 
+                   url.pathname.endsWith('.ts') || 
+                   (!url.pathname.includes('.') && !url.pathname.startsWith('/@') && !url.pathname.includes('node_modules'));
 
   if (isLocal && isSource) {
     event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
+      (async () => {
+        try {
+          // Coba ambil file dengan ekstensi .tsx jika tidak ada titik di path
+          let fetchUrl = event.request.url;
+          if (!url.pathname.includes('.')) {
+            fetchUrl += '.tsx';
+          }
+
+          const response = await fetch(fetchUrl);
           if (!response.ok) return response;
           
           const text = await response.text();
-          if (text.startsWith('<!DOCTYPE')) {
-             throw new Error("File sumber tidak ditemukan (404)");
+          
+          // Abaikan jika ternyata isinya HTML (biasanya redirect 404)
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+             return response;
           }
 
           if (typeof Babel === 'undefined') {
             return new Response(text, { headers: { 'Content-Type': 'application/javascript' } });
           }
 
-          try {
-            const result = Babel.transform(text, {
-              presets: [
-                ['react', { runtime: 'automatic' }],
-                ['typescript', { isTSX: true, allExtensions: true }],
-                ['env', { modules: false }]
-              ],
-              filename: url.pathname,
-              sourceMaps: 'inline'
-            }).code;
+          const result = Babel.transform(text, {
+            presets: [
+              ['react', { runtime: 'automatic' }],
+              ['typescript', { isTSX: true, allExtensions: true }],
+              ['env', { modules: false }]
+            ],
+            filename: url.pathname,
+            sourceMaps: 'inline'
+          }).code;
 
-            return new Response(result, {
-              headers: { 'Content-Type': 'application/javascript' }
-            });
-          } catch (err) {
-            return new Response(`console.error("Transpiler Error: ${err.message}");`, {
-              headers: { 'Content-Type': 'application/javascript' }
-            });
-          }
-        })
-        .catch(err => {
-          return new Response(`console.error("Fetch Error: ${err.message}");`, {
+          return new Response(result, {
             headers: { 'Content-Type': 'application/javascript' }
           });
-        })
+        } catch (err) {
+          console.error("Transpiler Error:", err);
+          return new Response(`console.error("Engine Transpiler Error: ${err.message}");`, {
+            headers: { 'Content-Type': 'application/javascript' }
+          });
+        }
+      })()
     );
   }
 });
