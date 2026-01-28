@@ -11,6 +11,7 @@
         const getBase = () => {
             const path = window.location.pathname;
             const segments = path.split('/').filter(s => s.length > 0);
+            // Detect GitHub Pages subdirectory
             if (window.location.hostname.includes('github.io') && segments.length > 0) {
                 return '/' + segments[0] + '/';
             }
@@ -19,6 +20,7 @@
 
         const BASE = getBase();
         window.APP_BASE = BASE;
+        console.log("Inisialisasi di:", BASE);
 
         window.process = {
             env: {
@@ -77,29 +79,47 @@
 
     <script>
         async function start() {
-            if (!navigator.serviceWorker) return;
+            if (!navigator.serviceWorker) {
+                alert("Browser Anda tidak mendukung Service Worker. Gunakan Chrome atau Edge versi terbaru.");
+                return;
+            }
             try {
-                const reg = await navigator.serviceWorker.register(window.APP_BASE + 'sw.js?v=' + Date.now(), { scope: window.APP_BASE });
+                // Register Service Worker with proper scope for subdirectories
+                const swPath = window.APP_BASE + 'sw.js';
+                const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
                 
+                console.log("Service Worker terdaftar di scope:", reg.scope);
+
+                // Wait until the service worker is controlling the page
                 if (navigator.serviceWorker.controller) {
                     launch();
                 } else {
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'activated') location.reload();
-                        });
+                    // This happens on first load. We need to wait for the SW to take control.
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log("Service Worker mengambil alih kontrol.");
+                        location.reload();
                     });
-                    setTimeout(() => { if (!navigator.serviceWorker.controller) location.reload(); }, 2000);
+                    
+                    // Fallback for first registration
+                    setTimeout(() => { 
+                        if (!navigator.serviceWorker.controller) {
+                            console.log("Menyegarkan halaman untuk aktivasi engine...");
+                            location.reload(); 
+                        }
+                    }, 1500);
                 }
             } catch (err) {
+                console.error("Gagal mendaftarkan Service Worker:", err);
+                document.getElementById('status-text').innerText = "Gagal memuat engine: " + err.message;
                 document.getElementById('reset-btn').style.display = 'block';
             }
         }
 
         function launch() {
+            console.log("Memuat entry point index.tsx...");
             const script = document.createElement('script');
             script.type = 'module';
+            // Use query param for cache busting but SW is now fixed to handle it
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
         }

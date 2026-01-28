@@ -1,7 +1,7 @@
 
 /**
  * Optimized Engine Transpiler with Caching - PUSDAL LH SUMA
- * Versi: 2.4.0 (Performance Boost)
+ * Versi: 2.5.0 (GitHub Pages Compatibility Fix)
  */
 
 const CACHE_NAME = 'engine-cache-v1';
@@ -19,9 +19,11 @@ function loadBabel() {
       importScripts(src);
       if (typeof Babel !== 'undefined') {
         babelLoaded = true;
-        console.log('[Engine] Babel Optimized.');
+        console.log('[Engine] Babel Loaded successfully.');
       }
-    } catch (e) {}
+    } catch (e) {
+        console.warn(`[Engine] Failed to load Babel from ${src}`, e);
+    }
   }
 }
 
@@ -41,18 +43,19 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
-  const path = url.pathname;
   
-  // Deteksi file sumber yang butuh transpilasi
-  const isSource = path.endsWith('.tsx') || path.endsWith('.ts');
+  // Strip query parameters for extension checking
+  const cleanPath = url.pathname;
+  const isSource = cleanPath.endsWith('.tsx') || cleanPath.endsWith('.ts');
 
   if (isLocal && isSource) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_NAME);
+        // Use full URL as cache key to respect versioning if needed, 
+        // but here we might want to ignore search for the cache match to be more efficient
         const cachedResponse = await cache.match(event.request);
 
-        // Jika ada di cache, kirim langsung (Super Cepat)
         if (cachedResponse) {
           return cachedResponse;
         }
@@ -61,11 +64,14 @@ self.addEventListener('fetch', (event) => {
           if (!babelLoaded) loadBabel();
           
           const response = await fetch(event.request);
-          if (!response.ok) return response;
+          if (!response.ok) {
+              console.error(`[Engine] Server returned ${response.status} for ${cleanPath}`);
+              return response;
+          }
           const content = await response.text();
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Transpiler not ready");
+            throw new Error("Transpiler (Babel) not ready. Check internet connection.");
           }
 
           const result = Babel.transform(content, {
@@ -74,7 +80,7 @@ self.addEventListener('fetch', (event) => {
               ['typescript', { isTSX: true, allExtensions: true }],
               ['env', { modules: false }]
             ],
-            filename: path,
+            filename: cleanPath,
             sourceMaps: 'inline'
           }).code;
 
@@ -82,12 +88,13 @@ self.addEventListener('fetch', (event) => {
             headers: { 'Content-Type': 'application/javascript' }
           });
 
-          // Simpan hasil ke cache untuk penggunaan berikutnya
+          // Save to cache
           cache.put(event.request, newResponse.clone());
           
           return newResponse;
         } catch (err) {
-          return new Response(`console.error("Engine Fail: ${err.message}");`, {
+          console.error(`[Engine] Transpilation failed for ${cleanPath}:`, err);
+          return new Response(`console.error("Engine Fail [${cleanPath}]: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });
         }

@@ -1,10 +1,10 @@
 
 import React from 'react';
 
-// Ambil base path yang dideteksi di index.html
+// Get base path detected in index.html
 const getLogoUrl = () => {
   const base = (window as any).APP_BASE || '/';
-  // Hapus double slash jika ada
+  // Standard logo path
   return (base + 'logo.png').replace(/\/+/g, '/');
 };
 
@@ -21,8 +21,11 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
       alt="Logo Pusdal LH SUMA" 
       className={className}
       onError={(e) => {
-        // Fallback jika file logo.png di root tidak terbaca atau belum diupload
-        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
+        // Fallback to official logo if local logo.png is missing or unreadable
+        const target = e.currentTarget;
+        if (target.src !== "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png") {
+            target.src = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
+        }
       }}
     />
   );
