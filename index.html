@@ -50,6 +50,19 @@
         #root { height: 100%; width: 100%; }
         .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; }
         .btn { background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; border: none; margin-top: 20px; }
+        
+        /* Print Utilities */
+        @media screen {
+            .print-only { display: none !important; }
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { overflow: visible !important; height: auto !important; width: auto !important; background: white !important; }
+            #root { height: auto !important; }
+            main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+            .page-transition { animation: none !important; transform: none !important; }
+        }
     </style>
 <script type="importmap">
 {

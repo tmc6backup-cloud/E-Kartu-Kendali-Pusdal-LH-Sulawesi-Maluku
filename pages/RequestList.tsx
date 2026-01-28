@@ -16,6 +16,7 @@ import {
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
 import { BudgetRequest } from '../types.ts';
+import Logo from '../components/Logo.tsx';
 
 const StatusBadge = ({ status }: { status: string }) => {
     const config = {
@@ -79,7 +80,19 @@ const RequestList: React.FC = () => {
     }, [requests, statusFilter, deptFilter, searchTerm, user]);
 
     return (
-        <div className="space-y-8 page-transition">
+        <div className="space-y-8 page-transition print:space-y-4">
+            {/* Header Cetak Laporan (Hanya muncul saat print) */}
+            <div className="print-only mb-6">
+                <div className="flex items-center gap-6 border-b-[3px] border-black pb-3">
+                    <Logo className="w-20 h-20 object-contain" />
+                    <div className="flex-1 text-center">
+                        <h2 className="text-[12pt] font-black uppercase leading-tight">Laporan Rekapitulasi Berkas Kendali Anggaran</h2>
+                        <h3 className="text-[10pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>
+                        <p className="text-[7pt] mt-1 italic">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">
@@ -89,7 +102,7 @@ const RequestList: React.FC = () => {
                         {user?.role === 'pengaju' ? 'Daftar pengajuan anggaran pribadi' : 'Manajemen Kartu Kendali Anggaran'}
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 no-print">
                     <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm transition-all">
                         <Printer size={18} /> Cetak Laporan
                     </button>
@@ -101,8 +114,8 @@ const RequestList: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden no-print">
-                <div className="p-8 border-b border-slate-100 flex items-center gap-6">
+            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-none">
+                <div className="p-8 border-b border-slate-100 flex items-center gap-6 no-print">
                     <div className="relative flex-1 group">
                         <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
                         <input type="text" placeholder="Cari kegiatan..." className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-[22px] text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all uppercase" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -110,74 +123,54 @@ const RequestList: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full text-left print:border-[1pt] print:border-black">
                         <thead>
-                            <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                <th className="px-8 py-6">Kegiatan & Bidang</th>
-                                {user?.role !== 'pengaju' && <th className="px-8 py-6">Pengusul</th>}
-                                <th className="px-8 py-6 text-right">Volume</th>
-                                <th className="px-8 py-6 text-center">Status</th>
-                                <th className="px-8 py-6 text-right">Aksi</th>
+                            <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-black">
+                                <th className="px-8 py-6 print:py-3 print:px-4">Kegiatan & Bidang</th>
+                                {user?.role !== 'pengaju' && <th className="px-8 py-6 print:py-3 print:px-4">Pengusul</th>}
+                                <th className="px-8 py-6 text-right print:py-3 print:px-4">Volume</th>
+                                <th className="px-8 py-6 text-center print:py-3 print:px-4">Status</th>
+                                <th className="px-8 py-6 text-right no-print">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 print:divide-black">
                             {loading ? (
                                 <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
                                 filteredRequests.map((req) => (
-                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-all group">
-                                        <td className="px-8 py-7">
+                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black">
+                                        <td className="px-8 py-7 print:py-3 print:px-4">
                                             <div className="space-y-1.5">
                                                 <div className="flex items-center gap-3">
-                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md">{req.title}</p>
+                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[9pt]">{req.title}</p>
                                                     {req.attachment_url && isValidator && (
-                                                        <a 
-                                                            href={req.attachment_url} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1 shadow-sm border border-blue-100"
-                                                            title="Buka Berkas Lampiran"
-                                                        >
+                                                        <span className="no-print p-1.5 bg-blue-50 text-blue-600 rounded-lg flex items-center gap-1 shadow-sm border border-blue-100">
                                                             <Paperclip size={12} />
                                                             <span className="text-[8px] font-black">FILE</span>
-                                                        </a>
+                                                        </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase">
-                                                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{req.category}</span>
+                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[7pt]">
+                                                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded print:bg-transparent print:border print:border-black">{req.category}</span>
                                                     <span>• {req.requester_department}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         {user?.role !== 'pengaju' && (
-                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase">
+                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[8pt] print:py-3 print:px-4">
                                                 <div className="flex items-center gap-2">
-                                                    <User size={12} className="text-slate-300" />
+                                                    <User size={12} className="text-slate-300 no-print" />
                                                     {req.requester_name}
                                                 </div>
                                             </td>
                                         )}
-                                        <td className="px-8 py-7 text-right font-black font-mono text-sm">Rp {req.amount.toLocaleString('id-ID')}</td>
-                                        <td className="px-8 py-7 text-center"><StatusBadge status={req.status} /></td>
-                                        <td className="px-8 py-7 text-right flex items-center justify-end gap-2">
-                                            {/* Admin atau Pemilik Draf bisa menghapus */}
+                                        <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[8pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
+                                        <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
+                                        <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
                                             {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (
                                                 <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
                                             )}
                                             
-                                            {req.attachment_url && isValidator && (
-                                                <a 
-                                                    href={req.attachment_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer" 
-                                                    className="p-3 text-blue-500 hover:bg-blue-50 rounded-xl transition-all flex items-center gap-2"
-                                                    title="Lihat Berkas Lampiran"
-                                                >
-                                                    <FileText size={18} />
-                                                    <span className="text-[9px] font-black uppercase">BERKAS</span>
-                                                </a>
-                                            )}
-
                                             {req.status === 'draft' ? (
                                                 <Link 
                                                     to={`/requests/edit/${req.id}`} 
