@@ -30,18 +30,9 @@ export const AuthContext = React.createContext<AuthContextType>({
 export const isValidatorRole = (role?: UserRole) => {
     if (!role) return false;
     const validatorRoles: UserRole[] = [
-        'kpa',
-        'validator_program', 
-        'validator_tu', 
-        'validator_ppk', 
-        'admin', 
-        'kepala_bidang', 
-        'bendahara',
-        'pic_verifikator',
-        'pic_tu',
-        'pic_wilayah_1',
-        'pic_wilayah_2',
-        'pic_wilayah_3'
+        'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin', 
+        'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu', 
+        'pic_wilayah_1', 'pic_wilayah_2', 'pic_wilayah_3'
     ];
     return validatorRoles.includes(role);
 };
@@ -49,64 +40,56 @@ export const isValidatorRole = (role?: UserRole) => {
 const App: React.FC = () => {
     const [user, setUser] = useState<Profile | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAuthResolving, setIsAuthResolving] = useState(true);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem('e_anggaran_user');
-        if (savedUser) {
-            try {
-                const parsed = JSON.parse(savedUser);
-                console.log("[Auth] Auto-login detected for:", parsed.full_name);
-                setUser(parsed);
-                setIsLoggedIn(true);
-            } catch (e) {
-                localStorage.removeItem('e_anggaran_user');
+        const checkSession = () => {
+            const savedUser = localStorage.getItem('e_anggaran_user');
+            if (savedUser) {
+                try {
+                    const parsed = JSON.parse(savedUser);
+                    setUser(parsed);
+                    setIsLoggedIn(true);
+                } catch (e) {
+                    localStorage.removeItem('e_anggaran_user');
+                }
             }
-        }
+            setIsAuthResolving(false);
+        };
+        checkSession();
     }, []);
 
     const login = async (username: string, password: string) => {
-        console.log("[Auth] Memulai proses verifikasi...");
         const u = username.trim();
         const p = password.trim();
-        if (!u || !p) throw new Error("Nama dan Password wajib diisi.");
         
         const cleanName = u.toLowerCase().replace(/\s+/g, '_');
         const userId = u.toLowerCase() === 'admin' ? 'user_admin' : `user_${cleanName}`;
         
         try {
-            const existingProfile = await dbService.getProfile(userId);
-            if (!existingProfile) {
-                console.warn("[Auth] User ID tidak ditemukan:", userId);
-                throw new Error("Akun tidak ditemukan. Hubungi Admin.");
-            }
-            if (existingProfile.password !== p) {
-                console.warn("[Auth] Password salah untuk:", userId);
-                throw new Error("Password salah.");
+            const profile = await dbService.getProfile(userId);
+            if (!profile || profile.password !== p) {
+                throw new Error("Kredensial tidak valid.");
             }
 
-            const profileToLogin = { ...existingProfile };
+            const profileToLogin = { ...profile };
             delete profileToLogin.password;
             
-            console.log("[Auth] Login Berhasil. Menyimpan session...");
             localStorage.setItem('e_anggaran_user', JSON.stringify(profileToLogin));
-            
-            // Set state secara berurutan
             setUser(profileToLogin);
             setIsLoggedIn(true);
-            
-            console.log("[Auth] State diperbarui. Mengalihkan ke Dashboard...");
         } catch (err: any) { 
-            console.error("[Auth Error]", err.message);
             throw err; 
         }
     };
 
     const logout = () => {
-        console.log("[Auth] Logout initiated.");
         setUser(null);
         setIsLoggedIn(false);
         localStorage.removeItem('e_anggaran_user');
     };
+
+    if (isAuthResolving) return null;
 
     return (
         <AuthContext.Provider value={{ user, isLoggedIn, login, logout }}>

@@ -1,13 +1,13 @@
 
 /**
- * Engine Transpiler - PUSDAL LH SUMA
- * Versi: 2.3.2 (GitHub Pages Production)
+ * Optimized Engine Transpiler with Caching - PUSDAL LH SUMA
+ * Versi: 2.4.0 (Performance Boost)
  */
 
+const CACHE_NAME = 'engine-cache-v1';
 const BABEL_SOURCES = [
   'https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js',
-  'https://unpkg.com/@babel/standalone@7.24.7/babel.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js'
 ];
 
 let babelLoaded = false;
@@ -19,11 +19,9 @@ function loadBabel() {
       importScripts(src);
       if (typeof Babel !== 'undefined') {
         babelLoaded = true;
-        console.log('[Engine] Babel Loaded via ' + src);
+        console.log('[Engine] Babel Optimized.');
       }
-    } catch (e) {
-      console.warn('[Engine] Failed to load Babel from: ' + src);
-    }
+    } catch (e) {}
   }
 }
 
@@ -34,62 +32,40 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k))))
+    .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
-  
   const path = url.pathname;
-  const fileName = path.split('/').pop() || '';
   
-  // Deteksi file source (TS/TSX) atau modul tanpa ekstensi
-  const isSource = path.endsWith('.tsx') || 
-                   path.endsWith('.ts') || 
-                   (fileName && !fileName.includes('.') && !path.includes('/@') && !path.includes('node_modules') && !path.includes('/api/'));
+  // Deteksi file sumber yang butuh transpilasi
+  const isSource = path.endsWith('.tsx') || path.endsWith('.ts');
 
   if (isLocal && isSource) {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const cachedResponse = await cache.match(event.request);
+
+        // Jika ada di cache, kirim langsung (Super Cepat)
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
         try {
           if (!babelLoaded) loadBabel();
-
-          let content = null;
-          let activePath = path;
-          let fetchUrl = event.request.url;
-
-          // Jika tanpa ekstensi, coba cari file fisiknya secara berurutan
-          if (!fileName.includes('.')) {
-            const extensions = ['.tsx', '.ts'];
-            for (const ext of extensions) {
-              try {
-                const tryUrl = url.origin + path + ext + url.search;
-                const testRes = await fetch(tryUrl);
-                // Pastikan response oke dan bukan halaman 404 HTML milik GitHub
-                if (testRes.ok && !testRes.headers.get('content-type')?.includes('text/html')) {
-                  fetchUrl = tryUrl;
-                  content = await testRes.text();
-                  activePath = path + ext;
-                  break;
-                }
-              } catch (e) {}
-            }
-          }
-
-          if (content === null) {
-            const response = await fetch(fetchUrl);
-            if (!response.ok) return response;
-            content = await response.text();
-          }
           
-          // Cegah Babel memproses halaman HTML (jika terjadi error redirect)
-          if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html')) {
-             return new Response(content, { headers: { 'Content-Type': 'text/html' } });
-          }
+          const response = await fetch(event.request);
+          if (!response.ok) return response;
+          const content = await response.text();
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Transpiler Engine not ready.");
+            throw new Error("Transpiler not ready");
           }
 
           const result = Babel.transform(content, {
@@ -98,18 +74,19 @@ self.addEventListener('fetch', (event) => {
               ['typescript', { isTSX: true, allExtensions: true }],
               ['env', { modules: false }]
             ],
-            filename: activePath,
+            filename: path,
             sourceMaps: 'inline'
           }).code;
 
-          return new Response(result, {
-            headers: { 
-              'Content-Type': 'application/javascript',
-              'Cache-Control': 'no-cache'
-            }
+          const newResponse = new Response(result, {
+            headers: { 'Content-Type': 'application/javascript' }
           });
+
+          // Simpan hasil ke cache untuk penggunaan berikutnya
+          cache.put(event.request, newResponse.clone());
+          
+          return newResponse;
         } catch (err) {
-          console.error("[Engine Error]", err.message);
           return new Response(`console.error("Engine Fail: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });

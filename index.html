@@ -18,7 +18,7 @@
         };
 
         const BASE = getBase();
-        window.APP_BASE = BASE; // Ekspos ke React
+        window.APP_BASE = BASE;
 
         window.process = {
             env: {
@@ -28,22 +28,7 @@
             }
         };
 
-        window.appLog = function(msg, isError = false) {
-            console.log(msg);
-            const detail = document.getElementById('error-detail');
-            if (detail) {
-                const line = document.createElement('div');
-                line.style.color = isError ? '#ef4444' : '#64748b';
-                line.style.marginBottom = '6px';
-                line.style.fontSize = '10px';
-                line.innerText = (isError ? "✖ " : "> ") + msg;
-                detail.appendChild(line);
-                detail.scrollTop = detail.scrollHeight;
-            }
-        };
-
         window.forceReset = async function() {
-            window.appLog("Memulai Pembersihan Total...");
             if ('serviceWorker' in navigator) {
                 const regs = await navigator.serviceWorker.getRegistrations();
                 for(let reg of regs) await reg.unregister();
@@ -52,8 +37,8 @@
                 const keys = await caches.keys();
                 for(let key of keys) await caches.delete(key);
             }
-            window.appLog("Pembersihan selesai. Memuat ulang...");
-            location.href = location.pathname + '?t=' + Date.now();
+            localStorage.clear();
+            location.href = window.APP_BASE;
         };
     </script>
     <style>
@@ -61,13 +46,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner { width: 40px; height: 40px; border: 4px solid #f1f5f9; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        #error-detail { 
-            max-height: 150px; overflow-y: auto; background: #ffffff; padding: 15px; border-radius: 15px; 
-            font-family: monospace; text-align: left; width: 100%; max-width: 400px; margin-top: 20px;
-            border: 1px solid #e2e8f0; font-size: 10px;
-        }
         .btn { background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; border: none; margin-top: 20px; }
-        .btn-red { background: #ef4444; margin-left: 10px; }
     </style>
 <script type="importmap">
 {
@@ -92,34 +71,17 @@
         <div style="display: flex; flex-direction: column; align-items: center; padding: 20px; text-align: center;">
             <div class="spinner"></div>
             <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
-            <div id="error-detail"></div>
-            <div>
-                <button id="retry-btn" onclick="location.reload()" class="btn" style="display:none;">COBA LAGI</button>
-                <button id="reset-btn" onclick="window.forceReset()" class="btn btn-red" style="display:none;">PERBAIKI SISTEM</button>
-            </div>
+            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444;">PERBAIKI SISTEM</button>
         </div>
     </div>
 
     <script>
         async function start() {
-            window.appLog("Inisialisasi di: " + window.APP_BASE);
-            
-            if (!navigator.serviceWorker) {
-                window.appLog("Browser tidak mendukung Service Worker.", true);
-                return;
-            }
-
+            if (!navigator.serviceWorker) return;
             try {
                 const reg = await navigator.serviceWorker.register(window.APP_BASE + 'sw.js?v=' + Date.now(), { scope: window.APP_BASE });
                 
-                if (reg.active && !navigator.serviceWorker.controller) {
-                    window.appLog("Sinkronisasi Engine...");
-                    location.reload();
-                    return;
-                }
-
                 if (navigator.serviceWorker.controller) {
-                    window.appLog("Engine Terhubung.");
                     launch();
                 } else {
                     reg.addEventListener('updatefound', () => {
@@ -128,32 +90,17 @@
                             if (newWorker.state === 'activated') location.reload();
                         });
                     });
-                    
-                    setTimeout(() => {
-                        if (!navigator.serviceWorker.controller) {
-                            window.appLog("Menunggu koordinasi Engine...");
-                            location.reload();
-                        }
-                    }, 1500);
+                    setTimeout(() => { if (!navigator.serviceWorker.controller) location.reload(); }, 2000);
                 }
-
             } catch (err) {
-                window.appLog("Gagal Memulai: " + err.message, true);
-                document.getElementById('retry-btn').style.display = 'inline-block';
-                document.getElementById('reset-btn').style.display = 'inline-block';
+                document.getElementById('reset-btn').style.display = 'block';
             }
         }
 
         function launch() {
-            document.getElementById('status-text').innerText = "Memulai Antarmuka...";
             const script = document.createElement('script');
             script.type = 'module';
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
-            script.onerror = (e) => {
-                window.appLog("Gagal memuat modul UI. Gunakan tombol 'PERBAIKI SISTEM'.", true);
-                document.getElementById('retry-btn').style.display = 'inline-block';
-                document.getElementById('reset-btn').style.display = 'inline-block';
-            };
             document.body.appendChild(script);
         }
 
