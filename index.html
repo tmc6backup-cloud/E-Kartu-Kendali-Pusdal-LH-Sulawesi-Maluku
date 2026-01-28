@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-        // Kredensial Environment
         window.process = {
             env: {
                 API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
@@ -41,52 +40,63 @@
 </head>
 <body class="overflow-x-hidden">
     <div id="root">
-        <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 15px;">
+        <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 20px; text-align: center;">
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">Menghubungkan Engine...</p>
+            <div id="status-container">
+                <p id="status-text" style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 8px;">Menghubungkan Engine...</p>
+                <p id="error-detail" style="font-size: 10px; color: #ef4444; max-width: 300px; font-weight: 500;"></p>
+            </div>
         </div>
     </div>
 
     <script>
-        // Logika deteksi base path yang lebih handal untuk GitHub Pages
-        const getBase = () => {
-            const path = window.location.pathname;
-            // Jika path berakhir dengan file (misal index.html), ambil foldernya
-            if (path.endsWith('.html')) {
-                return path.substring(0, path.lastIndexOf('/') + 1);
+        // Mendapatkan base URL secara dinamis dari URL saat ini
+        const getBasePath = () => {
+            const loc = window.location;
+            const path = loc.pathname;
+            // Jika di root (misal username.github.io/)
+            if (path === '/' || path === '') return '/';
+            
+            // Jika di subfolder (misal username.github.io/repo-name/)
+            // Ambil segmen pertama
+            const segments = path.split('/').filter(Boolean);
+            if (segments.length > 0 && !path.endsWith('.html')) {
+                return '/' + segments[0] + '/';
             }
-            // Pastikan berakhir dengan slash
-            return path.endsWith('/') ? path : path + '/';
+            
+            // Fallback: ambil folder dari file .html
+            return path.substring(0, path.lastIndexOf('/') + 1) || '/';
         };
 
-        const base = getBase();
-        console.log('App Base Path:', base);
+        const base = getBasePath();
+        console.log('Detected Base Path:', base);
 
         async function initApp() {
             const statusText = document.getElementById('status-text');
+            const errorDetail = document.getElementById('error-detail');
             
             if (!('serviceWorker' in navigator)) {
-                statusText.innerText = "Error: Browser tidak mendukung Service Worker.";
+                statusText.innerText = "Browser Tidak Mendukung";
+                errorDetail.innerText = "Gunakan Chrome atau Edge versi terbaru.";
                 return;
             }
 
             try {
-                // Registrasi Service Worker dengan scope yang sesuai
-                const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
+                // Registrasi dengan jalur absolut untuk menghindari 404
+                const swUrl = new URL('sw.js', window.location.origin + base).href;
+                console.log('Attempting to register SW at:', swUrl);
                 
-                // Jika Service Worker sudah aktif dan mengontrol halaman
+                const reg = await navigator.serviceWorker.register(swUrl, { scope: base });
+                console.log('SW Registered successfully with scope:', reg.scope);
+                
                 if (navigator.serviceWorker.controller) {
                     loadModule();
                 } else {
-                    // Jika ini instalasi pertama atau update, tunggu sampai aktif
-                    statusText.innerText = "Sinkronisasi Pertama... Mohon Tunggu.";
-                    
+                    statusText.innerText = "Mengaktifkan Sistem...";
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        console.log('Service Worker sekarang memegang kendali.');
                         window.location.reload();
                     });
 
-                    // Jika Service Worker sudah terpasang tapi belum aktif, suruh aktif
                     if (reg.waiting) {
                         reg.waiting.postMessage('skipWaiting');
                     } else if (reg.installing) {
@@ -96,28 +106,28 @@
                     }
                 }
             } catch (err) {
-                console.error('SW Registration Error:', err);
-                statusText.innerText = "Gagal memuat engine sistem. Pastikan koneksi HTTPS aktif.";
+                console.error('CRITICAL SW ERROR:', err);
+                statusText.innerText = "Gagal Memuat Engine";
+                errorDetail.innerText = "Penyebab: " + err.message + ". Pastikan file sw.js ada di root repositori dan gunakan HTTPS.";
                 statusText.style.color = "#ef4444";
             }
         }
 
         function loadModule() {
             const statusText = document.getElementById('status-text');
-            statusText.innerText = "Memuat Modul UI...";
+            statusText.innerText = "Memuat Antarmuka...";
             
             const script = document.createElement('script');
             script.type = 'module';
-            // Menambahkan timestamp untuk mencegah cache file yang rusak
             script.src = base + 'index.tsx?v=' + Date.now(); 
-            script.onerror = () => {
-                statusText.innerText = "Gagal memuat modul UI. Coba hapus cache browser.";
-                statusText.style.color = "#ef4444";
+            script.onerror = (e) => {
+                console.error('Module Load Error:', e);
+                statusText.innerText = "Gagal Memuat Komponen UI";
+                document.getElementById('error-detail').innerText = "Coba tekan Ctrl+F5 untuk membersihkan cache.";
             };
             document.body.appendChild(script);
         }
 
-        // Jalankan inisialisasi
         initApp();
     </script>
 </body>
