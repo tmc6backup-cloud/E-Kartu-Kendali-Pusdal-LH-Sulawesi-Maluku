@@ -11,6 +11,7 @@
         const getBase = () => {
             const path = window.location.pathname;
             const segments = path.split('/').filter(s => s.length > 0);
+            // Deteksi jika berjalan di GitHub Pages (URL mengandung username.github.io/repo-name)
             if (window.location.hostname.includes('github.io') && segments.length > 0) {
                 return '/' + segments[0] + '/';
             }
@@ -38,7 +39,7 @@
                 for(let key of keys) await caches.delete(key);
             }
             localStorage.clear();
-            location.href = window.APP_BASE;
+            location.reload();
         };
     </script>
     <style>
@@ -48,7 +49,6 @@
         #root { height: 100%; width: 100%; }
         .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; }
         
-        /* PRINT OPTIMIZATION */
         @media screen {
             .print-only { display: none !important; }
         }
@@ -71,11 +71,6 @@
             #root { height: auto !important; }
             main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
             .page-transition { animation: none !important; transform: none !important; }
-            
-            /* Sharp Borders for Print */
-            .print-border { border: 0.5pt solid black !important; }
-            .print-border-b { border-bottom: 0.5pt solid black !important; }
-            .print-border-r { border-right: 0.5pt solid black !important; }
         }
     </style>
 <script type="importmap">
@@ -100,8 +95,8 @@
     <div id="root">
         <div class="loader-wrapper">
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
-            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444;">PERBAIKI SISTEM</button>
+            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Inisialisasi Sistem...</p>
+            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444; color: white; padding: 10px 20px; border-radius: 12px; margin-top: 15px; font-weight: bold;">MUAT ULANG ASET</button>
         </div>
     </div>
     <script>
@@ -112,7 +107,10 @@
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
                 if (navigator.serviceWorker.controller) launch();
                 else navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err);
+                document.getElementById('reset-btn').style.display = 'block';
+            }
         }
         function launch() {
             const script = document.createElement('script');
