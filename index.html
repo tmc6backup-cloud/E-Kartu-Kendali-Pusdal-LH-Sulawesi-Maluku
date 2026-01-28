@@ -8,17 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-        // Fungsi deteksi base path yang lebih handal untuk GitHub Pages
+        // 1. Deteksi Base Path untuk GitHub Pages (Subfolder)
         const getBase = () => {
             const path = window.location.pathname;
             const hostname = window.location.hostname;
-            
             if (hostname.includes('github.io')) {
-                // Mengambil segmen pertama dari path sebagai nama repository
                 const segments = path.split('/').filter(s => s.length > 0);
-                if (segments.length > 0) {
-                    return '/' + segments[0] + '/';
-                }
+                if (segments.length > 0) return '/' + segments[0] + '/';
             }
             return '/';
         };
@@ -26,6 +22,7 @@
         const BASE = getBase();
         window.APP_BASE = BASE;
 
+        // 2. Konfigurasi Environment
         window.process = {
             env: {
                 API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
@@ -33,7 +30,6 @@
                 SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
             }
         };
-        console.log("[System] Base Path Detected:", BASE);
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow: hidden; height: 100vh; width: 100vw; }
@@ -64,22 +60,56 @@
     <div id="root">
         <div class="loader-wrapper">
             <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Memuat Sistem...</p>
+            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menyiapkan Transpiler...</p>
         </div>
     </div>
+
     <script>
-        async function start() {
+        // 3. Fungsi untuk memuat file utama
+        async function startApp() {
+            console.log("[System] Menjalankan index.tsx...");
+            document.getElementById('status-text').innerText = "Memuat Komponen...";
             const script = document.createElement('script');
             script.type = 'module';
-            // Memuat file utama secara relatif terhadap BASE
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             script.onerror = () => {
-                document.getElementById('status-text').innerText = "Gagal memuat file sistem. Periksa koneksi atau path.";
+                document.getElementById('status-text').innerText = "Gagal memuat skrip. Coba Refresh halaman.";
                 document.getElementById('status-text').style.color = "red";
             };
             document.body.appendChild(script);
         }
-        start();
+
+        // 4. Registrasi Service Worker (WAJIB agar .tsx bisa jalan di GitHub)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const swPath = window.APP_BASE + 'sw.js';
+                    console.log("[System] Mendaftarkan Service Worker di:", swPath);
+                    const registration = await navigator.serviceWorker.register(swPath, {
+                        scope: window.APP_BASE
+                    });
+                    
+                    // Tunggu sampai SW benar-benar aktif
+                    if (registration.active) {
+                        startApp();
+                    } else {
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated') startApp();
+                            });
+                        });
+                        // Jika sudah terinstall tapi belum aktif, reload atau tunggu
+                        navigator.serviceWorker.ready.then(startApp);
+                    }
+                } catch (err) {
+                    console.error("[System] SW Registration failed:", err);
+                    document.getElementById('status-text').innerText = "Browser tidak mendukung Service Worker.";
+                }
+            });
+        } else {
+            document.getElementById('status-text').innerText = "Browser Anda terlalu lama. Gunakan Chrome terbaru.";
+        }
     </script>
 </body>
 </html>
