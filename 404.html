@@ -5,14 +5,19 @@
     <meta charset="utf-8">
     <title>E-Kartu Kendali - Mengalihkan...</title>
     <script type="text/javascript">
-        // Deteksi jalur repo GitHub Pages
-        var pathSegments = window.location.pathname.split('/');
-        // Biasanya segmen pertama adalah nama repo pada GitHub Pages (user.github.io/repo-name/)
-        var repoName = pathSegments[1]; 
-        var root = window.location.origin + '/' + repoName + '/';
+        // Skrip untuk menangani refresh pada Single Page App di GitHub Pages
+        var path = window.location.pathname;
+        var parts = path.split('/');
         
-        // Redirect ke index.html di root repo
-        window.location.replace(root + 'index.html');
+        // Asumsi standar GitHub Pages: /nama-repo/sub-path
+        // Kita ingin kembali ke /nama-repo/index.html
+        var repoName = parts[1];
+        var redirectUrl = window.location.origin + '/' + repoName + '/index.html';
+        
+        // Simpan path yang diinginkan di session storage jika menggunakan routing (opsional)
+        // window.sessionStorage.setItem('redirect', path);
+        
+        window.location.replace(redirectUrl);
     </script>
 </head>
 <body>

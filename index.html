@@ -48,41 +48,57 @@
     </div>
 
     <script>
-        // Deteksi basis URL yang lebih akurat untuk GitHub Pages
-        const path = window.location.pathname;
-        const base = path.substring(0, path.lastIndexOf('/') + 1);
+        // Logika deteksi base path yang lebih handal untuk GitHub Pages
+        const getBase = () => {
+            const path = window.location.pathname;
+            // Jika path berakhir dengan file (misal index.html), ambil foldernya
+            if (path.endsWith('.html')) {
+                return path.substring(0, path.lastIndexOf('/') + 1);
+            }
+            // Pastikan berakhir dengan slash
+            return path.endsWith('/') ? path : path + '/';
+        };
+
+        const base = getBase();
+        console.log('App Base Path:', base);
 
         async function initApp() {
             const statusText = document.getElementById('status-text');
             
             if (!('serviceWorker' in navigator)) {
-                statusText.innerText = "Error: Browser Anda terlalu lama.";
+                statusText.innerText = "Error: Browser tidak mendukung Service Worker.";
                 return;
             }
 
             try {
+                // Registrasi Service Worker dengan scope yang sesuai
                 const reg = await navigator.serviceWorker.register(base + 'sw.js', { scope: base });
                 
-                // Jika sudah aktif dan mengontrol, langsung muat
-                if (reg.active && navigator.serviceWorker.controller) {
+                // Jika Service Worker sudah aktif dan mengontrol halaman
+                if (navigator.serviceWorker.controller) {
                     loadModule();
-                    return;
-                }
+                } else {
+                    // Jika ini instalasi pertama atau update, tunggu sampai aktif
+                    statusText.innerText = "Sinkronisasi Pertama... Mohon Tunggu.";
+                    
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log('Service Worker sekarang memegang kendali.');
+                        window.location.reload();
+                    });
 
-                // Jika belum mengontrol (kunjungan pertama), tunggu aktivasi dan reload
-                statusText.innerText = "Sinkronisasi Pertama... (Halaman akan memuat ulang)";
-                
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    window.location.reload();
-                });
-
-                // Force claim jika sudah ada SW yang terpasang tapi belum aktif
-                if (reg.waiting) {
-                    reg.waiting.postMessage('skipWaiting');
+                    // Jika Service Worker sudah terpasang tapi belum aktif, suruh aktif
+                    if (reg.waiting) {
+                        reg.waiting.postMessage('skipWaiting');
+                    } else if (reg.installing) {
+                        reg.installing.addEventListener('statechange', (e) => {
+                            if (e.target.state === 'activated') window.location.reload();
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('SW Registration Error:', err);
-                statusText.innerText = "Gagal memuat engine sistem.";
+                statusText.innerText = "Gagal memuat engine sistem. Pastikan koneksi HTTPS aktif.";
+                statusText.style.color = "#ef4444";
             }
         }
 
@@ -92,15 +108,16 @@
             
             const script = document.createElement('script');
             script.type = 'module';
-            // Menambahkan timestamp agar browser tidak mengambil cache lama yang korup
+            // Menambahkan timestamp untuk mencegah cache file yang rusak
             script.src = base + 'index.tsx?v=' + Date.now(); 
             script.onerror = () => {
-                statusText.innerText = "Gagal memuat komponen. Coba segarkan halaman (F5).";
+                statusText.innerText = "Gagal memuat modul UI. Coba hapus cache browser.";
                 statusText.style.color = "#ef4444";
             };
             document.body.appendChild(script);
         }
 
+        // Jalankan inisialisasi
         initApp();
     </script>
 </body>
