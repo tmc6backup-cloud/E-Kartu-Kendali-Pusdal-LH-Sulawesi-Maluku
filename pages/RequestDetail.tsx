@@ -15,7 +15,8 @@ import {
     ShieldCheck as ShieldIcon,
     ExternalLink
 } from 'lucide-react';
-import { AuthContext, isValidatorRole } from '../App.tsx';
+// Fix: Import from context/AuthContext instead of App.tsx
+import { AuthContext, isValidatorRole } from '../context/AuthContext.tsx';
 import { dbService } from '../services/dbService.ts';
 import { BudgetRequest, BudgetStatus } from '../types.ts';
 import Logo from '../components/Logo.tsx';

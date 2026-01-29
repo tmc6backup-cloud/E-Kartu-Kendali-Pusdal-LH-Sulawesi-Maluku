@@ -15,11 +15,10 @@ import {
     Coins,
     FileText,
     Wallet,
-    Briefcase,
-    ShieldCheck
+    Briefcase
 } from 'lucide-react';
-import { AuthContext, isValidatorRole } from '../App.tsx';
-import Logo from './Logo.tsx';
+import { AuthContext, isValidatorRole } from '../context/AuthContext';
+import Logo from './Logo';
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
@@ -109,31 +108,16 @@ const Sidebar: React.FC = () => {
 
     const getRoleLabel = () => {
         if (user?.role === 'admin') return 'ADMIN UTAMA';
-        if (user?.role === 'kpa') return 'KUASA PENGGUNA ANGGARAN (KPA)';
+        if (user?.role === 'kpa') return 'KPA';
         if (user?.role === 'pic_verifikator') return 'PIC VERIFIKATOR SPJ';
-        if (user?.role === 'pic_tu') return 'PIC TATA USAHA';
-        if (user?.role?.startsWith('pic_wilayah_')) {
-            const num = user.role.split('_').pop();
-            return `PIC BIDANG WILAYAH ${num}`;
-        }
         if (user?.role === 'kepala_bidang') return 'KEPALA BIDANG';
-        if (user?.role === 'validator_program') return 'VALIDATOR BAGIAN PROGRAM & ANGGARAN';
-        if (user?.role === 'validator_tu') return 'KASUBAG TATA USAHA';
-        if (user?.role === 'validator_ppk') return 'PEJABAT PPK';
-        if (user?.role === 'bendahara') return 'BENDAHARA';
         return 'PERSONIL';
     };
 
     const getRoleBadge = () => {
-        if (user?.role === 'admin') return 'bg-slate-900 text-white border-slate-800 shadow-slate-900/10';
-        if (user?.role === 'kpa') return 'bg-indigo-900 text-white border-indigo-700 shadow-indigo-900/20';
-        if (user?.role?.startsWith('pic_')) return 'bg-blue-50 text-blue-700 border-blue-200 shadow-blue-50';
-        if (user?.role === 'kepala_bidang') return 'bg-emerald-50 text-emerald-800 border-emerald-200 shadow-emerald-50';
-        if (user?.role === 'validator_program') return 'bg-amber-50 text-amber-700 border-amber-200 shadow-amber-50';
-        if (user?.role === 'validator_tu') return 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-indigo-50';
-        if (user?.role === 'validator_ppk') return 'bg-purple-50 text-purple-700 border-purple-200 shadow-purple-50';
-        if (user?.role === 'bendahara') return 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-900/20';
-        return 'bg-blue-50 text-blue-700 border-blue-200 shadow-blue-50';
+        if (user?.role === 'admin') return 'bg-slate-900 text-white border-slate-800';
+        if (user?.role === 'kpa') return 'bg-indigo-900 text-white border-indigo-700';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
     };
 
     return (
@@ -151,16 +135,6 @@ const Sidebar: React.FC = () => {
                         <span className={`text-[8px] px-3 py-2.5 rounded-xl font-black uppercase tracking-widest border block text-center shadow-sm ${getRoleBadge()}`}>
                                 {getRoleLabel()}
                         </span>
-                        {userDepts.length > 0 && (
-                            <div className="flex flex-col gap-1.5 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-slate-500">
-                                {userDepts.map((dept, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 px-1">
-                                        <Building2 size={12} className="text-blue-500 shrink-0" />
-                                        <span className="text-[7px] font-bold uppercase leading-tight tracking-wider text-slate-600">{dept}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
                 
@@ -175,37 +149,25 @@ const Sidebar: React.FC = () => {
                                 : 'text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-900 font-bold'
                             }`}
                         >
-                            <div className={`${isActive(item.path) ? 'text-emerald-400' : 'text-slate-400'}`}>
-                                {item.icon}
-                            </div>
+                            {item.icon}
                             <span className="text-[10px] uppercase tracking-wider">{item.label}</span>
                         </Link>
                     ))}
                 </nav>
 
                 <div className="p-6 border-t border-slate-100">
-                    <button 
-                        onClick={() => setShowLogoutConfirm(true)} 
-                        className="w-full flex items-center justify-center gap-3 py-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all duration-300 font-black text-[10px] uppercase tracking-[0.2em] border border-transparent hover:border-red-100"
-                    >
-                        <LogOut size={18} /> Keluar Sistem
+                    <button onClick={() => setShowLogoutConfirm(true)} className="w-full flex items-center justify-center gap-3 py-4 text-red-500 hover:bg-red-50 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em]">
+                        <LogOut size={18} /> Keluar
                     </button>
                 </div>
             </aside>
-
             {showLogoutConfirm && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-[340px] rounded-[32px] p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95">
-                        <div className="flex flex-col items-center text-center">
-                            <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
-                                <LogOut size={24} />
-                            </div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-1.5">Konfirmasi Keluar</h3>
-                            <p className="text-[11px] font-bold text-slate-500 mb-6 uppercase tracking-wide">Yakin ingin mengakhiri sesi?</p>
-                            <div className="grid grid-cols-2 gap-3 w-full">
-                                <button onClick={() => setShowLogoutConfirm(false)} className="py-3.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                                <button onClick={logout} className="py-3.5 bg-red-600 text-white hover:bg-red-700 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-100 transition-all active:scale-95">Keluar</button>
-                            </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-[340px] rounded-[32px] p-8 text-center shadow-2xl">
+                        <h3 className="text-lg font-black mb-4">Keluar?</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button onClick={() => setShowLogoutConfirm(false)} className="py-3 bg-slate-100 rounded-xl font-bold uppercase text-xs">Batal</button>
+                            <button onClick={logout} className="py-3 bg-red-600 text-white rounded-xl font-bold uppercase text-xs">Ya, Keluar</button>
                         </div>
                     </div>
                 </div>
