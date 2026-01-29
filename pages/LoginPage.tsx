@@ -1,6 +1,6 @@
 
 import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../App.tsx';
+import { AuthContext } from '../App';
 import { 
     User, 
     ArrowRight, 
@@ -12,7 +12,7 @@ import {
     EyeOff,
     ShieldCheck
 } from 'lucide-react';
-import Logo from '../components/Logo.tsx';
+import Logo from '../components/Logo';
 
 const LoginPage: React.FC = () => {
     const { login, isLoggedIn } = useContext(AuthContext);
@@ -22,7 +22,6 @@ const LoginPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Jika sudah login (misal dari auto-login localStorage), jangan tampilkan form
     if (isLoggedIn) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -37,8 +36,6 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         try {
             await login(username.trim(), password);
-            // Tidak perlu setShowSuccess(true) lagi karena App.tsx akan me-redirect secara otomatis
-            // saat state isLoggedIn berubah.
         } catch (err: any) {
             setError(err.message || "Gagal masuk ke sistem.");
             setLoading(false);
@@ -47,7 +44,6 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC]">
-            {/* Branding Side */}
             <div className="hidden md:flex md:w-1/2 lg:w-[60%] bg-slate-900 relative p-12 lg:p-24 flex-col justify-between overflow-hidden">
                 <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
                     <div className="absolute top-[-15%] right-[-10%] w-[90%] h-[90%] border-[50px] border-white/20 rounded-full"></div>
@@ -78,7 +74,6 @@ const LoginPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Login Side */}
             <div className="flex-1 flex items-center justify-center p-6 md:p-12">
                 <div className="w-full max-w-md space-y-10">
                     <div className="text-center md:text-left space-y-2">

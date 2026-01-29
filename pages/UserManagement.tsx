@@ -29,9 +29,9 @@ import {
     ChevronDown,
     ShieldAlert
 } from 'lucide-react';
-import { dbService } from '../services/dbService.ts';
-import { Profile, UserRole } from '../types.ts';
-import { AuthContext } from '../App.tsx';
+import { dbService } from '../services/dbService';
+import { Profile, UserRole } from '../types';
+import { AuthContext } from '../App';
 
 const DEPARTMENTS = [
     "PUSDAL LH SUMA",
