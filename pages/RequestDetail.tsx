@@ -13,7 +13,7 @@ import {
     User,
     Eye,
     ShieldCheck as ShieldIcon,
-    ExternalLink
+    AlertTriangle
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -37,13 +37,25 @@ const RequestDetail: React.FC = () => {
     const [request, setRequest] = useState<BudgetRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [validatorNote, setValidatorNote] = useState("");
+    const [accessDenied, setAccessDenied] = useState(false);
 
     const fetchRequest = async () => {
         if (!id) return;
         setLoading(true);
         try {
             const data = await dbService.getRequestById(id);
-            if (data) setRequest(data);
+            if (data) {
+                // VALIDASI AKSES KABID
+                if (user?.role === 'kepala_bidang') {
+                    const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+                    if (!myDepts.includes(data.requester_department?.toLowerCase() || '')) {
+                        setAccessDenied(true);
+                        setLoading(false);
+                        return;
+                    }
+                }
+                setRequest(data);
+            }
         } catch (err) { console.error(err); } finally { setLoading(false); }
     };
 
@@ -71,33 +83,26 @@ const RequestDetail: React.FC = () => {
 
     const isUserValidator = useMemo(() => isValidatorRole(user?.role), [user]);
 
-    const canValidate = useMemo(() => {
-        if (!user || !request) return false;
-        const role = user.role;
-        const status = request.status;
-        if (role === 'kepala_bidang' && status === 'pending') return true;
-        if (role === 'validator_program' && status === 'reviewed_bidang') return true;
-        if (role === 'validator_tu' && status === 'reviewed_program') return true;
-        if (role === 'validator_ppk' && status === 'reviewed_tu') return true;
-        if (role.startsWith('pic_') && status === 'approved') return true;
-        if (role === 'admin') return true;
-        return false;
-    }, [user, request]);
-
-    const getNextStatus = (): BudgetStatus => {
-        if (!request) return 'pending';
-        switch(request.status) {
-            case 'pending': return 'reviewed_bidang';
-            case 'reviewed_bidang': return 'reviewed_program';
-            case 'reviewed_program': return 'reviewed_tu';
-            case 'reviewed_tu': return 'approved';
-            case 'approved': return 'reviewed_pic';
-            default: return request.status;
-        }
-    };
-
     if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
-    if (!request) return <div className="text-center py-40">Berkas tidak ditemukan</div>;
+    
+    if (accessDenied) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 text-center space-y-6">
+                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center shadow-inner">
+                    <AlertTriangle size={40} />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Akses Dibatasi</h2>
+                    <p className="text-sm font-medium text-slate-500 max-w-md">Anda tidak memiliki otoritas untuk meninjau berkas dari unit kerja ini.</p>
+                </div>
+                <button onClick={() => navigate('/requests')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3">
+                    <ArrowLeft size={16} /> Kembali ke Daftar
+                </button>
+            </div>
+        );
+    }
+
+    if (!request) return <div className="text-center py-40 font-bold uppercase text-slate-400">Berkas tidak ditemukan atau telah dihapus.</div>;
 
     const statusInfo = {
         pending: { label: 'MENUNGGU KABID', color: 'bg-amber-50 text-amber-700' },
@@ -129,8 +134,8 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black">
             
-            {/* KOP SURAT PRINT - Ultra Kompak */}
-            <div className="print-only mb-1 print:block">
+            {/* KOP SURAT PRINT - Hanya muncul saat print (print-only) */}
+            <div className="print-only mb-1">
                 <div className="flex items-center border-b-[1.5pt] border-black pb-1">
                     <Logo className="w-12 h-12 object-contain mr-3" />
                     <div className="flex-1 text-center">
@@ -162,7 +167,7 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-1.5 print:mt-0">
                     
-                    {/* Metadata Section - Kompak */}
+                    {/* Metadata Section */}
                     <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:border-none print:p-0 print:rounded-none">
                         <div className="space-y-6 print:space-y-0.5">
                             <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[8.5pt] print:mb-0.5 print:leading-tight">{request.title}</h2>
@@ -201,7 +206,7 @@ const RequestDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Table Section - Tanpa Whitespace saat Print */}
+                    {/* Table Section */}
                     <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm print:border-none print:mt-1 print:rounded-none">
                         <table className="w-full text-left border-collapse print:border-[0.5pt] print:border-black">
                             <thead className="bg-slate-50 print:bg-gray-100">
@@ -252,8 +257,8 @@ const RequestDetail: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* LEMBAR KENDALI - Sangat Kompak */}
-                    <div className="print-only mt-2 print:block">
+                    {/* LEMBAR KENDALI */}
+                    <div className="print-only mt-2">
                         <table className="w-full border-collapse border-[0.5pt] border-black text-center">
                             <thead className="bg-gray-100">
                                 <tr className="text-[7pt] font-black uppercase">
@@ -295,8 +300,8 @@ const RequestDetail: React.FC = () => {
                         </table>
                     </div>
 
-                    {/* SIGNATURE AREA - Horizontal dan Rapat */}
-                    <div className="print-only mt-4 print:block">
+                    {/* SIGNATURE AREA */}
+                    <div className="print-only mt-4">
                         <div className="grid grid-cols-2 gap-12 text-center text-[7pt]">
                             <div className="space-y-10">
                                 <div>

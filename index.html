@@ -11,7 +11,6 @@
         const getBase = () => {
             const path = window.location.pathname;
             const segments = path.split('/').filter(s => s.length > 0);
-            // Deteksi GitHub Pages (biasanya /nama-repo/)
             if (window.location.hostname.includes('github.io') && segments.length > 0) {
                 return '/' + segments[0] + '/';
             }
@@ -48,9 +47,14 @@
         #root { height: 100%; width: 100%; }
         .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; z-index: 1000; position: fixed; top: 0; left: 0; }
         
+        /* Utility untuk elemen cetak */
+        .print-only { display: none !important; }
+
         @media print {
             .no-print { display: none !important; }
+            .print-only { display: block !important; }
             .loader-wrapper { display: none !important; }
+            body { overflow: visible !important; height: auto !important; background: white !important; }
         }
     </style>
 <script type="importmap">
@@ -94,11 +98,9 @@
                 const swPath = window.APP_BASE + 'sw.js';
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
                 
-                // Jika sudah ada controller, jalankan aplikasi
                 if (navigator.serviceWorker.controller) {
                     launch();
                 } else {
-                    // Tunggu controller aktif
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         location.reload();
                     });
@@ -117,11 +119,9 @@
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
 
-            // Sembunyikan loader setelah 5 detik jika tidak ada aktivitas (fallback)
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
                 if (loader) {
-                    // Pengecekan apakah React sudah merender sesuatu
                     if (document.getElementById('root').innerHTML.length > 100) {
                         loader.style.display = 'none';
                     } else {

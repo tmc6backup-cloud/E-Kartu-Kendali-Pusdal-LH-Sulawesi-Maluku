@@ -65,9 +65,16 @@ const RequestList: React.FC = () => {
 
     const filteredRequests = useMemo(() => {
         let list = [...requests];
+        
+        // BATASAN AKSES BERDASARKAN ROLE
         if (user?.role === 'pengaju') {
             list = list.filter(req => req.requester_id === user.id);
+        } else if (user?.role === 'kepala_bidang') {
+            // Kepala Bidang hanya melihat departemen yang dikelolanya
+            const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+            list = list.filter(req => myDepts.includes(req.requester_department?.toLowerCase() || ''));
         }
+
         if (statusFilter) list = list.filter(req => req.status === statusFilter);
         if (deptFilter) list = list.filter(req => req.requester_department === deptFilter);
         if (searchTerm) {
