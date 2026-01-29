@@ -1,9 +1,9 @@
 
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AuthContext } from '../App.tsx';
-import { analyzeBudgetRequest } from '../services/geminiService.ts';
-import { dbService } from '../services/dbService.ts';
+import { AuthContext } from '../App';
+import { analyzeBudgetRequest } from '../services/geminiService';
+import { dbService } from '../services/dbService';
 import { 
     ArrowLeft, 
     Trash2, 
@@ -25,7 +25,7 @@ import {
     FileText,
     CheckCircle2
 } from 'lucide-react';
-import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
+import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
@@ -186,7 +186,7 @@ const NewRequest: React.FC = () => {
             navigate('/requests');
         } catch (err: any) { 
             console.error(err);
-            alert("Terjadi kesalahan: " + (err.message || "Gagal menyimpan ke database. Pastikan struktur tabel sudah sesuai."));
+            alert("Terjadi kesalahan: " + (err.message || "Gagal menyimpan ke database."));
         } finally { 
             setLoading(false); 
         }
@@ -250,8 +250,8 @@ const NewRequest: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lama Kegiatan (Cth: 3 Hari)</label>
-                                    <input type="text" required className="w-full p-4 bg-white border rounded-2xl text-xs font-black uppercase" value={formData.executionDuration} onChange={(e) => setFormData({...formData, executionDuration: e.target.value})} placeholder="Input durasi..." />
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lama Kegiatan</label>
+                                    <input type="text" required className="w-full p-4 bg-white border rounded-2xl text-xs font-black uppercase" value={formData.executionDuration} onChange={(e) => setFormData({...formData, executionDuration: e.target.value})} placeholder="3 Hari" />
                                 </div>
                             </div>
                         </div>
@@ -362,7 +362,7 @@ const NewRequest: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* TOMBOL AKSI BARU */}
+                        {/* TOMBOL AKSI */}
                         <div className="flex flex-col sm:flex-row justify-end gap-6 pt-10 border-t border-slate-100">
                             <button 
                                 type="button" 
@@ -380,7 +380,7 @@ const NewRequest: React.FC = () => {
                                 className="px-20 py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:from-blue-700 hover:to-indigo-800 shadow-2xl shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={22} className="text-white/80" />} 
-                                Kirim Pengajuan Sekarang
+                                Kirim Pengajuan
                             </button>
                         </div>
                     </form>
