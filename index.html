@@ -28,81 +28,14 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; }
         
-        .splash-screen {
-            position: fixed;
-            inset: 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
-        }
-
-        .logo-container {
-            position: relative;
-            margin-bottom: 2rem;
-            animation: pulse 2s infinite ease-in-out;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-
-        .loader-bar {
-            width: 200px;
-            height: 3px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .loader-progress {
-            position: absolute;
-            height: 100%;
-            width: 40%;
-            background: #10b981;
-            border-radius: 10px;
-            animation: slide 1.5s infinite ease-in-out;
-        }
-
-        @keyframes slide {
-            0% { left: -40%; }
-            100% { left: 100%; }
-        }
-
-        .status-text {
-            color: #94a3b8;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            margin-top: 1.5rem;
-        }
+        /* Hilangkan visual scrollbar namun tetap bisa scroll */
+        ::-webkit-scrollbar { display: none !important; width: 0 !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
 
         #root { opacity: 0; transition: opacity 0.5s ease; height: 100%; width: 100%; overflow-y: auto; }
         #root.loaded { opacity: 1; }
         
-        /* Utility untuk kontrol visibilitas Cetak */
         .print-only { display: none !important; }
-
-        .force-btn {
-            margin-top: 2rem;
-            padding: 0.75rem 1.5rem;
-            background: rgba(255,255,255,0.05);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            cursor: pointer;
-            display: none;
-        }
 
         @media print { 
             @page {
@@ -111,6 +44,7 @@
             }
             .no-print { display: none !important; } 
             .print-only { display: block !important; }
+            
             body { 
                 overflow: visible !important; 
                 height: auto !important; 
@@ -120,34 +54,37 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
+
             #root { 
                 overflow: visible !important; 
                 height: auto !important; 
                 opacity: 1 !important; 
                 padding: 0 !important;
+                display: block !important;
             }
-            
-            /* Memperkuat Garis Tabel Agar Tidak Terputus */
+
+            /* Konsistensi Garis Tabel */
             table { 
                 border-collapse: collapse !important; 
                 width: 100% !important;
                 border: 1pt solid black !important;
-            }
-            th, td { 
-                border: 1pt solid black !important; 
-                page-break-inside: avoid !important;
+                table-layout: fixed !important; /* Memaksa kolom tetap konsisten */
             }
             
+            th, td { 
+                border: 1pt solid black !important; 
+                padding: 5pt !important;
+                word-wrap: break-word !important;
+                overflow: hidden !important;
+            }
+
+            thead { display: table-header-group !important; }
+            tr { page-break-inside: avoid !important; }
+
             .break-inside-avoid {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
-            
-            tr { 
-                page-break-inside: avoid !important; 
-                page-break-after: auto !important; 
-            }
-            thead { display: table-header-group !important; }
         }
     </style>
 <script type="importmap">
@@ -168,71 +105,30 @@
 </script>
 </head>
 <body>
-    <div id="splash-screen" class="splash-screen">
-        <div class="logo-container">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png" 
-                 alt="Logo KLH" style="width: 80px; height: 80px; object-fit: contain;">
+    <div id="splash-screen" style="position:fixed; inset:0; background:#0f172a; display:flex; align-items:center; justify-content:center; z-index:9999;">
+        <div style="width:150px; height:2px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden;">
+            <div style="height:100%; width:40%; background:#10b981; animation:load 1.5s infinite ease-in-out;"></div>
         </div>
-        <div class="loader-bar">
-            <div class="loader-progress"></div>
-        </div>
-        <p id="status-text" class="status-text">Memuat Otoritas...</p>
-        <button id="force-btn" class="force-btn" onclick="hideSplash()">Masuk Paksa</button>
+        <style>@keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }</style>
     </div>
-
     <div id="root"></div>
-
     <script>
-        const statusText = document.getElementById('status-text');
-        const splash = document.getElementById('splash-screen');
-        const root = document.getElementById('root');
-        const forceBtn = document.getElementById('force-btn');
-
         function hideSplash() {
-            splash.style.opacity = '0';
-            splash.style.visibility = 'hidden';
-            root.classList.add('loaded');
+            const splash = document.getElementById('splash-screen');
+            if(splash) { splash.style.display = 'none'; }
+            document.getElementById('root').classList.add('loaded');
         }
-
-        async function start() {
-            try {
-                const swPath = window.APP_BASE + 'sw.js';
-                const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
-                
-                if (navigator.serviceWorker.controller) {
-                    launch();
-                } else {
-                    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-                }
-            } catch (err) { 
-                console.error(err);
-                statusText.innerText = "Gangguan Jaringan. Mencoba Masuk...";
-                setTimeout(launch, 2000);
-            }
-        }
-
         function launch() {
             const script = document.createElement('script');
             script.type = 'module';
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
-
-            setTimeout(() => { forceBtn.style.display = 'block'; }, 6000);
-
-            const checkReady = setInterval(() => {
-                if (root.innerHTML.trim().length > 50) {
-                    clearInterval(checkReady);
-                    hideSplash();
-                }
+            const check = setInterval(() => {
+                if(document.getElementById('root').innerHTML.length > 50) { clearInterval(check); hideSplash(); }
             }, 100);
-
-            setTimeout(() => {
-                clearInterval(checkReady);
-                hideSplash();
-            }, 12000);
+            setTimeout(() => { clearInterval(check); hideSplash(); }, 8000);
         }
-
-        start();
+        launch();
     </script>
 </body>
 </html>
