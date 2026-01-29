@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-        // Konfigurasi Environment Global
         window.process = {
             env: {
                 API_KEY: "process.env.API_KEY",
@@ -36,12 +35,6 @@
             transition: opacity 0.4s ease-out, visibility 0.4s;
         }
         .loader-wrapper.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
     </style>
     <script type="importmap">
     {
@@ -68,8 +61,7 @@
     </div>
 
     <div id="root"></div>
-
-    <!-- Langsung memuat skrip utama sebagai module -->
-    <script type="module" src="index.tsx"></script>
+    <!-- Penting: Menggunakan .js bukan .tsx untuk menghindari galat MIME type -->
+    <script type="module" src="index.js"></script>
 </body>
 </html>
