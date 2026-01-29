@@ -28,6 +28,15 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; }
         
+        /* Menyembunyikan scrollbar untuk semua elemen di layar */
+        * {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        *::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+
         .splash-screen {
             position: fixed;
             inset: 0;
@@ -107,24 +116,42 @@
         @media print { 
             @page {
                 size: A4;
-                margin: 1.5cm;
+                margin: 1cm 1.5cm;
             }
             .no-print { display: none !important; } 
             .print-only { display: block !important; }
+            
+            /* Memaksa elemen agar tidak memiliki scrollbar saat cetak */
+            * { 
+                overflow: visible !important; 
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                box-shadow: none !important;
+            }
+            *::-webkit-scrollbar { display: none !important; }
+
             body { 
                 overflow: visible !important; 
                 height: auto !important; 
                 width: auto !important; 
                 background: white !important; 
                 color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
             #root { 
                 overflow: visible !important; 
                 height: auto !important; 
                 opacity: 1 !important; 
                 padding: 0 !important;
+                margin: 0 !important;
             }
-            /* Mencegah kotak terpotong di tengah halaman */
+            main {
+                overflow: visible !important;
+                height: auto !important;
+                padding: 0 !important;
+            }
+            
             .break-inside-avoid {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
@@ -133,6 +160,7 @@
                 page-break-inside: auto; 
                 width: 100% !important;
                 border-collapse: collapse !important;
+                background-color: white !important;
             }
             tr { page-break-inside: avoid; page-break-after: auto; }
             thead { display: table-header-group; }

@@ -180,12 +180,12 @@ const RequestDetail: React.FC = () => {
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black">
+        <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black print:overflow-visible">
             
-            {/* Kop Surat Resmi KLH - Logo Diperbesar (w-28) */}
+            {/* Kop Surat Resmi KLH - Logo diperkecil ke w-14 agar lebih proporsional */}
             <div className="print-only mb-4 border-b-[2.5pt] border-black pb-2 break-inside-avoid">
                 <div className="flex items-center">
-                    <Logo className="w-28 h-28 object-contain mr-6" />
+                    <Logo className="w-14 h-14 object-contain mr-6" />
                     <div className="flex-1 text-center">
                         <h2 className="text-[12pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
                         <h3 className="text-[12pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
@@ -234,7 +234,7 @@ const RequestDetail: React.FC = () => {
                         </div>
                     )}
 
-                    <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none break-inside-avoid">
+                    <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none break-inside-avoid print:overflow-visible">
                         <div className="space-y-6 print:space-y-2">
                             <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[11pt] print:font-black leading-snug">{request.title}</h2>
                             <div className="w-full h-px bg-slate-100 print:bg-black print:h-[1.2pt]"></div>
@@ -253,7 +253,7 @@ const RequestDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid">
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black">
@@ -288,7 +288,7 @@ const RequestDetail: React.FC = () => {
                         </table>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-4 print:border-black print:border-[1pt] print:shadow-none print:mt-4 break-inside-avoid">
+                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-4 print:border-black print:border-[1pt] print:shadow-none print:mt-4 break-inside-avoid print:overflow-visible">
                         <p className="text-xs font-black uppercase tracking-widest print:text-[8.5pt] underline mb-1">Justifikasi Kebutuhan:</p>
                         <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
