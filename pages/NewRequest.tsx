@@ -23,7 +23,10 @@ import {
     Tag,
     ChevronRight,
     PlusCircle,
-    Save
+    Save,
+    Settings2,
+    Zap,
+    Keyboard
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
 
@@ -50,6 +53,9 @@ const NewRequest: React.FC = () => {
     const [aiAnalyzing, setAiAnalyzing] = useState(false);
     const [aiResult, setAiResult] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    // Track which items are in manual mode for Volkeg
+    const [manualVolkeg, setManualVolkeg] = useState<Record<string, boolean>>({});
 
     const [items, setItems] = useState<CalculationItem[]>([
         { 
@@ -111,16 +117,33 @@ const NewRequest: React.FC = () => {
     const handleItemChange = (itemId: string, field: keyof CalculationItem, value: any) => {
         setItems(prevItems => prevItems.map(item => {
             if (item.id !== itemId) return item;
+            
+            const isManual = manualVolkeg[itemId];
             const updatedItem = { ...item, [field]: value };
-            if (['f1_val', 'f2_val', 'f3_val', 'f4_val'].includes(field)) {
+            
+            // Auto calculate volkeg only if NOT in manual mode and one of the factors changed
+            if (!isManual && ['f1_val', 'f2_val', 'f3_val', 'f4_val'].includes(field)) {
                 updatedItem.volkeg = (Number(updatedItem.f1_val) || 1) * 
                                      (Number(updatedItem.f2_val) || 1) * 
                                      (Number(updatedItem.f3_val) || 1) * 
                                      (Number(updatedItem.f4_val) || 1);
             }
+            
             updatedItem.jumlah = (Number(updatedItem.volkeg) || 0) * (Number(updatedItem.hargaSatuan) || 0);
             return updatedItem;
         }));
+    };
+
+    const toggleManualMode = (itemId: string) => {
+        setManualVolkeg(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+        // If turning manual OFF, re-trigger formula calculation for that item
+        if (manualVolkeg[itemId]) {
+            setItems(prevItems => prevItems.map(item => {
+                if (item.id !== itemId) return item;
+                const newVolkeg = (Number(item.f1_val) || 1) * (Number(item.f2_val) || 1) * (Number(item.f3_val) || 1) * (Number(item.f4_val) || 1);
+                return { ...item, volkeg: newVolkeg, jumlah: newVolkeg * item.hargaSatuan };
+            }));
+        }
     };
 
     const getPaguStatus = (ro: string, komp: string, subk: string) => {
@@ -228,6 +251,7 @@ const NewRequest: React.FC = () => {
                                             <option>Perjalanan Dinas</option>
                                             <option>Honorarium</option>
                                             <option>Peralatan Kantor</option>
+                                            <option>Pemeliharaan</option>
                                             <option>Sewa</option>
                                             <option>Lain-lain</option>
                                         </select>
@@ -264,7 +288,10 @@ const NewRequest: React.FC = () => {
                             </h3>
                             <button 
                                 type="button" 
-                                onClick={() => setItems([...items, { id: Date.now().toString(), title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }])} 
+                                onClick={() => {
+                                    const newId = Date.now().toString();
+                                    setItems([...items, { id: newId, title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
+                                }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
                                 <PlusCircle size={18} className="text-emerald-400" /> Tambah Item
@@ -274,6 +301,7 @@ const NewRequest: React.FC = () => {
                         {items.map((item, idx) => {
                             const paguInfo = getPaguStatus(item.ro_code, item.komponen_code, item.subkomponen_code);
                             const isOver = item.jumlah > paguInfo.sisa && item.ro_code !== '';
+                            const isManual = manualVolkeg[item.id] || false;
                             
                             return (
                                 <div key={item.id} className={`bg-white rounded-[40px] border-2 transition-all shadow-sm overflow-hidden ${isOver ? 'border-red-500 ring-4 ring-red-50' : 'border-slate-100'}`}>
@@ -323,47 +351,67 @@ const NewRequest: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50/50 p-8 rounded-[32px] border border-slate-100 space-y-8">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <Calculator size={16} className="text-blue-600" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">Kalkulasi Volume (Rumus)</span>
+                                        <div className="bg-slate-50/50 p-8 rounded-[32px] border border-slate-100 space-y-8 relative">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Calculator size={16} className="text-blue-600" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">Kalkulasi Volume</span>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => toggleManualMode(item.id)}
+                                                    className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                                                >
+                                                    {isManual ? <Keyboard size={12} /> : <Zap size={12} />}
+                                                    {isManual ? 'Input Manual Aktif' : 'Gunakan Rumus'}
+                                                </button>
                                             </div>
                                             
-                                            {/* Strip Formula Visual */}
-                                            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                            {/* Strip Formula Visual - Fleksibel & Rapih */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                                                 {[1,2,3,4].map(n => (
-                                                    <React.Fragment key={n}>
-                                                        <div className="flex flex-col items-center gap-1.5">
-                                                            <div className="flex border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                                                                <input type="number" className="w-12 py-2 text-center text-xs font-black outline-none" value={item[`f${n}_val` as keyof CalculationItem] as number} onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} />
-                                                                <input type="text" className="w-10 py-2 bg-slate-50 text-[7px] font-black text-slate-400 text-center border-l border-slate-100 outline-none uppercase" value={item[`f${n}_unit` as keyof CalculationItem] as string} onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} />
-                                                            </div>
-                                                            <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">F{n}</span>
+                                                    <div key={n} className="flex flex-col items-center gap-2">
+                                                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Faktor {n}</span>
+                                                        <div className={`flex border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all ${isManual ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                                                            <input type="number" className="w-full py-2 text-center text-xs font-black outline-none bg-white" value={item[`f${n}_val` as keyof CalculationItem] as number} onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} />
+                                                            <input type="text" className="w-10 py-2 bg-slate-50 text-[7px] font-black text-slate-400 text-center border-l border-slate-100 outline-none uppercase" value={item[`f${n}_unit` as keyof CalculationItem] as string} onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} />
                                                         </div>
-                                                        {n < 4 && <X size={12} className="text-slate-300" />}
-                                                    </React.Fragment>
-                                                ))}
-                                                <Equal size={12} className="text-blue-500 mx-1" />
-                                                <div className="flex flex-col items-center gap-1.5">
-                                                    <div className="flex bg-slate-900 text-white rounded-xl overflow-hidden shadow-lg">
-                                                        <div className="w-14 py-2 text-center text-xs font-black">{item.volkeg}</div>
-                                                        <div className="w-12 py-2 bg-slate-800 text-[8px] font-black text-emerald-400 text-center uppercase">{item.satkeg}</div>
                                                     </div>
-                                                    <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">Volkeg</span>
-                                                </div>
+                                                ))}
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 items-end">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 items-end">
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Total Volkeg {isManual && '(Manual)'}</label>
+                                                    <div className="flex bg-slate-900 text-white rounded-2xl overflow-hidden shadow-lg group focus-within:ring-2 focus-within:ring-emerald-400 transition-all">
+                                                        <input 
+                                                            type="number" 
+                                                            readOnly={!isManual}
+                                                            className={`w-full py-4 text-center text-sm font-black outline-none bg-transparent ${isManual ? 'cursor-text' : 'cursor-default opacity-80'}`}
+                                                            value={item.volkeg} 
+                                                            onChange={(e) => handleItemChange(item.id, 'volkeg', e.target.value)} 
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            className="w-16 py-4 bg-slate-800 text-[10px] font-black text-emerald-400 text-center uppercase outline-none" 
+                                                            value={item.satkeg} 
+                                                            onChange={(e) => handleItemChange(item.id, 'satkeg', e.target.value)} 
+                                                            placeholder="SAT"
+                                                        />
+                                                    </div>
+                                                </div>
+
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Harga Satuan (Rp)</label>
                                                     <div className="relative">
-                                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">Rp</span>
-                                                        <input type="number" className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black outline-none focus:border-blue-600 transition-all shadow-sm" value={item.hargaSatuan} onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} />
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">Rp</span>
+                                                        <input type="number" className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black outline-none focus:border-blue-600 transition-all shadow-sm" value={item.hargaSatuan} onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} />
                                                     </div>
                                                 </div>
-                                                <div className="bg-slate-900 p-5 rounded-2xl text-right border border-slate-800 shadow-xl">
-                                                    <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Subtotal Item</p>
-                                                    <p className="text-md font-black font-mono text-emerald-400 tracking-tight">Rp {item.jumlah.toLocaleString('id-ID')}</p>
+
+                                                <div className="bg-slate-900 p-4 rounded-2xl text-right border border-slate-800 shadow-xl self-end h-[58px] flex flex-col justify-center">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase mb-0.5">Subtotal Item</p>
+                                                    <p className="text-sm font-black font-mono text-emerald-400 tracking-tight">Rp {item.jumlah.toLocaleString('id-ID')}</p>
                                                 </div>
                                             </div>
                                         </div>
