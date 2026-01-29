@@ -31,8 +31,7 @@ import {
 } from 'lucide-react';
 import { dbService } from '../services/dbService.ts';
 import { Profile, UserRole } from '../types.ts';
-// Fix: Import from context/AuthContext instead of App.tsx
-import { AuthContext } from '../context/AuthContext.tsx';
+import { AuthContext } from '../App.tsx';
 
 const DEPARTMENTS = [
     "PUSDAL LH SUMA",

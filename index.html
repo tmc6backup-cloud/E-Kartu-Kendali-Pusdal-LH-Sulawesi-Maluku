@@ -5,84 +5,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
-    
-    <!-- Favicon fix to stop 404 error -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Babel Standalone: Sangat penting untuk menjalankan .tsx di GitHub Pages tanpa build step -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <script>
+        const getBase = () => {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(s => s.length > 0);
+            if (window.location.hostname.includes('github.io') && segments.length > 0) {
+                return '/' + segments[0] + '/';
+            }
+            return '/';
+        };
+
+        const BASE = getBase();
+        window.APP_BASE = BASE;
+
         window.process = {
             env: {
-                API_KEY: "process.env.API_KEY",
+                API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
                 SUPABASE_URL: "https://syptvhtbxflhjgdepbqs.supabase.co",
                 SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
             }
         };
-        // Konfigurasi Tailwind (opsional untuk menghilangkan warning)
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
-                }
+
+        window.forceReset = async function() {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for(let reg of regs) await reg.unregister();
             }
-        }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for(let key of keys) await caches.delete(key);
+            }
+            localStorage.clear();
+            location.href = window.APP_BASE;
+        };
     </script>
-    
     <style>
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #F8FAFC; 
-            margin: 0; 
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow: hidden; height: 100vh; width: 100vw; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner { width: 40px; height: 40px; border: 4px solid #f1f5f9; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
-        .loader-wrapper { 
-            position: fixed; top: 0; left: 0; 
-            height: 100vh; width: 100vw; 
-            display: flex; align-items: center; justify-content: center; 
-            flex-direction: column; background: #F8FAFC; 
-            z-index: 9999;
-            transition: opacity 0.4s ease-out, visibility 0.4s;
+        #root { height: 100%; width: 100%; }
+        .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; }
+        
+        /* PRINT OPTIMIZATION */
+        @media screen {
+            .print-only { display: none !important; }
         }
-        .loader-wrapper.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        @media print {
+            @page {
+                size: A4;
+                margin: 0.5cm;
+            }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { 
+                overflow: visible !important; 
+                height: auto !important; 
+                width: auto !important; 
+                background: white !important; 
+                color: black !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            #root { height: auto !important; }
+            main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+            .page-transition { animation: none !important; transform: none !important; }
+            
+            /* Sharp Borders for Print */
+            .print-border { border: 0.5pt solid black !important; }
+            .print-border-b { border-bottom: 0.5pt solid black !important; }
+            .print-border-r { border-right: 0.5pt solid black !important; }
+        }
     </style>
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@19.0.0",
-        "react/": "https://esm.sh/react@19.0.0/",
-        "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
-        "react-dom": "https://esm.sh/react-dom@19.0.0",
-        "react-dom/": "https://esm.sh/react-dom@19.0.0/",
-        "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
-        "@google/genai": "https://esm.sh/@google/genai@1.3.0",
-        "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
-        "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
-        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1"
-      }
-    }
-    </script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1"
+  }
+}
+</script>
 </head>
 <body>
-    <div id="app-loader" class="loader-wrapper">
-        <div class="spinner"></div>
-        <p style="font-size: 10px; font-weight: 800; color: #64748b; margin-top: 24px; letter-spacing: 0.2em; text-transform: uppercase;">Memuat Sistem E-Kendali...</p>
+    <div id="root">
+        <div class="loader-wrapper">
+            <div class="spinner"></div>
+            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
+            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444;">PERBAIKI SISTEM</button>
+        </div>
     </div>
-
-    <div id="root"></div>
-    
-    <!-- Gunakan type="text/babel" agar Babel Standalone memproses file ini -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
+    <script>
+        async function start() {
+            if (!navigator.serviceWorker) return;
+            try {
+                const swPath = window.APP_BASE + 'sw.js';
+                const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
+                if (navigator.serviceWorker.controller) launch();
+                else navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+            } catch (err) { console.error(err); }
+        }
+        function launch() {
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
+            document.body.appendChild(script);
+        }
+        start();
+    </script>
 </body>
 </html>

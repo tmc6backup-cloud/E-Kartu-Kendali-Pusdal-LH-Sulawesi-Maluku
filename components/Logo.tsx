@@ -1,45 +1,36 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface LogoProps {
   className?: string;
 }
 
 const Logo: React.FC<LogoProps> = ({ className }) => {
-  // Karena logo.png ada di root bersama index.html, jalur "logo.png" secara teknis adalah yang paling benar.
-  // Tambahkan timestamp untuk menghindari cache 404 yang membandel.
-  const [src, setSrc] = useState(`logo.png?v=${Date.now()}`);
-  const [retryCount, setRetryCount] = useState(0);
+  // Ambil base path dari window (didefinisikan di index.html)
+  const base = (window as any).APP_BASE || '/';
+  
+  // Konstruksi URL logo yang lebih aman
+  // Menggunakan relative path dari root aplikasi
+  const logoUrl = (base + 'logo.png').replace(/\/+/g, '/');
+  
+  // State untuk fallback jika logo.png tidak ditemukan
+  const [imgSrc, setImgSrc] = useState(logoUrl);
+  const [hasError, setHasError] = useState(false);
 
-  // Logo cadangan jika file lokal benar-benar tidak bisa diakses sama sekali.
-  const fallbackUrl = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
-
-  const handleError = () => {
-    if (retryCount === 0) {
-      // Jika "logo.png" gagal, coba jalur absolut menggunakan APP_BASE yang dideteksi index.html
-      const base = (window as any).APP_BASE || '/';
-      const cleanBase = base.endsWith('/') ? base : base + '/';
-      console.warn(`[Logo] Gagal memuat logo.png. Mencoba jalur absolut: ${cleanBase}logo.png`);
-      setSrc(`${cleanBase}logo.png?v=${Date.now()}`);
-      setRetryCount(1);
-    } else if (retryCount === 1) {
-      // Jika jalur absolut juga gagal, gunakan fallback remote
-      console.warn("[Logo] Semua jalur lokal gagal. Menggunakan logo cadangan KLHK.");
-      setSrc(fallbackUrl);
-      setRetryCount(2);
-    }
-  };
+  const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
 
   return (
-    <div className={`flex items-center justify-center overflow-hidden ${className}`}>
-      <img 
-        src={src} 
-        alt="Logo Instansi" 
-        className="w-full h-full object-contain"
-        onError={handleError}
-        style={{ display: 'block', minWidth: '20px', minHeight: '20px' }}
-      />
-    </div>
+    <img 
+      src={hasError ? fallbackLogo : imgSrc} 
+      alt="Logo Pusdal LH SUMA" 
+      className={className}
+      onError={() => {
+        if (!hasError) {
+          setHasError(true);
+          console.warn("Logo lokal tidak ditemukan, beralih ke fallback.");
+        }
+      }}
+    />
   );
 };
 
