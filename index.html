@@ -26,7 +26,7 @@
         };
     </script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow: hidden; height: 100vh; width: 100vw; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; }
         
         .splash-screen {
             position: fixed;
@@ -83,9 +83,12 @@
             margin-top: 1.5rem;
         }
 
-        #root { opacity: 0; transition: opacity 0.5s ease; height: 100%; width: 100%; }
+        #root { opacity: 0; transition: opacity 0.5s ease; height: 100%; width: 100%; overflow-y: auto; }
         #root.loaded { opacity: 1; }
         
+        /* Utility untuk kontrol visibilitas Cetak */
+        .print-only { display: none !important; }
+
         .force-btn {
             margin-top: 2rem;
             padding: 0.75rem 1.5rem;
@@ -101,7 +104,12 @@
             display: none;
         }
 
-        @media print { .no-print { display: none !important; } }
+        @media print { 
+            .no-print { display: none !important; } 
+            .print-only { display: block !important; }
+            body { overflow: visible !important; height: auto !important; width: auto !important; background: white !important; }
+            #root { overflow: visible !important; height: auto !important; opacity: 1 !important; }
+        }
     </style>
 <script type="importmap">
 {
@@ -170,18 +178,15 @@
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
 
-            // Munculkan tombol paksa jika loading > 6 detik
             setTimeout(() => { forceBtn.style.display = 'block'; }, 6000);
 
             const checkReady = setInterval(() => {
-                // Menurunkan threshold ke 50 karakter agar lebih sensitif terhadap render awal
                 if (root.innerHTML.trim().length > 50) {
                     clearInterval(checkReady);
                     hideSplash();
                 }
             }, 100);
 
-            // Timeout maksimal 12 detik untuk menutup splash apapun yang terjadi
             setTimeout(() => {
                 clearInterval(checkReady);
                 hideSplash();

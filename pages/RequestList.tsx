@@ -66,11 +66,9 @@ const RequestList: React.FC = () => {
     const filteredRequests = useMemo(() => {
         let list = [...requests];
         
-        // BATASAN AKSES BERDASARKAN ROLE
         if (user?.role === 'pengaju') {
             list = list.filter(req => req.requester_id === user.id);
         } else if (user?.role === 'kepala_bidang') {
-            // Kepala Bidang hanya melihat departemen yang dikelolanya
             const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
             list = list.filter(req => myDepts.includes(req.requester_department?.toLowerCase() || ''));
         }
@@ -88,14 +86,14 @@ const RequestList: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
-            {/* Header Cetak Laporan (Hanya muncul saat print) */}
-            <div className="print-only mb-6">
-                <div className="flex items-center gap-6 border-b-[3px] border-black pb-3">
-                    <Logo className="w-20 h-20 object-contain" />
+            {/* Kop Laporan - Hanya Cetak */}
+            <div className="print-only mb-8">
+                <div className="flex items-center gap-6 border-b-[4px] border-black pb-4">
+                    <Logo className="w-24 h-24 object-contain" />
                     <div className="flex-1 text-center">
-                        <h2 className="text-[12pt] font-black uppercase leading-tight">Laporan Rekapitulasi Berkas Kendali Anggaran</h2>
-                        <h3 className="text-[10pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>
-                        <p className="text-[7pt] mt-1 italic">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
+                        <h2 className="text-[14pt] font-black uppercase leading-tight">Laporan Monitoring Kartu Kendali Anggaran</h2>
+                        <h3 className="text-[11pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>
+                        <p className="text-[8pt] mt-2 italic font-medium">Dicetak oleh: {user?.full_name} pada {new Date().toLocaleString('id-ID')}</p>
                     </div>
                 </div>
             </div>
@@ -110,18 +108,18 @@ const RequestList: React.FC = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3 no-print">
-                    <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm transition-all">
+                    <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm transition-all hover:bg-slate-50">
                         <Printer size={18} /> Cetak Laporan
                     </button>
                     {!isValidatorRole(user?.role) && (
-                        <Link to="/requests/new" className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl">
+                        <Link to="/requests/new" className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl hover:bg-slate-800 transition-all">
                             <Database size={18} /> Usulan Baru
                         </Link>
                     )}
                 </div>
             </div>
 
-            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-none">
+            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-[1pt] print:border-black print:rounded-none">
                 <div className="p-8 border-b border-slate-100 flex items-center gap-6 no-print">
                     <div className="relative flex-1 group">
                         <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
@@ -130,9 +128,9 @@ const RequestList: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left print:border-[1pt] print:border-black">
+                    <table className="w-full text-left print:border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-black">
+                            <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-b-[1pt] print:border-black">
                                 <th className="px-8 py-6 print:py-3 print:px-4">Kegiatan & Bidang</th>
                                 {user?.role !== 'pengaju' && <th className="px-8 py-6 print:py-3 print:px-4">Pengusul</th>}
                                 <th className="px-8 py-6 text-right print:py-3 print:px-4">Volume</th>
@@ -140,7 +138,7 @@ const RequestList: React.FC = () => {
                                 <th className="px-8 py-6 text-right no-print">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 print:divide-black">
+                        <tbody className="divide-y divide-slate-100 print:divide-y-0">
                             {loading ? (
                                 <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
