@@ -10,14 +10,13 @@ import {
     ArrowUpRight,
     Loader2,
     ShieldCheck,
-    LayoutGrid,
-    TrendingUp
+    LayoutGrid
 } from 'lucide-react';
-import { dbService } from '../services/dbService.ts';
-import { AuthContext } from '../App.tsx';
+import { dbService } from '../services/dbService';
+import { AuthContext } from '../App';
 
-// Komponen Reusable untuk Kartu Bidang (Sesuai Referensi Gambar)
-const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = ({ deptData, isGlobalContext }) => {
+// Komponen Reusable untuk Kartu Bidang
+const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = ({ deptData }) => {
     const RO_CARDS = [
         { code: 'EBA', label: 'DANA EBA', icon: <Building2 size={16} />, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
         { code: 'EBB', label: 'DANA EBB', icon: <Coins size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
@@ -29,7 +28,6 @@ const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = (
 
     return (
         <div className="bg-white border border-slate-100 rounded-[48px] p-8 md:p-12 shadow-sm space-y-12 transition-all hover:shadow-md">
-            {/* Header Bidang */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
                     <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner">
@@ -48,7 +46,6 @@ const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = (
                 </div>
             </div>
 
-            {/* Grid Kartu Dana RO */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {RO_CARDS.map((card) => {
                     const key = card.code.toLowerCase();
@@ -91,7 +88,6 @@ const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = (
                 })}
             </div>
 
-            {/* Footer Saldo */}
             <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-end gap-6">
                 <div className="space-y-2">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">TOTAL SISA SALDO BIDANG:</p>
@@ -139,14 +135,12 @@ const Dashboard: React.FC = () => {
         fetchData();
     }, [user]);
 
-    // Otoritas Global: Admin, KPA, Validator (Pimpinan/Pusat)
     const isGlobalUser = useMemo(() => {
         if (!user) return false;
         const globalRoles = ['admin', 'kpa', 'validator_program', 'validator_ppk', 'bendahara'];
         return globalRoles.includes(user.role);
     }, [user]);
 
-    // Otoritas Terbatas (Multi-Bidang): PIC
     const isPicUser = useMemo(() => {
         return user?.role?.startsWith('pic_');
     }, [user]);
@@ -162,8 +156,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-12 page-transition">
-            
-            {/* Header Dashboard Status */}
             <div className="flex items-center gap-4 mb-2">
                 <div className="p-3 bg-white border border-slate-100 rounded-2xl text-blue-600 shadow-sm">
                     <LayoutGrid size={24} />
@@ -174,12 +166,9 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Tampilan Kondisional */}
             <div className="space-y-10">
                 {isGlobalUser ? (
-                    // ADMIN / KPA / VALIDATOR: Lihat per bidang (SEMUA)
                     <div className="space-y-12">
-                        {/* Agregat Global Kantor */}
                         <div className="bg-slate-900 rounded-[40px] p-8 md:p-12 text-white flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-emerald-400">
@@ -196,13 +185,11 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* List Seluruh Bidang */}
                         {stats.deptBudgets.map((dept: any, idx: number) => (
-                            <DeptBudgetCard key={idx} deptData={dept} isGlobalContext />
+                            <DeptBudgetCard key={idx} deptData={dept} />
                         ))}
                     </div>
                 ) : isPicUser ? (
-                    // PIC: Lihat hanya bidang-bidang yang ditugaskan (Bisa lebih dari satu)
                     <div className="space-y-12">
                         <div className="px-10 py-6 bg-blue-50 border border-blue-100 rounded-[32px] flex items-center justify-between">
                             <div className="flex items-center gap-4 text-blue-900">
@@ -228,7 +215,6 @@ const Dashboard: React.FC = () => {
                         })()}
                     </div>
                 ) : (
-                    // KEPALA BIDANG / STAF: Hanya lihat satu bidang sendiri
                     <div className="space-y-6">
                         {(() => {
                             const userDept = user?.department?.split(', ')[0] || '';
@@ -244,7 +230,6 @@ const Dashboard: React.FC = () => {
                 )}
             </div>
 
-            {/* QUICK ACTIONS (Tetap Sama) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10">
                 <div className="bg-white border border-slate-100 rounded-[32px] p-8 flex items-center justify-between group cursor-pointer hover:border-slate-300 transition-all">
                     <div>
@@ -276,7 +261,6 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 };
