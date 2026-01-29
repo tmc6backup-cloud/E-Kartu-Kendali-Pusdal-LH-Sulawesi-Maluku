@@ -18,8 +18,8 @@ import {
     Briefcase,
     ShieldCheck
 } from 'lucide-react';
-import { AuthContext, isValidatorRole } from '../App.tsx';
-import Logo from './Logo.tsx';
+import { AuthContext, isValidatorRole } from '../App';
+import Logo from './Logo';
 
 const Sidebar: React.FC = () => {
     const location = useLocation();

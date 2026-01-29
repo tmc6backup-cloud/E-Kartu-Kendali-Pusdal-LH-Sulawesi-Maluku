@@ -1,6 +1,6 @@
 
-import { supabase } from '../lib/supabase.ts';
-import { BudgetRequest, BudgetStatus, Profile, BudgetCeiling } from '../types.ts';
+import { supabase } from '../lib/supabase';
+import { BudgetRequest, BudgetStatus, Profile, BudgetCeiling } from '../types';
 
 export const dbService = {
     // --- Profil User ---
