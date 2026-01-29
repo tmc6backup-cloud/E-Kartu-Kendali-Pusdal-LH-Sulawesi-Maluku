@@ -11,13 +11,4 @@ if (rootElement) {
       <App />
     </React.StrictMode>
   );
-
-  // Sembunyikan loader secara manual jika diperlukan
-  const loader = document.getElementById('app-loader');
-  if (loader) {
-      // Tunggu sebentar agar render pertama selesai
-      setTimeout(() => {
-          loader.style.display = 'none';
-      }, 500);
-  }
 }

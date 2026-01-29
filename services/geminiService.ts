@@ -7,7 +7,6 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const analyzeBudgetRequest = async (title: string, amount: number, description: string) => {
   try {
     const response = await ai.models.generateContent({
-      // Use Pro model for complex reasoning and analysis tasks
       model: "gemini-3-pro-preview",
       contents: `Analisis pengajuan anggaran pemerintah berikut:
       Judul: ${title}
@@ -21,7 +20,6 @@ export const analyzeBudgetRequest = async (title: string, amount: number, descri
       
       Gunakan Bahasa Indonesia yang formal dan profesional.`,
       config: {
-        // Enable thinking budget for more detailed reasoning on complex budget data
         thinkingConfig: { thinkingBudget: 4096 },
         temperature: 0.7,
         topP: 0.95,
@@ -38,7 +36,6 @@ export const analyzeBudgetRequest = async (title: string, amount: number, descri
 export const getBudgetInsights = async (totalPending: number, totalApproved: number) => {
     try {
       const response = await ai.models.generateContent({
-        // Flash model is sufficient for basic text summarization/insight tasks
         model: "gemini-3-flash-preview",
         contents: `Dashboard Pengajuan Anggaran:
         Total Pending: Rp ${totalPending.toLocaleString('id-ID')}
