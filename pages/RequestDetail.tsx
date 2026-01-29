@@ -13,7 +13,10 @@ import {
     User,
     Eye,
     ShieldCheck as ShieldIcon,
-    AlertTriangle
+    AlertTriangle,
+    CheckCircle,
+    XCircle,
+    MessageSquareQuote
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -38,6 +41,7 @@ const RequestDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [validatorNote, setValidatorNote] = useState("");
     const [accessDenied, setAccessDenied] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
 
     const fetchRequest = async () => {
         if (!id) return;
@@ -45,7 +49,7 @@ const RequestDetail: React.FC = () => {
         try {
             const data = await dbService.getRequestById(id);
             if (data) {
-                // VALIDASI AKSES KABID
+                // VALIDASI AKSES KABID (Untuk melihat detail)
                 if (user?.role === 'kepala_bidang') {
                     const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
                     if (!myDepts.includes(data.requester_department?.toLowerCase() || '')) {
@@ -70,18 +74,42 @@ const RequestDetail: React.FC = () => {
     const handleAction = async (status: BudgetStatus, isReject: boolean = false) => {
         if (!id) return;
         if (isReject && !validatorNote.trim()) {
-            alert("Harap berikan alasan penolakan/revisi.");
+            alert("Harap berikan alasan penolakan/revisi pada kolom catatan.");
             return;
         }
-        const success = await dbService.updateStatus(id, status, validatorNote.trim() ? { field: 'program_note', value: validatorNote } : undefined);
-        if (success) {
-            alert("Status berkas berhasil diperbarui.");
-            fetchRequest();
-            setValidatorNote("");
+
+        setActionLoading(true);
+        try {
+            const success = await dbService.updateStatus(
+                id, 
+                status, 
+                validatorNote.trim() ? { field: 'pic_note', value: validatorNote } : undefined
+            );
+            
+            if (success) {
+                alert(isReject ? "Berkas telah dikembalikan untuk revisi." : "Berkas berhasil disetujui dan diteruskan.");
+                setValidatorNote("");
+                fetchRequest();
+            }
+        } catch (err) {
+            alert("Terjadi kesalahan saat memproses data.");
+        } finally {
+            setActionLoading(false);
         }
     };
 
     const isUserValidator = useMemo(() => isValidatorRole(user?.role), [user]);
+
+    // Pengecekan Otoritas Tombol Setujui Kepala Bidang
+    const canKabidApprove = useMemo(() => {
+        if (!user || !request) return false;
+        const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+        return (
+            user.role === 'kepala_bidang' && 
+            request.status === 'pending' && 
+            myDepts.includes(request.requester_department?.toLowerCase() || '')
+        );
+    }, [user, request]);
 
     if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
     
@@ -105,6 +133,7 @@ const RequestDetail: React.FC = () => {
     if (!request) return <div className="text-center py-40 font-bold uppercase text-slate-400">Berkas tidak ditemukan atau telah dihapus.</div>;
 
     const statusInfo = {
+        draft: { label: 'DRAF', color: 'bg-slate-100 text-slate-600' },
         pending: { label: 'MENUNGGU KABID', color: 'bg-amber-50 text-amber-700' },
         reviewed_bidang: { label: 'MENUNGGU PROGRAM', color: 'bg-blue-50 text-blue-700' },
         reviewed_program: { label: 'MENUNGGU TU', color: 'bg-indigo-50 text-indigo-700' },
@@ -134,7 +163,7 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black">
             
-            {/* KOP SURAT PRINT - Hanya muncul saat print (print-only) */}
+            {/* KOP SURAT PRINT */}
             <div className="print-only mb-1">
                 <div className="flex items-center border-b-[1.5pt] border-black pb-1">
                     <Logo className="w-12 h-12 object-contain mr-3" />
@@ -167,6 +196,52 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-1.5 print:mt-0">
                     
+                    {/* Panel Aksi Kepala Bidang (HANYA MUNCUL JIKA OTORITAS SESUAI) */}
+                    {canKabidApprove && (
+                        <div className="no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-emerald-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500">
+                            <div className="flex items-center gap-4 border-b border-emerald-50 pb-6">
+                                <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-100">
+                                    <ShieldIcon size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Otorisasi Kepala Bidang</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tinjau dan Berikan Disposisi Pengajuan</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                    <MessageSquareQuote size={14} className="text-blue-500" /> Catatan / Instruksi Disposisi
+                                </label>
+                                <textarea 
+                                    className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl text-xs font-bold uppercase focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner placeholder:text-slate-300"
+                                    rows={3}
+                                    placeholder="TAMBAHKAN CATATAN JIKA PERLU (WAJIB JIKA DITOLAK)..."
+                                    value={validatorNote}
+                                    onChange={(e) => setValidatorNote(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <button 
+                                    onClick={() => handleAction('rejected', true)}
+                                    disabled={actionLoading}
+                                    className="flex-1 py-5 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <XCircle size={18} /> Kembalikan / Revisi
+                                </button>
+                                <button 
+                                    onClick={() => handleAction('reviewed_bidang')}
+                                    disabled={actionLoading}
+                                    className="flex-[2] py-5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl shadow-emerald-100 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+                                    Setujui & Teruskan ke Program
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Metadata Section */}
                     <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:border-none print:p-0 print:rounded-none">
                         <div className="space-y-6 print:space-y-0.5">
@@ -327,11 +402,11 @@ const RequestDetail: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Sidebar Info (No Print) */}
+                {/* Sidebar Info */}
                 <div className="xl:col-span-1 space-y-8 no-print">
-                    {isUserValidator && request.attachment_url && (
-                        <div className="bg-white p-8 rounded-[40px] border border-blue-100 shadow-sm space-y-6">
-                            <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest text-center">Berkas Lampiran</h4>
+                    {request.attachment_url && (
+                        <div className="bg-white p-8 rounded-[40px] border border-blue-100 shadow-sm space-y-6 text-center">
+                            <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest">Berkas Lampiran</h4>
                             <a href={request.attachment_url} target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
                                 <Eye size={14} /> Lihat Berkas
                             </a>

@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         const getBase = () => {
+            // Netlify biasanya berada di root domain, jadi base path adalah '/'
+            // Kita hanya butuh sub-path jika di GitHub Pages.
             const path = window.location.pathname;
             const segments = path.split('/').filter(s => s.length > 0);
             if (window.location.hostname.includes('github.io') && segments.length > 0) {
