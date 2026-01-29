@@ -1,7 +1,7 @@
 
 /**
  * Optimized Engine Transpiler with Caching - PUSDAL LH SUMA
- * Versi: 2.7.1 (Image Bypass Fix)
+ * Versi: 2.7.0 (GitHub Pages Fix - Auto Extension & Path Sync)
  */
 
 const CACHE_NAME = 'engine-cache-v2';
@@ -43,12 +43,11 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
-  const path = url.pathname;
   
-  // PERBAIKAN: Abaikan semua format gambar umum agar tidak diproses oleh Engine
-  const isImage = path.match(/\.(png|jpg|jpeg|gif|svg|webp|ico|bmp)$/i);
-  if (isImage) return; 
-
+  // Deteksi jika ini adalah request untuk file internal aplikasi
+  let path = url.pathname;
+  
+  // Cek apakah request memiliki ekstensi atau tidak
   const hasExtension = path.split('/').pop().includes('.');
   const isPotentialSource = isLocal && !path.startsWith('/http') && (
     path.endsWith('.ts') || 
@@ -70,6 +69,7 @@ self.addEventListener('fetch', (event) => {
           let response = await fetch(event.request);
           let finalPath = path;
 
+          // LOGIKA KRUSIAL: Jika 404 dan tidak ada ekstensi, coba cari file .ts atau .tsx
           if (!response.ok && !hasExtension) {
             const trials = [path + '.ts', path + '.tsx', path + '/index.ts', path + '/index.tsx'];
             for (const trial of trials) {
@@ -84,6 +84,7 @@ self.addEventListener('fetch', (event) => {
 
           if (!response.ok) return response;
 
+          // Hanya transpile jika itu file TypeScript/React
           if (finalPath.endsWith('.ts') || finalPath.endsWith('.tsx') || finalPath.endsWith('.js') || !hasExtension) {
             const content = await response.text();
 

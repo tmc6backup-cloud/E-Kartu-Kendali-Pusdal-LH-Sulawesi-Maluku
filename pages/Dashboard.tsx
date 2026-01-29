@@ -84,6 +84,11 @@ const Dashboard: React.FC = () => {
 
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
+    // Cek apakah trend memiliki data (tidak semua nol)
+    const hasTrendData = stats.monthlyTrend.some((m: any) => m.amount > 0);
+    // Cek apakah kategori memiliki data
+    const hasCategoryData = stats.categories && stats.categories.length > 0;
+
     return (
         <div className="space-y-10 page-transition">
             <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
@@ -131,38 +136,60 @@ const Dashboard: React.FC = () => {
 
             {/* Visualisasi Anggaran Bidang */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6">
+                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col min-h-[450px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         <TrendingUp size={20} className="text-blue-600" /> Trend Pengajuan {isGlobalViewer ? 'Kantor' : 'Bidang'}
                     </h3>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={stats.monthlyTrend}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={3} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
+                    
+                    {!hasTrendData ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
+                            <Database size={40} className="text-slate-200 mb-4" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada pengajuan di TA {new Date().getFullYear()}</p>
+                        </div>
+                    ) : (
+                        <div className="h-[300px] w-full mt-auto">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={stats.monthlyTrend}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(val) => `Rp${(val/1000000).toFixed(0)}jt`} />
+                                    <Tooltip 
+                                        formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Jumlah']}
+                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={3} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </div>
 
-                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6">
+                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col min-h-[450px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         <PieIcon size={20} className="text-indigo-600" /> Komposisi Kategori
                     </h3>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={stats.categories} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                                    {stats.categories.map((e: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip />
-                                <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
+
+                    {!hasCategoryData ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
+                            <PieIcon size={40} className="text-slate-200 mb-4" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data kategori nihil</p>
+                        </div>
+                    ) : (
+                        <div className="h-[300px] w-full mt-auto">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={stats.categories} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                                        {stats.categories.map((e: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip 
+                                        formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Total']}
+                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '20px' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -173,52 +200,59 @@ const Dashboard: React.FC = () => {
                     <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Status Anggaran per Bidang</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {stats.deptBudgets.map((dept: any, i: number) => {
-                        const percent = dept.total > 0 ? (dept.spent / dept.total) * 100 : 0;
-                        return (
-                            <div key={i} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all">
-                                <div className="flex items-start justify-between mb-8">
-                                    <div>
-                                        <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-tight mb-1">{dept.name}</h4>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Alokasi TA {new Date().getFullYear()}</p>
+                {stats.deptBudgets.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {stats.deptBudgets.map((dept: any, i: number) => {
+                            const percent = dept.total > 0 ? (dept.spent / dept.total) * 100 : 0;
+                            return (
+                                <div key={i} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all">
+                                    <div className="flex items-start justify-between mb-8">
+                                        <div>
+                                            <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-tight mb-1">{dept.name}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Alokasi TA {new Date().getFullYear()}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-2xl text-slate-400 group-hover:text-blue-600 transition-colors"><Coins size={20} /></div>
                                     </div>
-                                    <div className="p-3 bg-slate-50 rounded-2xl text-slate-400 group-hover:text-blue-600 transition-colors"><Coins size={20} /></div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase">Pagu Tersisa</p>
+                                                <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {dept.remaining.toLocaleString('id-ID')}</p>
+                                            </div>
+                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black ${percent > 90 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                {percent.toFixed(1)}% Terpakai
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                            <div 
+                                                className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-blue-600'}`}
+                                                style={{ width: `${Math.min(percent, 100)}%` }}
+                                            ></div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                                            <div className="space-y-1">
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Total Pagu</p>
+                                                <p className="text-xs font-black text-slate-600">Rp {(dept.total/1000000).toFixed(1)}jt</p>
+                                            </div>
+                                            <div className="space-y-1 text-right">
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Realisasi</p>
+                                                <p className="text-xs font-black text-slate-600">Rp {(dept.spent/1000000).toFixed(1)}jt</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase">Pagu Tersisa</p>
-                                            <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {dept.remaining.toLocaleString('id-ID')}</p>
-                                        </div>
-                                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black ${percent > 90 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                            {percent.toFixed(1)}% Terpakai
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-blue-600'}`}
-                                            style={{ width: `${Math.min(percent, 100)}%` }}
-                                        ></div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                                        <div className="space-y-1">
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Total Pagu</p>
-                                            <p className="text-xs font-black text-slate-600">Rp {(dept.total/1000000).toFixed(1)}jt</p>
-                                        </div>
-                                        <div className="space-y-1 text-right">
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Realisasi</p>
-                                            <p className="text-xs font-black text-slate-600">Rp {(dept.spent/1000000).toFixed(1)}jt</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
+                        <Building2 size={48} className="mx-auto text-slate-100 mb-4" />
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Belum ada alokasi pagu bidang terdaftar</p>
+                    </div>
+                )}
             </div>
         </div>
     );

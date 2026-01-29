@@ -274,13 +274,28 @@ const RequestDetail: React.FC = () => {
 
                     <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black">
                         <table className="w-full text-left border-collapse print:border-black">
-                            <thead className="bg-slate-50 print:bg-gray-100"><tr className="text-[9px] font-black text-slate-400 uppercase print:text-black"><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt]">Struktur / Akun</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] w-[45%]">Uraian Detail</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] text-center">Vol</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] text-right">Satuan</th><th className="px-6 py-4 print:text-[6.5pt] text-right">Jumlah</th></tr></thead>
+                            <thead className="bg-slate-50 print:bg-gray-100"><tr className="text-[9px] font-black text-slate-400 uppercase print:text-black"><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt]">Struktur / Akun</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] w-[45%]">Uraian Detail & Perincian</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] text-center">Volume Total</th><th className="px-6 py-4 border-r print:border-black print:text-[6.5pt] text-right">Satuan</th><th className="px-6 py-4 print:text-[6.5pt] text-right">Jumlah</th></tr></thead>
                             <tbody className="divide-y divide-slate-100 print:divide-black">
                                 {request.calculation_items?.map((item, idx) => (
                                     <tr key={idx} className="print:border-black">
                                         <td className="px-6 py-4 border-r print:border-black"><p className="text-[8px] font-black print:text-[6pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[5.5pt]">{item.kode_akun}</p></td>
-                                        <td className="px-6 py-4 border-r print:border-black"><p className="text-xs font-bold uppercase print:text-[6pt] leading-tight">{item.title}</p>{item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[5.5pt]">Ket: {item.detail_barang}</p>}</td>
-                                        <td className="px-6 py-4 text-center border-r print:border-black text-xs font-black print:text-[6pt]">{item.volkeg}</td>
+                                        <td className="px-6 py-4 border-r print:border-black">
+                                            <p className="text-xs font-bold uppercase print:text-[6pt] leading-tight">{item.title}</p>
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[5.5pt]">Ket: {item.detail_barang}</p>}
+                                            <div className="mt-1 flex items-center gap-1.5">
+                                                <span className="text-[7px] font-black bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 uppercase tracking-tighter print:text-black print:text-[5pt] print:border print:border-black/20">
+                                                    Perincian: {item.f1_val} {item.f1_unit} 
+                                                    {item.f2_val > 1 && ` x ${item.f2_val} ${item.f2_unit}`}
+                                                    {item.f3_val > 1 && ` x ${item.f3_val} ${item.f3_unit}`}
+                                                    {item.f4_val > 1 && ` x ${item.f4_val} ${item.f4_unit}`}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-r print:border-black">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs font-black print:text-[6pt]">{item.volkeg} {item.satkeg}</span>
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4 text-right border-r print:border-black text-xs print:text-[6pt]">{item.hargaSatuan.toLocaleString('id-ID')}</td>
                                         <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[6pt]">{item.jumlah.toLocaleString('id-ID')}</td>
                                     </tr>
@@ -295,7 +310,7 @@ const RequestDetail: React.FC = () => {
                         <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[6pt]">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
-                    {/* RIWAYAT CATATAN VERIFIKASI - GAYA MIRROR IMAGE */}
+                    {/* RIWAYAT CATATAN VERIFIKASI */}
                     {(request.pic_note || request.program_note || request.tu_note || request.ppk_note) && (
                         <div className="no-print space-y-6">
                             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-3 px-4">

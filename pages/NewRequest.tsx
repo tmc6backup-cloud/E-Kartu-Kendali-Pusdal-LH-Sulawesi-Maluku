@@ -27,7 +27,8 @@ import {
     Settings2,
     Zap,
     Keyboard,
-    Target
+    Target,
+    ListChecks
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
 
@@ -394,10 +395,23 @@ const NewRequest: React.FC = () => {
                                                         </React.Fragment>
                                                     ))}
                                                 </div>
+
+                                                {/* LIVE FORMULA PREVIEW */}
+                                                {!isManual && (
+                                                    <div className="mt-4 p-3 bg-blue-600/10 border border-blue-100 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                                                        <ListChecks size={16} className="text-blue-600" />
+                                                        <p className="text-[9px] font-black text-blue-900 uppercase tracking-wider">
+                                                            Review Perhitungan: {item.f1_val} {item.f1_unit} 
+                                                            {item.f2_val > 1 && ` x ${item.f2_val} ${item.f2_unit}`}
+                                                            {item.f3_val > 1 && ` x ${item.f3_val} ${item.f3_unit}`}
+                                                            {item.f4_val > 1 && ` x ${item.f4_val} ${item.f4_unit}`}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Row 2: Volkeg, Harga Satuan, Subtotal (DIPERBESAR) */}
+                                        {/* Row 2: Volkeg, Harga Satuan, Subtotal */}
                                         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end px-2">
                                             <div className="md:col-span-3 space-y-3">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">

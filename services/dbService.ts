@@ -121,7 +121,6 @@ export const dbService = {
     },
 
     getStats: async (role: string, userName: string, department?: string) => {
-        // Tentukan apakah user memiliki hak akses global (Admin/Pimpinan)
         const isGlobal = ['admin', 'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'bendahara'].includes(role);
         const currentYear = new Date().getFullYear();
         const userDepts = department ? department.split(', ').map(d => d.trim().toLowerCase()) : [];
@@ -144,10 +143,9 @@ export const dbService = {
 
             // 1. Proses Pagu (Budget Ceilings)
             ceilingData.forEach(c => {
-                const deptName = c.department.trim();
+                const deptName = (c.department || 'LAINNYA').trim();
                 const deptNameLower = deptName.toLowerCase();
                 
-                // Filter akses: Jika bukan global, hanya masukkan departemen user
                 if (isGlobal || userDepts.includes(deptNameLower)) {
                     if (!departmentMap[deptName]) {
                         departmentMap[deptName] = { 
@@ -180,8 +178,11 @@ export const dbService = {
                     if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + amt;
 
                     if (curr.created_at) {
-                        const mIdx = new Date(curr.created_at).getMonth();
-                        if (monthlyTrend[mIdx]) monthlyTrend[mIdx].amount += amt;
+                        const date = new Date(curr.created_at);
+                        if (date.getFullYear() === currentYear) {
+                            const mIdx = date.getMonth();
+                            if (monthlyTrend[mIdx]) monthlyTrend[mIdx].amount += amt;
+                        }
                     }
 
                     // Update detail per departemen
@@ -189,17 +190,21 @@ export const dbService = {
                     if (deptKey) {
                         const status = curr.status;
                         if (status in departmentMap[deptKey].queue) departmentMap[deptKey].queue[status]++;
-                        if (status !== 'rejected') departmentMap[deptKey].proposed += amt;
+                        if (status !== 'rejected' && status !== 'draft') {
+                            departmentMap[deptKey].proposed += amt;
+                        }
                     }
                 }
                 return acc;
             }, { totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0 });
 
+            const categories = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
+
             return {
                 ...summary,
                 totalOfficeCeiling,
                 monthlyTrend,
-                categories: Object.entries(categoryMap).map(([name, value]) => ({ name, value })),
+                categories,
                 deptBudgets: Object.entries(departmentMap).map(([name, d]) => ({
                     name,
                     total: d.ceiling,
