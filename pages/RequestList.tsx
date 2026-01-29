@@ -11,14 +11,12 @@ import {
     User,
     Paperclip,
     FileText,
-    Edit2,
-    Filter
+    Edit2
 } from 'lucide-react';
-// Fix: Import AuthContext and isValidatorRole from the correct context directory instead of App.tsx
-import { AuthContext, isValidatorRole } from '../context/AuthContext';
-import { dbService } from '../services/dbService';
-import { BudgetRequest } from '../types';
-import Logo from '../components/Logo';
+import { AuthContext, isValidatorRole } from '../App.tsx';
+import { dbService } from '../services/dbService.ts';
+import { BudgetRequest } from '../types.ts';
+import Logo from '../components/Logo.tsx';
 
 const StatusBadge = ({ status }: { status: string }) => {
     const config = {
@@ -67,33 +65,23 @@ const RequestList: React.FC = () => {
 
     const filteredRequests = useMemo(() => {
         let list = [...requests];
-
         if (user?.role === 'pengaju') {
             list = list.filter(req => req.requester_id === user.id);
-        } else if (user?.role === 'kepala_bidang') {
-            const myDepts = user.department ? user.department.split(', ').map(d => d.trim().toLowerCase()) : [];
-            list = list.filter(req => {
-                const reqDept = (req.requester_department || '').trim().toLowerCase();
-                return myDepts.includes(reqDept);
-            });
         }
-
         if (statusFilter) list = list.filter(req => req.status === statusFilter);
-        if (deptFilter) list = list.filter(req => req.requester_department?.toLowerCase() === deptFilter.toLowerCase());
-        
+        if (deptFilter) list = list.filter(req => req.requester_department === deptFilter);
         if (searchTerm) {
-            const term = searchTerm.toLowerCase();
             list = list.filter(req => 
-                req.title.toLowerCase().includes(term) ||
-                req.requester_name.toLowerCase().includes(term) ||
-                (req.requester_department && req.requester_department.toLowerCase().includes(term))
+                req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                req.requester_name.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
         return list;
     }, [requests, statusFilter, deptFilter, searchTerm, user]);
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-8 page-transition print:space-y-4">
+        <div className="space-y-8 page-transition print:space-y-4">
+            {/* Header Cetak Laporan (Hanya muncul saat print) */}
             <div className="print-only mb-6">
                 <div className="flex items-center gap-6 border-b-[3px] border-black pb-3">
                     <Logo className="w-20 h-20 object-contain" />
@@ -107,16 +95,19 @@ const RequestList: React.FC = () => {
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">
-                        {user?.role === 'pengaju' ? 'Berkas Saya' : 'Monitoring Kantor'}
+                    <h1 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">
+                        {user?.role === 'pengaju' ? 'Berkas Saya' : 'Monitoring Berkas'}
                     </h1>
+                    <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest">
+                        {user?.role === 'pengaju' ? 'Daftar pengajuan anggaran pribadi' : 'Manajemen Kartu Kendali Anggaran'}
+                    </p>
                 </div>
                 <div className="flex items-center gap-3 no-print">
-                    <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm hover:bg-slate-50 transition-all">
+                    <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm transition-all">
                         <Printer size={18} /> Cetak Laporan
                     </button>
                     {!isValidatorRole(user?.role) && (
-                        <Link to="/requests/new" className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl hover:bg-slate-800 transition-all">
+                        <Link to="/requests/new" className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl">
                             <Database size={18} /> Usulan Baru
                         </Link>
                     )}
@@ -124,10 +115,10 @@ const RequestList: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-none">
-                <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center gap-6 no-print">
+                <div className="p-8 border-b border-slate-100 flex items-center gap-6 no-print">
                     <div className="relative flex-1 group">
-                        <Search className="absolute left-6 top-4.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
-                        <input type="text" placeholder="Cari berdasarkan judul, nama pengusul, atau bidang..." className="w-full pl-16 pr-6 py-4 bg-slate-50 border-transparent rounded-[24px] text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all uppercase shadow-inner" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
+                        <input type="text" placeholder="Cari kegiatan..." className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-[22px] text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all uppercase" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
 
@@ -135,50 +126,74 @@ const RequestList: React.FC = () => {
                     <table className="w-full text-left print:border-[1pt] print:border-black">
                         <thead>
                             <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-black">
-                                <th className="px-10 py-6 print:py-3 print:px-4">Kegiatan & Bidang</th>
-                                {user?.role !== 'pengaju' && <th className="px-10 py-6 print:py-3 print:px-4">Pengusul</th>}
-                                <th className="px-10 py-6 text-right print:py-3 print:px-4">Nilai</th>
-                                <th className="px-10 py-6 text-center print:py-3 print:px-4">Status</th>
-                                <th className="px-10 py-6 text-right no-print">Opsi</th>
+                                <th className="px-8 py-6 print:py-3 print:px-4">Kegiatan & Bidang</th>
+                                {user?.role !== 'pengaju' && <th className="px-8 py-6 print:py-3 print:px-4">Pengusul</th>}
+                                <th className="px-8 py-6 text-right print:py-3 print:px-4">Volume</th>
+                                <th className="px-8 py-6 text-center print:py-3 print:px-4">Status</th>
+                                <th className="px-8 py-6 text-right no-print">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 print:divide-black">
                             {loading ? (
-                                <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500 opacity-30" size={40} /></td></tr>
+                                <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
                                 filteredRequests.map((req) => (
                                     <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black">
-                                        <td className="px-10 py-7 print:py-3 print:px-4">
-                                            <div className="space-y-2">
-                                                <p className="font-black text-slate-900 text-sm uppercase leading-tight line-clamp-2 max-w-lg print:text-[9pt]">{req.title}</p>
-                                                <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest print:text-black print:text-[7pt]">
-                                                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">{req.category}</span>
+                                        <td className="px-8 py-7 print:py-3 print:px-4">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-3">
+                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[9pt]">{req.title}</p>
+                                                    {req.attachment_url && isValidator && (
+                                                        <span className="no-print p-1.5 bg-blue-50 text-blue-600 rounded-lg flex items-center gap-1 shadow-sm border border-blue-100">
+                                                            <Paperclip size={12} />
+                                                            <span className="text-[8px] font-black">FILE</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[7pt]">
+                                                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded print:bg-transparent print:border print:border-black">{req.category}</span>
                                                     <span>• {req.requester_department}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         {user?.role !== 'pengaju' && (
-                                            <td className="px-10 py-7 text-xs font-black text-slate-700 uppercase print:text-[8pt] print:py-3 print:px-4">
-                                                {req.requester_name}
+                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[8pt] print:py-3 print:px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <User size={12} className="text-slate-300 no-print" />
+                                                    {req.requester_name}
+                                                </div>
                                             </td>
                                         )}
-                                        <td className="px-10 py-7 text-right font-black font-mono text-sm print:text-[8pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
-                                        <td className="px-10 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
-                                        <td className="px-10 py-7 text-right no-print">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {req.status === 'draft' ? (
-                                                    <Link to={`/requests/edit/${req.id}`} className="px-5 py-3 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2">Edit <Edit2 size={14} /></Link>
-                                                ) : (
-                                                    <Link to={`/requests/${req.id}`} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2">Tinjau <ChevronRight size={14} /></Link>
-                                                )}
-                                            </div>
+                                        <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[8pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
+                                        <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
+                                        <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
+                                            {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (
+                                                <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                            )}
+                                            
+                                            {req.status === 'draft' ? (
+                                                <Link 
+                                                    to={`/requests/edit/${req.id}`} 
+                                                    className="px-5 py-3 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all active:scale-95"
+                                                >
+                                                    Lanjutkan <Edit2 size={14} />
+                                                </Link>
+                                            ) : (
+                                                <Link 
+                                                    to={`/requests/${req.id}`} 
+                                                    className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 active:scale-95 transition-all"
+                                                >
+                                                    Tinjau <ChevronRight size={14} />
+                                                </Link>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-40 text-center">
-                                        <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.4em]">Data Nihil</p>
+                                    <td colSpan={5} className="py-32 text-center">
+                                        <Database size={48} className="mx-auto text-slate-100 mb-4" />
+                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Tidak ada data berkas.</p>
                                     </td>
                                 </tr>
                             )}

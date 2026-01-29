@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { dbService } from '../services/dbService';
-import { BudgetCeiling, BudgetRequest } from '../types';
+import { dbService } from '../services/dbService.ts';
+import { BudgetCeiling, BudgetRequest } from '../types.ts';
 import { 
     Wallet, 
     Save, 
@@ -20,6 +20,7 @@ import {
     PieChart
 } from 'lucide-react';
 
+// Daftar departemen yang disinkronkan dengan UserManagement
 const ALL_DEPARTMENTS = [
     "PUSDAL LH SUMA",
     "Bagian Tata Usaha",
@@ -32,6 +33,7 @@ const ALL_DEPARTMENTS = [
     "Sub Bagian Keuangan"
 ];
 
+// Default RO Codes yang sering digunakan
 const DEFAULT_RO_CODES = ["FBA", "BDH", "EBD", "EBB", "EBA", "BDB"];
 
 const AdminPagu: React.FC = () => {
@@ -80,10 +82,12 @@ const AdminPagu: React.FC = () => {
         fetchData();
     }, [year]);
 
+    // Total Pagu Kantor (Seluruh Bidang)
     const officeTotal = useMemo(() => {
         return ceilings.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     }, [ceilings]);
 
+    // Mendapatkan daftar departemen unik yang ada di data ceilings (dari DB) 
     const departmentsToShow = useMemo(() => {
         const fromData = Array.from(new Set(ceilings.map(c => c.department)));
         return Array.from(new Set([...ALL_DEPARTMENTS, ...fromData]));
@@ -109,6 +113,7 @@ const AdminPagu: React.FC = () => {
 
             if (success) {
                 await fetchData();
+                // Reset form setelah simpan
                 setNewEntry({ ...newEntry, komponen: '', subkomponen: '', amount: 0 });
                 setIsCustomRo(false);
             } else {
@@ -180,6 +185,7 @@ const AdminPagu: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto space-y-10 pb-20 page-transition">
+            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 uppercase">
@@ -201,6 +207,7 @@ const AdminPagu: React.FC = () => {
                 </div>
             </div>
 
+            {/* Rekapitulasi Global Satu Kantor */}
             <div className="bg-slate-900 rounded-[48px] p-10 text-white shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
@@ -227,6 +234,7 @@ const AdminPagu: React.FC = () => {
                 </div>
             </div>
 
+            {/* Input Form */}
             <div ref={formRef} className="bg-white rounded-[40px] border border-slate-200 p-10 shadow-sm space-y-8 scroll-mt-24">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg">
@@ -311,10 +319,13 @@ const AdminPagu: React.FC = () => {
                 </button>
             </div>
 
+            {/* List Pagu per Bidang */}
             <div className="space-y-16">
                 {departmentsToShow.map((deptName, idx) => {
                     const deptCeilings = ceilings.filter(c => c.department === deptName);
                     if (deptCeilings.length === 0) return null;
+
+                    // Hitung Total Pagu per Bidang ini
                     const totalDeptPagu = deptCeilings.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
 
                     return (
@@ -324,6 +335,7 @@ const AdminPagu: React.FC = () => {
                                     <Building2 size={16} className="text-emerald-400" />
                                     <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">{deptName}</h2>
                                 </div>
+                                
                                 <div className="flex items-center gap-4">
                                     <div className="px-5 py-2.5 bg-white border-2 border-slate-100 rounded-xl shadow-sm flex items-center gap-3">
                                         <TrendingUp size={14} className="text-emerald-500" />
@@ -395,6 +407,7 @@ const AdminPagu: React.FC = () => {
                                                 </tr>
                                             );
                                         })}
+                                        {/* Footer Baris Total per Bidang */}
                                         <tr className="bg-slate-50/50">
                                             <td className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total {deptName}</td>
                                             <td className="px-8 py-6 text-right font-black text-slate-900 font-mono text-base border-t border-slate-200">
