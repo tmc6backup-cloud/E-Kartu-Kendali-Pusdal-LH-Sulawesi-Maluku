@@ -7,16 +7,6 @@
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        // Konfigurasi Environment Global
-        window.process = {
-            env: {
-                API_KEY: "process.env.API_KEY",
-                SUPABASE_URL: "https://syptvhtbxflhjgdepbqs.supabase.co",
-                SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
-            }
-        };
-    </script>
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -42,6 +32,14 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+        /* Print Style */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .print-only { display: block !important; }
+        }
+        .print-only { display: none; }
     </style>
     <script type="importmap">
     {
@@ -64,12 +62,14 @@
 <body>
     <div id="app-loader" class="loader-wrapper">
         <div class="spinner"></div>
-        <p style="font-size: 10px; font-weight: 800; color: #64748b; margin-top: 24px; letter-spacing: 0.2em; text-transform: uppercase;">Memuat Sistem E-Kendali...</p>
+        <p style="font-size: 10px; font-weight: 800; color: #64748b; margin-top: 24px; letter-spacing: 0.2em; text-transform: uppercase;">Menyiapkan Sistem E-Kendali...</p>
     </div>
 
     <div id="root"></div>
 
-    <!-- Langsung memuat skrip utama sebagai module -->
-    <script type="module" src="index.tsx"></script>
+    <!-- Gunakan inline module import untuk memicu transpiler lingkungan -->
+    <script type="module">
+        import './index.tsx';
+    </script>
 </body>
 </html>
