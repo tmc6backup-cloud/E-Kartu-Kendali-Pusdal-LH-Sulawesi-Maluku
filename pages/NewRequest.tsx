@@ -26,7 +26,8 @@ import {
     Save,
     Settings2,
     Zap,
-    Keyboard
+    Keyboard,
+    Target
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
 
@@ -121,7 +122,6 @@ const NewRequest: React.FC = () => {
             const isManual = manualVolkeg[itemId];
             const updatedItem = { ...item, [field]: value };
             
-            // Auto calculate volkeg only if NOT in manual mode and one of the factors changed
             if (!isManual && ['f1_val', 'f2_val', 'f3_val', 'f4_val'].includes(field)) {
                 updatedItem.volkeg = (Number(updatedItem.f1_val) || 1) * 
                                      (Number(updatedItem.f2_val) || 1) * 
@@ -136,7 +136,6 @@ const NewRequest: React.FC = () => {
 
     const toggleManualMode = (itemId: string) => {
         setManualVolkeg(prev => ({ ...prev, [itemId]: !prev[itemId] }));
-        // If turning manual OFF, re-trigger formula calculation for that item
         if (manualVolkeg[itemId]) {
             setItems(prevItems => prevItems.map(item => {
                 if (item.id !== itemId) return item;
@@ -339,80 +338,112 @@ const NewRequest: React.FC = () => {
                                     </div>
 
                                     {/* Area Kalkulasi & Uraian */}
-                                    <div className="p-8 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                        <div className="space-y-6">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Biaya/Barang</label>
-                                                <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: KONSUMSI NASI KOTAK PESERTA" />
+                                    <div className="p-8 md:p-10 space-y-10">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Biaya/Barang</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: KONSUMSI NASI KOTAK PESERTA" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Spesifikasi Teknis</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
+                                                </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Spesifikasi Teknis</label>
-                                                <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
+
+                                            <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 relative">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <Calculator size={16} className="text-blue-600" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">1. Faktor Volume</span>
+                                                    </div>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => toggleManualMode(item.id)}
+                                                        className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                                                    >
+                                                        {isManual ? <Keyboard size={12} /> : <Zap size={12} />}
+                                                        {isManual ? 'Input Manual Aktif' : 'Gunakan Rumus'}
+                                                    </button>
+                                                </div>
+                                                
+                                                {/* Visualisasi Faktor Terpisah */}
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    {[1,2,3,4].map(n => (
+                                                        <React.Fragment key={n}>
+                                                            <div className={`flex-1 min-w-[120px] bg-white p-3 rounded-2xl shadow-sm border border-slate-100 space-y-2 transition-all ${isManual ? 'opacity-30' : ''}`}>
+                                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">Faktor {n}</p>
+                                                                <div className="flex items-center">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        disabled={isManual}
+                                                                        className="w-full text-center text-xs font-black outline-none bg-transparent" 
+                                                                        value={item[`f${n}_val` as keyof CalculationItem] as number} 
+                                                                        onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} 
+                                                                    />
+                                                                    <input 
+                                                                        type="text" 
+                                                                        disabled={isManual}
+                                                                        className="w-10 text-[7px] font-black text-blue-500 text-center outline-none uppercase bg-blue-50 rounded px-1 py-0.5" 
+                                                                        value={item[`f${n}_unit` as keyof CalculationItem] as string} 
+                                                                        onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} 
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            {n < 4 && <div className={`text-slate-200 font-black text-xs ${isManual ? 'opacity-0' : ''}`}>×</div>}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50/50 p-8 rounded-[32px] border border-slate-100 space-y-8 relative">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <Calculator size={16} className="text-blue-600" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">Kalkulasi Volume</span>
+                                        {/* Row 2: Volkeg, Harga Satuan, Subtotal (DIPERBESAR) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end px-2">
+                                            <div className="md:col-span-3 space-y-3">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                                    <Target size={14} className="text-emerald-500" /> Total Volkeg
+                                                </label>
+                                                <div className="flex bg-slate-900 text-white rounded-3xl overflow-hidden shadow-xl ring-4 ring-slate-100">
+                                                    <input 
+                                                        type="number" 
+                                                        readOnly={!isManual}
+                                                        className={`w-full py-6 text-center text-lg font-black outline-none bg-transparent ${isManual ? 'cursor-text text-amber-400' : 'cursor-default opacity-90'}`}
+                                                        value={item.volkeg} 
+                                                        onChange={(e) => handleItemChange(item.id, 'volkeg', e.target.value)} 
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        className="w-20 py-6 bg-slate-800 text-[11px] font-black text-emerald-400 text-center uppercase outline-none border-l border-white/5" 
+                                                        value={item.satkeg} 
+                                                        onChange={(e) => handleItemChange(item.id, 'satkeg', e.target.value)} 
+                                                        placeholder="SAT"
+                                                    />
                                                 </div>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => toggleManualMode(item.id)}
-                                                    className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
-                                                >
-                                                    {isManual ? <Keyboard size={12} /> : <Zap size={12} />}
-                                                    {isManual ? 'Input Manual Aktif' : 'Gunakan Rumus'}
-                                                </button>
-                                            </div>
-                                            
-                                            {/* Strip Formula Visual - Fleksibel & Rapih */}
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                                                {[1,2,3,4].map(n => (
-                                                    <div key={n} className="flex flex-col items-center gap-2">
-                                                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Faktor {n}</span>
-                                                        <div className={`flex border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all ${isManual ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                                                            <input type="number" className="w-full py-2 text-center text-xs font-black outline-none bg-white" value={item[`f${n}_val` as keyof CalculationItem] as number} onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} />
-                                                            <input type="text" className="w-10 py-2 bg-slate-50 text-[7px] font-black text-slate-400 text-center border-l border-slate-100 outline-none uppercase" value={item[`f${n}_unit` as keyof CalculationItem] as string} onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} />
-                                                        </div>
-                                                    </div>
-                                                ))}
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 items-end">
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Total Volkeg {isManual && '(Manual)'}</label>
-                                                    <div className="flex bg-slate-900 text-white rounded-2xl overflow-hidden shadow-lg group focus-within:ring-2 focus-within:ring-emerald-400 transition-all">
-                                                        <input 
-                                                            type="number" 
-                                                            readOnly={!isManual}
-                                                            className={`w-full py-4 text-center text-sm font-black outline-none bg-transparent ${isManual ? 'cursor-text' : 'cursor-default opacity-80'}`}
-                                                            value={item.volkeg} 
-                                                            onChange={(e) => handleItemChange(item.id, 'volkeg', e.target.value)} 
-                                                        />
-                                                        <input 
-                                                            type="text" 
-                                                            className="w-16 py-4 bg-slate-800 text-[10px] font-black text-emerald-400 text-center uppercase outline-none" 
-                                                            value={item.satkeg} 
-                                                            onChange={(e) => handleItemChange(item.id, 'satkeg', e.target.value)} 
-                                                            placeholder="SAT"
-                                                        />
-                                                    </div>
+                                            <div className="md:col-span-4 space-y-3">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                                    <Coins size={14} className="text-amber-500" /> Harga Satuan (Rp)
+                                                </label>
+                                                <div className="relative group">
+                                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black text-slate-300 group-focus-within:text-blue-500 transition-colors">Rp</span>
+                                                    <input 
+                                                        type="number" 
+                                                        className="w-full pl-16 pr-6 py-6 bg-white border-2 border-slate-100 rounded-3xl text-xl font-black outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100/50" 
+                                                        value={item.hargaSatuan} 
+                                                        onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} 
+                                                        placeholder="0"
+                                                    />
                                                 </div>
+                                            </div>
 
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Harga Satuan (Rp)</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">Rp</span>
-                                                        <input type="number" className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black outline-none focus:border-blue-600 transition-all shadow-sm" value={item.hargaSatuan} onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} />
-                                                    </div>
-                                                </div>
-
-                                                <div className="bg-slate-900 p-4 rounded-2xl text-right border border-slate-800 shadow-xl self-end h-[58px] flex flex-col justify-center">
-                                                    <p className="text-[8px] font-black text-slate-500 uppercase mb-0.5">Subtotal Item</p>
-                                                    <p className="text-sm font-black font-mono text-emerald-400 tracking-tight">Rp {item.jumlah.toLocaleString('id-ID')}</p>
-                                                </div>
+                                            <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-[40px] text-right border border-white/5 shadow-2xl relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 blur-2xl rounded-full -mr-12 -mt-12"></div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 relative z-10">Subtotal Item Terkalkulasi</p>
+                                                <p className="text-3xl font-black font-mono text-emerald-400 tracking-tighter relative z-10">
+                                                    <span className="text-xs text-emerald-600 mr-2">IDR</span>
+                                                    {item.jumlah.toLocaleString('id-ID')}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
