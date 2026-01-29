@@ -1,19 +1,19 @@
 
 import React, { useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import NewRequest from './pages/NewRequest';
-import RequestList from './pages/RequestList';
-import RequestDetail from './pages/RequestDetail';
-import UserManagement from './pages/UserManagement';
-import AdminPagu from './pages/AdminPagu';
-import LoginPage from './pages/LoginPage';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import { AuthContext } from './context/AuthContext';
+import Dashboard from './pages/Dashboard.tsx';
+import NewRequest from './pages/NewRequest.tsx';
+import RequestList from './pages/RequestList.tsx';
+import RequestDetail from './pages/RequestDetail.tsx';
+import UserManagement from './pages/UserManagement.tsx';
+import AdminPagu from './pages/AdminPagu.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import Sidebar from './components/Sidebar.tsx';
+import Header from './components/Header.tsx';
+import { AuthContext } from './context/AuthContext.tsx';
 
 const App: React.FC = () => {
-    const { isLoggedIn, user } = useContext(AuthContext);
+    const { isLoggedIn } = useContext(AuthContext);
 
     return (
         <HashRouter>
@@ -32,8 +32,8 @@ const App: React.FC = () => {
                                         <Route path="/requests/new" element={<NewRequest />} />
                                         <Route path="/requests/edit/:id" element={<NewRequest />} />
                                         <Route path="/requests/:id" element={<RequestDetail />} />
-                                        <Route path="/users" element={user?.role === 'admin' ? <UserManagement /> : <Navigate to="/" replace />} />
-                                        <Route path="/ceilings" element={user?.role === 'admin' ? <AdminPagu /> : <Navigate to="/" replace />} />
+                                        <Route path="/users" element={<UserManagement />} />
+                                        <Route path="/ceilings" element={<AdminPagu />} />
                                         <Route path="*" element={<Navigate to="/" replace />} />
                                     </Routes>
                                 </main>

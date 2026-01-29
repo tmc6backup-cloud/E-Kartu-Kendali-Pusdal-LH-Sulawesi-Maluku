@@ -5,8 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
+    
+    <!-- Favicon fix to stop 404 error -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Babel Standalone: Sangat penting untuk menjalankan .tsx di GitHub Pages tanpa build step -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <script>
         window.process = {
             env: {
@@ -15,7 +23,18 @@
                 SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
             }
         };
+        // Konfigurasi Tailwind (opsional untuk menghilangkan warning)
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
     </script>
+    
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -36,6 +55,7 @@
         }
         .loader-wrapper.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
     </style>
+    
     <script type="importmap">
     {
       "imports": {
@@ -61,7 +81,8 @@
     </div>
 
     <div id="root"></div>
-    <!-- Penting: Menggunakan .js bukan .tsx untuk menghindari galat MIME type -->
-    <script type="module" src="index.js"></script>
+    
+    <!-- Gunakan type="text/babel" agar Babel Standalone memproses file ini -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
 </body>
 </html>
