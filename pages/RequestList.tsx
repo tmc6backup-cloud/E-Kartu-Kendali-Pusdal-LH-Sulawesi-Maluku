@@ -86,14 +86,14 @@ const RequestList: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
-            {/* Kop Laporan - Hanya Cetak */}
-            <div className="print-only mb-8">
-                <div className="flex items-center gap-6 border-b-[4px] border-black pb-4">
-                    <Logo className="w-24 h-24 object-contain" />
+            {/* Kop Laporan - Logo Diperbesar (w-28) */}
+            <div className="print-only mb-8 break-inside-avoid">
+                <div className="flex items-center gap-8 border-b-[5px] border-black pb-4">
+                    <Logo className="w-28 h-28 object-contain" />
                     <div className="flex-1 text-center">
-                        <h2 className="text-[14pt] font-black uppercase leading-tight">Laporan Monitoring Kartu Kendali Anggaran</h2>
-                        <h3 className="text-[11pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>
-                        <p className="text-[8pt] mt-2 italic font-medium">Dicetak oleh: {user?.full_name} pada {new Date().toLocaleString('id-ID')}</p>
+                        <h2 className="text-[16pt] font-black uppercase leading-tight">Laporan Monitoring Kartu Kendali Anggaran</h2>
+                        <h3 className="text-[12pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>
+                        <p className="text-[9pt] mt-3 italic font-medium">Dicetak oleh: {user?.full_name} pada {new Date().toLocaleString('id-ID')}</p>
                     </div>
                 </div>
             </div>
@@ -119,7 +119,7 @@ const RequestList: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-[1pt] print:border-black print:rounded-none">
+            <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-[1pt] print:border-black print:rounded-none break-inside-avoid">
                 <div className="p-8 border-b border-slate-100 flex items-center gap-6 no-print">
                     <div className="relative flex-1 group">
                         <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
@@ -143,11 +143,11 @@ const RequestList: React.FC = () => {
                                 <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
                                 filteredRequests.map((req) => (
-                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black">
+                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black break-inside-avoid">
                                         <td className="px-8 py-7 print:py-3 print:px-4">
                                             <div className="space-y-1.5">
                                                 <div className="flex items-center gap-3">
-                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[9pt]">{req.title}</p>
+                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[10pt]">{req.title}</p>
                                                     {req.attachment_url && isValidator && (
                                                         <span className="no-print p-1.5 bg-blue-50 text-blue-600 rounded-lg flex items-center gap-1 shadow-sm border border-blue-100">
                                                             <Paperclip size={12} />
@@ -155,21 +155,21 @@ const RequestList: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[7pt]">
+                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[8pt]">
                                                     <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded print:bg-transparent print:border print:border-black">{req.category}</span>
                                                     <span>• {req.requester_department}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         {user?.role !== 'pengaju' && (
-                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[8pt] print:py-3 print:px-4">
+                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[9pt] print:py-3 print:px-4">
                                                 <div className="flex items-center gap-2">
                                                     <User size={12} className="text-slate-300 no-print" />
                                                     {req.requester_name}
                                                 </div>
                                             </td>
                                         )}
-                                        <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[8pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
+                                        <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[9pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
                                         <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
                                         <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
                                             {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (

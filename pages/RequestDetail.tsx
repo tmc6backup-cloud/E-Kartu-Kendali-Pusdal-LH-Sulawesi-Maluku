@@ -182,23 +182,22 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black">
             
-            {/* Kop Surat Resmi KLH - Hanya Muncul Saat Print */}
-            <div className="print-only mb-2">
-                <div className="flex items-center border-b-[2pt] border-black pb-2">
-                    <Logo className="w-16 h-16 object-contain mr-4" />
-                    <div className="flex-1 text-center">
-                        <h2 className="text-[10pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup dan Kehutanan</h2>
-                        <h3 className="text-[9pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup</h3>
-                        <h3 className="text-[10.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
-                        <p className="text-[6.5pt] mt-1 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Telp: (0411) 556677. Email: pusdal.lh.suma@menlhk.go.id</p>
+            {/* Kop Surat Resmi KLH - Logo Sangat Besar (w-32) */}
+            <div className="print-only mb-6 border-b-[2.5pt] border-black pb-3 break-inside-avoid">
+                <div className="flex items-center">
+                    <Logo className="w-32 h-32 object-contain mr-8" />
+                    <div className="flex-1 text-center pr-10">
+                        <h2 className="text-[13pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
+                        <h3 className="text-[13pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
+                        <h3 className="text-[14pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Pembangunan Kehutanan dan Lingkungan Hidup Sulawesi Maluku</h3>
+                        <p className="text-[8pt] mt-3 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Email: sekretariat@pusdalsuma.go.id</p>
                     </div>
                 </div>
-                <div className="border-b-[0.5pt] border-black h-[1.5pt] mt-[1pt]"></div>
             </div>
 
-            <div className="print-only text-center mb-4">
-                <h2 className="text-[11pt] font-black underline uppercase tracking-tight">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
-                <p className="text-[7pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
+            <div className="print-only text-center mb-6 break-inside-avoid">
+                <h2 className="text-[13pt] font-black underline uppercase tracking-tight">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
+                <p className="text-[9pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
             </div>
 
             <div className="flex items-center justify-between no-print">
@@ -213,7 +212,7 @@ const RequestDetail: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
-                <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-2 print:mt-0">
+                <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-4 print:mt-0">
                     
                     {/* PANEL AKSI UNTUK VERIFIKATOR (NO PRINT) */}
                     {actionConfig && (
@@ -235,124 +234,75 @@ const RequestDetail: React.FC = () => {
                         </div>
                     )}
 
-                    {/* PANEL REVISI UNTUK PENGAJU (NO PRINT) */}
-                    {request.status === 'rejected' && user?.id === request.requester_id && (
-                        <div className="no-print bg-red-600 p-8 md:p-10 rounded-[48px] shadow-2xl space-y-6 animate-in zoom-in-95 duration-500">
-                            <div className="flex items-center gap-5 text-white">
-                                <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center"><RotateCcw size={28} /></div>
-                                <div>
-                                    <h3 className="text-xl font-black uppercase tracking-tight">Perlu Perbaikan Segera</h3>
-                                    <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Pengajuan Anda telah dikembalikan oleh verifikator</p>
+                    <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none break-inside-avoid">
+                        <div className="space-y-6 print:space-y-3">
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[12pt] print:font-black leading-snug">{request.title}</h2>
+                            <div className="w-full h-px bg-slate-100 print:bg-black print:h-[1.5pt]"></div>
+                            <div className="grid grid-cols-2 gap-x-12 print:gap-x-10">
+                                <div className="space-y-2 print:space-y-1.5">
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Kategori</span><span className="font-black">: {request.category}</span></div>
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Unit Kerja</span><span className="font-black">: {request.requester_department}</span></div>
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Lokasi</span><span className="font-black">: {request.location}</span></div>
                                 </div>
-                            </div>
-                            <button 
-                                onClick={() => navigate(`/requests/edit/${request.id}`)}
-                                className="w-full py-5 bg-white text-red-600 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl hover:bg-slate-50 transition-all active:scale-95"
-                            >
-                                <Edit3 size={18} /> Lakukan Perbaikan & Ajukan Ulang
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none">
-                        <div className="space-y-6 print:space-y-1">
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[10pt] print:font-black">{request.title}</h2>
-                            <div className="w-full h-px bg-slate-100 print:bg-black print:h-[0.5pt]"></div>
-                            <div className="grid grid-cols-2 gap-x-12 print:gap-x-4">
-                                <div className="space-y-2 print:space-y-0.5">
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Kategori</span><span className="font-black">: {request.category}</span></div>
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Unit Kerja</span><span className="font-black">: {request.requester_department}</span></div>
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Lokasi</span><span className="font-black">: {request.location}</span></div>
-                                </div>
-                                <div className="space-y-2 print:space-y-0.5">
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Tanggal</span><span className="font-black">: {new Date(request.execution_date).toLocaleDateString('id-ID')}</span></div>
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Durasi</span><span className="font-black">: {request.execution_duration}</span></div>
-                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[7pt]"><span className="w-20 font-bold text-slate-400 print:text-black">Pengaju</span><span className="font-black">: {request.requester_name}</span></div>
+                                <div className="space-y-2 print:space-y-1.5">
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Tanggal</span><span className="font-black">: {new Date(request.execution_date).toLocaleDateString('id-ID')}</span></div>
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Durasi</span><span className="font-black">: {request.execution_duration}</span></div>
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8.5pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Pengaju</span><span className="font-black">: {request.requester_name}</span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[0.5pt] print:shadow-none">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-slate-50 print:bg-gray-100 border-b border-slate-100 print:border-black">
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid">
+                        <table className="w-full text-left border-collapse border-black">
+                            <thead className="bg-slate-50 print:bg-gray-200 border-b-2 border-black">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black">
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[7pt] print:py-1.5">Struktur / Akun</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[7pt] print:py-1.5 w-[45%]">Uraian & Perincian</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[7pt] print:py-1.5 text-center">Vol Total</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[7pt] print:py-1.5 text-right">Satuan</th>
-                                    <th className="px-6 py-4 print:text-[7pt] print:py-1.5 text-right">Jumlah</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4">Struktur / Akun</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 w-[45%]">Uraian & Perincian</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-center">Vol</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-right">Harga</th>
+                                    <th className="px-6 py-4 print:text-[8.5pt] print:py-2.5 print:px-4 text-right">Jumlah (IDR)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 print:divide-y-0">
+                            <tbody className="divide-y-0">
                                 {request.calculation_items?.map((item, idx) => (
-                                    <tr key={idx} className="print:border-b-[0.5pt] print:border-black">
-                                        <td className="px-6 py-4 border-r print:border-black print:py-1"><p className="text-[8px] font-black print:text-[6.5pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6pt]">{item.kode_akun}</p></td>
-                                        <td className="px-6 py-4 border-r print:border-black print:py-1">
-                                            <p className="text-xs font-bold uppercase print:text-[7pt] leading-tight">{item.title}</p>
-                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6pt]">Spesifikasi: {item.detail_barang}</p>}
-                                            <div className="mt-1 flex items-center gap-1.5 no-print">
-                                                <span className="text-[7px] font-black bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 uppercase tracking-tighter">
-                                                    Detail: {item.f1_val} {item.f1_unit} 
-                                                    {item.f2_val > 1 && ` x ${item.f2_val} ${item.f2_unit}`}
-                                                    {item.f3_val > 1 && ` x ${item.f3_val} ${item.f3_unit}`}
-                                                    {item.f4_val > 1 && ` x ${item.f4_val} ${item.f4_unit}`}
-                                                </span>
-                                            </div>
-                                            <p className="print-only text-[6pt] mt-0.5">({item.f1_val} {item.f1_unit} {item.f2_val > 1 ? `x ${item.f2_val} ${item.f2_unit}` : ''} {item.f3_val > 1 ? `x ${item.f3_val} ${item.f3_unit}` : ''} {item.f4_val > 1 ? `x ${item.f4_val} ${item.f4_unit}` : ''})</p>
+                                    <tr key={idx} className="print:border-b-[1pt] print:border-black break-inside-avoid">
+                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-3"><p className="text-[8px] font-black print:text-[7.5pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[7pt]">{item.kode_akun}</p></td>
+                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-4">
+                                            <p className="text-xs font-bold uppercase print:text-[8.5pt] leading-tight">{item.title}</p>
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[7pt]">Spesifikasi: {item.detail_barang}</p>}
+                                            <p className="print-only text-[7pt] mt-1 italic">({item.f1_val} {item.f1_unit} {item.f2_val > 1 ? `x ${item.f2_val} ${item.f2_unit}` : ''} {item.f3_val > 1 ? `x ${item.f3_val} ${item.f3_unit}` : ''} {item.f4_val > 1 ? `x ${item.f4_val} ${item.f4_unit}` : ''})</p>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-r print:border-black print:py-1">
-                                            <span className="text-xs font-black print:text-[7pt]">{item.volkeg} {item.satkeg}</span>
+                                        <td className="px-6 py-4 text-center border-r border-black print:py-2 print:px-3">
+                                            <span className="text-xs font-black print:text-[8.5pt]">{item.volkeg} {item.satkeg}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right border-r print:border-black print:py-1 text-xs print:text-[7pt]">{item.hargaSatuan.toLocaleString('id-ID')}</td>
-                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[7pt] print:py-1">{item.jumlah.toLocaleString('id-ID')}</td>
+                                        <td className="px-6 py-4 text-right border-r border-black print:py-2 print:px-3 text-xs print:text-[8.5pt]">{item.hargaSatuan.toLocaleString('id-ID')}</td>
+                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8.5pt] print:py-2 print:px-3">{item.jumlah.toLocaleString('id-ID')}</td>
                                     </tr>
                                 ))}
-                                <tr className="bg-slate-950 text-white print:bg-white print:text-black print:border-t-[1pt] print:border-black">
-                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[8pt] print:py-2">TOTAL KESELURUHAN (IDR)</td>
-                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[8pt] print:py-2">Rp {request.amount.toLocaleString('id-ID')}</td>
+                                <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-2 print:border-black break-inside-avoid">
+                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r border-black print:text-[10pt] print:py-4 print:px-5">TOTAL KESELURUHAN</td>
+                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[11pt] print:py-4 print:px-5">Rp {request.amount.toLocaleString('id-ID')}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none print:mt-4">
-                        <p className="text-xs font-black uppercase tracking-widest print:text-[7.5pt] underline mb-1">Justifikasi Kebutuhan:</p>
-                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[7pt]">{request.description || "TIDAK ADA DESKRIPSI."}</p>
+                    <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-5 print:border-black print:border-[1pt] print:shadow-none print:mt-5 break-inside-avoid">
+                        <p className="text-xs font-black uppercase tracking-widest print:text-[9pt] underline mb-1.5">Justifikasi Kebutuhan:</p>
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8.5pt] text-justify">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
-                    {/* RIWAYAT CATATAN (NO PRINT) */}
-                    {(request.pic_note || request.program_note || request.tu_note || request.ppk_note) && (
-                        <div className="no-print space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-3 px-4">
-                                <MessageCircle size={18} className="text-slate-400" /> Riwayat Catatan Verifikator
-                            </h3>
-                            <div className="grid grid-cols-1 gap-4">
-                                {[
-                                    { label: 'BIDANG / PIC', text: request.pic_note },
-                                    { label: 'PROGRAM & ANGGARAN', text: request.program_note },
-                                    { label: 'TATA USAHA', text: request.tu_note },
-                                    { label: 'PEJABAT PPK', text: request.ppk_note }
-                                ].filter(n => n.text).map((note, idx) => (
-                                    <div key={idx} className="bg-slate-50/80 border border-slate-100 p-8 md:p-10 rounded-[32px] shadow-sm animate-in slide-in-from-bottom-2 duration-500">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">CATATAN {note.label}</p>
-                                        <p className="text-lg md:text-xl font-black text-slate-800 uppercase leading-relaxed italic">"{note.text}"</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Lembar Pengesahan Printout */}
-                    <div className="print-only mt-6">
-                        <table className="w-full border-collapse border-[0.5pt] border-black text-center">
-                            <thead className="bg-gray-100"><tr className="text-[7.5pt] font-black uppercase"><th className="border-black py-1 w-1/3 border-[0.5pt]">VALIDASI PROGRAM</th><th className="border-black py-1 w-1/3 border-[0.5pt]">VALIDASI TU</th><th className="border-black py-1 w-1/3 border-[0.5pt]">PENGESAHAN PPK</th></tr></thead>
-                            <tbody><tr className="h-16"><td className="border-black relative border-[0.5pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-60"><div className="border-[1.5pt] border-emerald-900 text-emerald-900 px-1 py-0.5 font-black text-[7pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[0.5pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-60"><div className="border-[1.5pt] border-blue-900 text-blue-900 px-1 py-0.5 font-black text-[7pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[0.5pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2pt] border-red-900 text-red-900 px-2 py-1 font-black text-[8pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[6.5pt] font-bold uppercase"><td className="border-black py-1 border-[0.5pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td><td className="border-black py-1 border-[0.5pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td><td className="border-black py-1 border-[0.5pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '-'}</td></tr></tbody>
+                    <div className="print-only mt-8 break-inside-avoid">
+                        <table className="w-full border-collapse border-[1pt] border-black text-center">
+                            <thead className="bg-gray-100"><tr className="text-[9pt] font-black uppercase"><th className="border-black py-2.5 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2.5 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2.5 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
+                            <tbody><tr className="h-24"><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[10pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[8pt] font-bold uppercase"><td className="border-black py-2.5 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2.5 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2.5 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td></tr></tbody>
                         </table>
                     </div>
 
-                    <div className="print-only mt-8">
-                        <div className="grid grid-cols-2 gap-12 text-center text-[8pt]"><div className="space-y-12"><div><p className="font-bold">Mengetahui,</p><p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p></div><div><p className="font-black underline uppercase">( ..................................................... )</p><p className="text-[7pt] mt-1">NIP. ..................................................</p></div></div><div className="space-y-12"><div><p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p><p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div><div><p className="font-black underline uppercase">( {request.requester_name} )</p><p className="text-[7pt] mt-1">NIP. ..................................................</p></div></div></div>
+                    <div className="print-only mt-12 break-inside-avoid">
+                        <div className="grid grid-cols-2 gap-16 text-center text-[10pt]"><div className="space-y-20"><div><p className="font-bold">Mengetahui,</p><p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p></div><div><p className="font-black underline uppercase leading-none">( ..................................................... )</p><p className="text-[8.5pt] mt-1.5">NIP. ..................................................</p></div></div><div className="space-y-20"><div><p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p><p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div><div><p className="font-black underline uppercase leading-none">( {request.requester_name} )</p><p className="text-[8.5pt] mt-1.5">NIP. ..................................................</p></div></div></div>
                     </div>
                 </div>
 
