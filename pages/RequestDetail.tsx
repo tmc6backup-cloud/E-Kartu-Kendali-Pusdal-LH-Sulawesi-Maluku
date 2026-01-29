@@ -171,10 +171,10 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black">
             
-            {/* Kop Surat Resmi KLH - Logo diperbesar ke w-28 dan tetap items-start */}
+            {/* Kop Surat Resmi KLH - Ukuran Logo Diperkecil (w-24) */}
             <div className="print-only mb-6 border-b-[2pt] border-black pb-3 break-inside-avoid">
-                <div className="flex items-start pt-1">
-                    <Logo className="w-28 h-28 object-contain mr-6 mt-0" />
+                <div className="flex items-center">
+                    <Logo className="w-24 h-24 object-contain mr-6" />
                     <div className="flex-1 text-center pr-10">
                         <h2 className="text-[12pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
                         <h3 className="text-[12pt] font-bold uppercase leading-tight mt-0.5">Badan Pengendalian Lingkungan Hidup RI</h3>
@@ -242,30 +242,30 @@ const RequestDetail: React.FC = () => {
                     </div>
 
                     <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid">
-                        <table className="w-full text-left border-collapse border-black" style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+                        <table className="w-full text-left border-collapse border-black" style={{ borderCollapse: 'collapse' }}>
                             <thead className="bg-slate-50 print:bg-gray-100">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black">
-                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4" style={{ width: '22%' }}>Struktur / Akun</th>
-                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4" style={{ width: '38%' }}>Uraian & Perincian</th>
-                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-center" style={{ width: '10%' }}>Vol</th>
-                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-right" style={{ width: '15%' }}>Harga</th>
-                                    <th className="px-6 py-4 border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-right" style={{ width: '15%' }}>Jumlah (IDR)</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 print:w-[20%]">Struktur / Akun</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 print:w-[40%]">Uraian & Perincian</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-center print:w-[10%]">Vol</th>
+                                    <th className="px-6 py-4 border-r border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-right print:w-[15%]">Harga</th>
+                                    <th className="px-6 py-4 border-black print:text-[8.5pt] print:py-2.5 print:px-4 text-right print:w-[15%]">Jumlah (IDR)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {request.calculation_items?.map((item, idx) => (
                                     <tr key={idx} className="print:border-b-[1pt] print:border-black">
-                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-3" style={{ width: '22%' }}><p className="text-[8px] font-black print:text-[7.5pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[7pt]">{item.kode_akun}</p></td>
-                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-4" style={{ width: '38%' }}>
+                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-3"><p className="text-[8px] font-black print:text-[7.5pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[7pt]">{item.kode_akun}</p></td>
+                                        <td className="px-6 py-4 border-r border-black print:py-2 print:px-4">
                                             <p className="text-xs font-bold uppercase print:text-[8.5pt] leading-tight">{item.title}</p>
-                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[7pt]">Spec: {item.detail_barang}</p>}
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[7pt]">Spesifikasi: {item.detail_barang}</p>}
                                             <p className="print-only text-[7pt] mt-1 italic">({item.f1_val} {item.f1_unit} {item.f2_val > 1 ? `x ${item.f2_val} ${item.f2_unit}` : ''} {item.f3_val > 1 ? `x ${item.f3_val} ${item.f3_unit}` : ''} {item.f4_val > 1 ? `x ${item.f4_val} ${item.f4_unit}` : ''})</p>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-r border-black print:py-2 print:px-3" style={{ width: '10%' }}>
+                                        <td className="px-6 py-4 text-center border-r border-black print:py-2 print:px-3">
                                             <span className="text-xs font-black print:text-[8.5pt]">{item.volkeg} {item.satkeg}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right border-r border-black print:py-2 print:px-3 text-xs print:text-[8.5pt]" style={{ width: '15%' }}>{item.hargaSatuan.toLocaleString('id-ID')}</td>
-                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8.5pt] print:py-2 print:px-3" style={{ width: '15%' }}>{item.jumlah.toLocaleString('id-ID')}</td>
+                                        <td className="px-6 py-4 text-right border-r border-black print:py-2 print:px-3 text-xs print:text-[8.5pt]">{item.hargaSatuan.toLocaleString('id-ID')}</td>
+                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8.5pt] print:py-2 print:px-3">{item.jumlah.toLocaleString('id-ID')}</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.5pt] print:border-black">
