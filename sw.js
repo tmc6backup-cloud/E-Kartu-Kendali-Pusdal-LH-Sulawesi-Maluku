@@ -1,7 +1,7 @@
 
 /**
  * Optimized Engine Transpiler with Caching - PUSDAL LH SUMA
- * Versi: 2.5.0 (GitHub Pages Compatibility Fix)
+ * Versi: 2.6.0 (GitHub Pages Path & Extension Fix)
  */
 
 const CACHE_NAME = 'engine-cache-v1';
@@ -44,34 +44,46 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
   
-  // Strip query parameters for extension checking
-  const cleanPath = url.pathname;
+  // Ambil path bersih tanpa query params
+  let cleanPath = url.pathname;
+  
+  // Cek apakah ini file sumber (TS/TSX) atau import modul lokal tanpa ekstensi
+  // Kita anggap path lokal tanpa titik (.) sebagai kemungkinan file TS/TSX
   const isSource = cleanPath.endsWith('.tsx') || cleanPath.endsWith('.ts');
+  const isPotentialModule = isLocal && !cleanPath.includes('.') && !cleanPath.endsWith('/');
 
-  if (isLocal && isSource) {
+  if (isLocal && (isSource || isPotentialModule)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_NAME);
-        // Use full URL as cache key to respect versioning if needed, 
-        // but here we might want to ignore search for the cache match to be more efficient
         const cachedResponse = await cache.match(event.request);
 
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+        if (cachedResponse) return cachedResponse;
 
         try {
           if (!babelLoaded) loadBabel();
           
-          const response = await fetch(event.request);
-          if (!response.ok) {
-              console.error(`[Engine] Server returned ${response.status} for ${cleanPath}`);
-              return response;
+          let response = await fetch(event.request);
+          
+          // Jika 404 dan tidak ada ekstensi, coba cari dengan .ts atau .tsx
+          if (!response.ok && isPotentialModule) {
+            const trials = [cleanPath + '.ts', cleanPath + '.tsx'];
+            for (const trial of trials) {
+              const trialRes = await fetch(trial);
+              if (trialRes.ok) {
+                response = trialRes;
+                cleanPath = trial; // Update path untuk Babel
+                break;
+              }
+            }
           }
+
+          if (!response.ok) return response;
+
           const content = await response.text();
 
           if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Transpiler (Babel) not ready. Check internet connection.");
+            throw new Error("Transpiler (Babel) not ready.");
           }
 
           const result = Babel.transform(content, {
@@ -88,9 +100,7 @@ self.addEventListener('fetch', (event) => {
             headers: { 'Content-Type': 'application/javascript' }
           });
 
-          // Save to cache
           cache.put(event.request, newResponse.clone());
-          
           return newResponse;
         } catch (err) {
           console.error(`[Engine] Transpilation failed for ${cleanPath}:`, err);
