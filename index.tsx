@@ -4,20 +4,12 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 
-const hideLoader = () => {
-  const loader = document.getElementById('app-loader');
-  if (loader) {
-    loader.classList.add('hidden');
-    setTimeout(() => {
-      loader.style.display = 'none';
-    }, 500);
-  }
-};
-
 const rootElement = document.getElementById('root');
+
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   
+  // Render aplikasi dengan Provider
   root.render(
     <React.StrictMode>
       <AuthProvider>
@@ -26,13 +18,23 @@ if (rootElement) {
     </React.StrictMode>
   );
 
-  // Sembunyikan loader segera setelah JS berhasil dieksekusi
-  // Tidak perlu menunggu event 'load' jendela yang bisa terhambat gambar rusak
+  // Fungsi untuk menyembunyikan loader secara instan
+  const forceHideLoader = () => {
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(() => {
+        loader.style.display = 'none';
+      }, 500);
+    }
+  };
+
+  // Jalankan segera setelah render dimulai
   if (document.readyState === 'complete') {
-    hideLoader();
+    forceHideLoader();
   } else {
-    window.addEventListener('load', hideLoader);
-    // Cadangan: jika load event terlalu lama, paksa tutup setelah 2 detik
-    setTimeout(hideLoader, 2000);
+    window.addEventListener('load', forceHideLoader);
+    // Cadangan: Paksa tutup setelah 1.5 detik jika event load terhambat
+    setTimeout(forceHideLoader, 1500);
   }
 }

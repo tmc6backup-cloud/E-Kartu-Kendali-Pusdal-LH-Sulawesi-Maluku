@@ -13,15 +13,18 @@ import Header from './components/Header';
 import { AuthContext } from './context/AuthContext';
 
 const App: React.FC = () => {
-    const { user, isLoggedIn } = useContext(AuthContext);
+    const { isLoggedIn, user } = useContext(AuthContext);
 
     return (
         <HashRouter>
             <Routes>
+                {/* Rute Login */}
                 <Route path="/login" element={!isLoggedIn ? <LoginPage /> : <Navigate to="/" replace />} />
+                
+                {/* Rute Aplikasi Utama */}
                 <Route path="/*" element={
                     isLoggedIn ? (
-                        <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
+                        <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC]">
                             <Sidebar />
                             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                                 <Header />
