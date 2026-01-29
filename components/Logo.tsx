@@ -6,15 +6,11 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ className }) => {
-  // Ambil base path dari window (didefinisikan di index.html)
-  const base = (window as any).APP_BASE || '/';
+  // URL Logo KLH baru 2024
+  const klhLogoUrl = "https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png";
   
-  // Konstruksi URL logo yang lebih aman
-  // Menggunakan relative path dari root aplikasi
-  const logoUrl = (base + 'logo.png').replace(/\/+/g, '/');
-  
-  // State untuk fallback jika logo.png tidak ditemukan
-  const [imgSrc, setImgSrc] = useState(logoUrl);
+  // State untuk fallback jika logo utama bermasalah
+  const [imgSrc, setImgSrc] = useState(klhLogoUrl);
   const [hasError, setHasError] = useState(false);
 
   const fallbackLogo = "https://upload.wikimedia.org/wikipedia/commons/0/06/Logo_Kementerian_Lingkungan_Hidup_dan_Kehutanan.png";
@@ -27,7 +23,7 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
       onError={() => {
         if (!hasError) {
           setHasError(true);
-          console.warn("Logo lokal tidak ditemukan, beralih ke fallback.");
+          console.warn("Logo utama tidak dapat dimuat, beralih ke fallback.");
         }
       }}
     />
