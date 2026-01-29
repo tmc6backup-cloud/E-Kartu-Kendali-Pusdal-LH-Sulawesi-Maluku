@@ -157,7 +157,7 @@ const RequestDetail: React.FC = () => {
         draft: { label: 'DRAF', color: 'bg-slate-100 text-slate-600' },
         pending: { label: 'ANTRIAN KABID', color: 'bg-amber-50 text-amber-700' },
         reviewed_bidang: { label: 'ANTRIAN PROGRAM', color: 'bg-blue-50 text-blue-700' },
-        reviewed_program: { label: 'ANTRIAN TU', color: 'bg-indigo-50 text-indigo-700' },
+        reviewed_program: { label: 'ANTRIAN PROGRAM OK', color: 'bg-indigo-50 text-indigo-700' },
         reviewed_tu: { label: 'ANTRIAN PPK', color: 'bg-purple-50 text-purple-700' },
         approved: { label: 'DISETUJUI (SPJ)', color: 'bg-emerald-50 text-emerald-700' },
         reviewed_pic: { label: 'SPJ TERVERIFIKASI', color: 'bg-cyan-50 text-cyan-700' },
@@ -182,22 +182,22 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black print:overflow-visible">
             
-            {/* Kop Surat Resmi KLH - Logo diperkecil ke w-14 agar lebih proporsional */}
-            <div className="print-only mb-4 border-b-[2.5pt] border-black pb-2 break-inside-avoid">
-                <div className="flex items-center">
-                    <Logo className="w-14 h-14 object-contain mr-6" />
-                    <div className="flex-1 text-center">
-                        <h2 className="text-[12pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
-                        <h3 className="text-[12pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
-                        <h3 className="text-[13pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Pembangunan Kehutanan dan Lingkungan Hidup Sulawesi Maluku</h3>
-                        <p className="text-[7.5pt] mt-2 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Telp: (0411) 556677. Email: pusdal.lh.suma@menlhk.go.id</p>
+            {/* Kop Surat Resmi KLH - Logo diperbesar ke w-32 (128px), pl-12 (48px) untuk geser kanan, items-center agar sejajar */}
+            <div className="print-only mb-6 border-b-[3pt] border-black pb-4 break-inside-avoid">
+                <div className="flex items-center pl-12 pr-6">
+                    <Logo className="w-32 h-32 object-contain mr-8" />
+                    <div className="flex-1 text-center pr-12">
+                        <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
+                        <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
+                        <h3 className="text-[14.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
+                        <p className="text-[8.5pt] mt-3 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Email: sekretariat@pusdalsuma.go.id</p>
                     </div>
                 </div>
             </div>
 
             <div className="print-only text-center mb-6 break-inside-avoid">
                 <h2 className="text-[12pt] font-black underline uppercase tracking-tight">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
-                <p className="text-[8pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
+                <p className="text-[8.5pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
             </div>
 
             <div className="flex items-center justify-between no-print">

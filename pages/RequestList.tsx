@@ -86,10 +86,10 @@ const RequestList: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
-            {/* Kop Laporan - Logo Diperbesar (w-28) */}
+            {/* Kop Laporan - Logo Diperbesar ke w-32 (128px) agar proporsional */}
             <div className="print-only mb-8 break-inside-avoid">
-                <div className="flex items-center gap-8 border-b-[5px] border-black pb-4">
-                    <Logo className="w-28 h-28 object-contain" />
+                <div className="flex items-center gap-10 border-b-[5px] border-black pb-4 pl-8 pr-8">
+                    <Logo className="w-32 h-32 object-contain" />
                     <div className="flex-1 text-center">
                         <h2 className="text-[16pt] font-black uppercase leading-tight">Laporan Monitoring Kartu Kendali Anggaran</h2>
                         <h3 className="text-[12pt] font-bold uppercase mt-1">Pusdal LH Sulawesi Maluku - TA {new Date().getFullYear()}</h3>

@@ -116,7 +116,7 @@
         @media print { 
             @page {
                 size: A4;
-                margin: 1cm 1.5cm;
+                margin: 0.8cm 1.2cm;
             }
             .no-print { display: none !important; } 
             .print-only { display: block !important; }
@@ -127,13 +127,15 @@
                 scrollbar-width: none !important;
                 -ms-overflow-style: none !important;
                 box-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             *::-webkit-scrollbar { display: none !important; }
 
             body { 
                 overflow: visible !important; 
                 height: auto !important; 
-                width: auto !important; 
+                width: 100% !important; 
                 background: white !important; 
                 color: black !important;
                 padding: 0 !important;
@@ -145,6 +147,7 @@
                 opacity: 1 !important; 
                 padding: 0 !important;
                 margin: 0 !important;
+                width: 100% !important;
             }
             main {
                 overflow: visible !important;
