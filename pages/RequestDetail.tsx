@@ -16,7 +16,9 @@ import {
     AlertTriangle,
     CheckCircle,
     XCircle,
-    MessageSquareQuote
+    MessageSquareQuote,
+    CreditCard,
+    Check
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -49,8 +51,8 @@ const RequestDetail: React.FC = () => {
         try {
             const data = await dbService.getRequestById(id);
             if (data) {
-                // VALIDASI AKSES KABID (Untuk melihat detail)
-                if (user?.role === 'kepala_bidang') {
+                // VALIDASI AKSES UNIT KERJA UNTUK KABID & PIC WILAYAH
+                if (user?.role === 'kepala_bidang' || user?.role?.startsWith('pic_wilayah_')) {
                     const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
                     if (!myDepts.includes(data.requester_department?.toLowerCase() || '')) {
                         setAccessDenied(true);
@@ -74,7 +76,7 @@ const RequestDetail: React.FC = () => {
     const handleAction = async (status: BudgetStatus, isReject: boolean = false) => {
         if (!id) return;
         if (isReject && !validatorNote.trim()) {
-            alert("Harap berikan alasan penolakan/revisi pada kolom catatan.");
+            alert("Harap berikan alasan penolakan/revisi pada kolom catatan agar pengaju dapat memperbaikinya.");
             return;
         }
 
@@ -87,7 +89,7 @@ const RequestDetail: React.FC = () => {
             );
             
             if (success) {
-                alert(isReject ? "Berkas telah dikembalikan untuk revisi." : "Berkas berhasil disetujui dan diteruskan.");
+                alert(isReject ? "Berkas telah dikembalikan untuk revisi." : "Verifikasi berhasil. Berkas diteruskan ke tahap selanjutnya.");
                 setValidatorNote("");
                 fetchRequest();
             }
@@ -98,17 +100,84 @@ const RequestDetail: React.FC = () => {
         }
     };
 
-    const isUserValidator = useMemo(() => isValidatorRole(user?.role), [user]);
-
-    // Pengecekan Otoritas Tombol Setujui Kepala Bidang
-    const canKabidApprove = useMemo(() => {
-        if (!user || !request) return false;
+    // LOGIKA ADAPTIF UNTUK PANEL AKSI SEMUA ROLE
+    const actionConfig = useMemo(() => {
+        if (!user || !request) return null;
+        
+        const role = user.role;
+        const status = request.status;
         const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
-        return (
-            user.role === 'kepala_bidang' && 
-            request.status === 'pending' && 
-            myDepts.includes(request.requester_department?.toLowerCase() || '')
-        );
+        const isMyDept = myDepts.includes(request.requester_department?.toLowerCase() || '');
+
+        // 1. KEPALA BIDANG
+        if (role === 'kepala_bidang' && status === 'pending' && isMyDept) {
+            return {
+                title: 'Verifikasi Struktural',
+                subtitle: 'Kepala Bidang / Unit Kerja',
+                targetStatus: 'reviewed_bidang' as BudgetStatus,
+                icon: <UserCheck size={24} />,
+                color: 'emerald'
+            };
+        }
+
+        // 2. VALIDATOR PROGRAM
+        if (role === 'validator_program' && status === 'reviewed_bidang') {
+            return {
+                title: 'Validasi Anggaran',
+                subtitle: 'Bagian Program & Anggaran',
+                targetStatus: 'reviewed_program' as BudgetStatus,
+                icon: <GanttChart size={24} />,
+                color: 'blue'
+            };
+        }
+
+        // 3. KASUBAG TU
+        if (role === 'validator_tu' && status === 'reviewed_program') {
+            return {
+                title: 'Validasi Tata Usaha',
+                subtitle: 'Kasubag Tata Usaha',
+                targetStatus: 'reviewed_tu' as BudgetStatus,
+                icon: <FileSearch size={24} />,
+                color: 'indigo'
+            };
+        }
+
+        // 4. PEJABAT PPK
+        if (role === 'validator_ppk' && status === 'reviewed_tu') {
+            return {
+                title: 'Pengesahan Dokumen',
+                subtitle: 'Pejabat Pembuat Komitmen (PPK)',
+                targetStatus: 'approved' as BudgetStatus,
+                icon: <Stamp size={24} />,
+                color: 'purple'
+            };
+        }
+
+        // 5. PIC VERIFIKATOR (SPJ)
+        const isPic = role === 'pic_verifikator' || role === 'pic_tu' || role?.startsWith('pic_wilayah_');
+        if (isPic && status === 'approved' && (role === 'pic_verifikator' || role === 'pic_tu' || isMyDept)) {
+            return {
+                title: 'Verifikasi SPJ',
+                subtitle: 'PIC Verifikator Kelengkapan Berkas',
+                targetStatus: 'reviewed_pic' as BudgetStatus,
+                icon: <ShieldIcon size={24} />,
+                color: 'cyan'
+            };
+        }
+
+        // 6. BENDAHARA
+        if (role === 'bendahara' && status === 'reviewed_pic') {
+            return {
+                title: 'Penyelesaian Pembayaran',
+                subtitle: 'Bendahara Pengeluaran',
+                targetStatus: 'approved' as BudgetStatus, // Dalam konteks ini bisa disesuaikan ke status final/realized jika ada
+                icon: <Coins size={24} />,
+                color: 'emerald',
+                buttonLabel: 'Konfirmasi Pembayaran Selesai'
+            };
+        }
+
+        return null;
     }, [user, request]);
 
     if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
@@ -121,7 +190,7 @@ const RequestDetail: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                     <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Akses Dibatasi</h2>
-                    <p className="text-sm font-medium text-slate-500 max-w-md">Anda tidak memiliki otoritas untuk meninjau berkas dari unit kerja ini.</p>
+                    <p className="text-sm font-medium text-slate-500 max-w-md">Anda tidak memiliki otoritas untuk memproses berkas dari unit kerja ini.</p>
                 </div>
                 <button onClick={() => navigate('/requests')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3">
                     <ArrowLeft size={16} /> Kembali ke Daftar
@@ -130,14 +199,14 @@ const RequestDetail: React.FC = () => {
         );
     }
 
-    if (!request) return <div className="text-center py-40 font-bold uppercase text-slate-400">Berkas tidak ditemukan atau telah dihapus.</div>;
+    if (!request) return <div className="text-center py-40 font-bold uppercase text-slate-400">Berkas tidak ditemukan.</div>;
 
     const statusInfo = {
         draft: { label: 'DRAF', color: 'bg-slate-100 text-slate-600' },
-        pending: { label: 'MENUNGGU KABID', color: 'bg-amber-50 text-amber-700' },
-        reviewed_bidang: { label: 'MENUNGGU PROGRAM', color: 'bg-blue-50 text-blue-700' },
-        reviewed_program: { label: 'MENUNGGU TU', color: 'bg-indigo-50 text-indigo-700' },
-        reviewed_tu: { label: 'MENUNGGU PPK', color: 'bg-purple-50 text-purple-700' },
+        pending: { label: 'ANTRIAN KABID', color: 'bg-amber-50 text-amber-700' },
+        reviewed_bidang: { label: 'ANTRIAN PROGRAM', color: 'bg-blue-50 text-blue-700' },
+        reviewed_program: { label: 'ANTRIAN TU', color: 'bg-indigo-50 text-indigo-700' },
+        reviewed_tu: { label: 'ANTRIAN PPK', color: 'bg-purple-50 text-purple-700' },
         approved: { label: 'DISETUJUI (SPJ)', color: 'bg-emerald-50 text-emerald-700' },
         reviewed_pic: { label: 'SPJ TERVERIFIKASI', color: 'bg-cyan-50 text-cyan-700' },
         rejected: { label: 'REVISI / DITOLAK', color: 'bg-red-50 text-red-700' }
@@ -196,27 +265,27 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-1.5 print:mt-0">
                     
-                    {/* Panel Aksi Kepala Bidang (HANYA MUNCUL JIKA OTORITAS SESUAI) */}
-                    {canKabidApprove && (
-                        <div className="no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-emerald-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500">
-                            <div className="flex items-center gap-4 border-b border-emerald-50 pb-6">
-                                <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-100">
-                                    <ShieldIcon size={24} />
+                    {/* PANEL AKSI CERDAS (ADAPTIF UNTUK SEMUA ROLE) */}
+                    {actionConfig && (
+                        <div className={`no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-${actionConfig.color}-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500`}>
+                            <div className={`flex items-center gap-4 border-b border-${actionConfig.color}-50 pb-6`}>
+                                <div className={`w-12 h-12 bg-${actionConfig.color}-600 text-white rounded-2xl flex items-center justify-center shadow-lg`}>
+                                    {actionConfig.icon}
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Otorisasi Kepala Bidang</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tinjau dan Berikan Disposisi Pengajuan</p>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{actionConfig.title}</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{actionConfig.subtitle}</p>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                    <MessageSquareQuote size={14} className="text-blue-500" /> Catatan / Instruksi Disposisi
+                                    <MessageSquareQuote size={14} className="text-blue-500" /> Catatan Disposisi / Hasil Verifikasi
                                 </label>
                                 <textarea 
                                     className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl text-xs font-bold uppercase focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner placeholder:text-slate-300"
                                     rows={3}
-                                    placeholder="TAMBAHKAN CATATAN JIKA PERLU (WAJIB JIKA DITOLAK)..."
+                                    placeholder="MASUKKAN CATATAN JIKA ADA (WAJIB JIKA PERLU REVISI)..."
                                     value={validatorNote}
                                     onChange={(e) => setValidatorNote(e.target.value)}
                                 />
@@ -231,12 +300,12 @@ const RequestDetail: React.FC = () => {
                                     <XCircle size={18} /> Kembalikan / Revisi
                                 </button>
                                 <button 
-                                    onClick={() => handleAction('reviewed_bidang')}
+                                    onClick={() => handleAction(actionConfig.targetStatus)}
                                     disabled={actionLoading}
-                                    className="flex-[2] py-5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl shadow-emerald-100 transition-all active:scale-95 disabled:opacity-50"
+                                    className={`flex-[2] py-5 bg-${actionConfig.color}-600 text-white hover:bg-${actionConfig.color}-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl transition-all active:scale-95 disabled:opacity-50`}
                                 >
-                                    {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
-                                    Setujui & Teruskan ke Program
+                                    {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
+                                    {actionConfig.buttonLabel || 'Setujui & Teruskan'}
                                 </button>
                             </div>
                         </div>
