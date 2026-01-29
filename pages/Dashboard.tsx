@@ -13,7 +13,8 @@ import {
     LayoutGrid
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
-import { AuthContext } from '../App';
+// Fix: Import AuthContext from the correct context directory instead of App.tsx
+import { AuthContext } from '../context/AuthContext';
 
 // Komponen Reusable untuk Kartu Bidang
 const DeptBudgetCard: React.FC<{ deptData: any, isGlobalContext?: boolean }> = ({ deptData }) => {

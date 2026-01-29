@@ -1,7 +1,8 @@
 
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AuthContext } from '../App';
+// Fix: Import AuthContext from the correct context directory instead of App.tsx
+import { AuthContext } from '../context/AuthContext';
 import { analyzeBudgetRequest } from '../services/geminiService';
 import { dbService } from '../services/dbService';
 import { 

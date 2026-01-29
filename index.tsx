@@ -2,33 +2,37 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { AuthProvider } from './context/AuthContext';
+
+const hideLoader = () => {
+  const loader = document.getElementById('app-loader');
+  if (loader) {
+    loader.classList.add('hidden');
+    setTimeout(() => {
+      loader.style.display = 'none';
+    }, 500);
+  }
+};
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   
-  // Render aplikasi
   root.render(
     <React.StrictMode>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </React.StrictMode>
   );
 
-  // Fungsi untuk menyembunyikan loader setelah komponen utama terpasang
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      const loader = document.getElementById('app-loader');
-      if (loader) {
-        loader.classList.add('hidden');
-      }
-    }, 800);
-  });
-
-  // Cadangan jika event load sudah terlewat
-  setTimeout(() => {
-    const loader = document.getElementById('app-loader');
-    if (loader && !loader.classList.contains('hidden')) {
-      loader.classList.add('hidden');
-    }
-  }, 3000);
+  // Sembunyikan loader segera setelah JS berhasil dieksekusi
+  // Tidak perlu menunggu event 'load' jendela yang bisa terhambat gambar rusak
+  if (document.readyState === 'complete') {
+    hideLoader();
+  } else {
+    window.addEventListener('load', hideLoader);
+    // Cadangan: jika load event terlalu lama, paksa tutup setelah 2 detik
+    setTimeout(hideLoader, 2000);
+  }
 }
