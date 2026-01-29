@@ -11,14 +11,14 @@
         const getBase = () => {
             const path = window.location.pathname;
             const segments = path.split('/').filter(s => s.length > 0);
+            // Deteksi GitHub Pages (biasanya /nama-repo/)
             if (window.location.hostname.includes('github.io') && segments.length > 0) {
                 return '/' + segments[0] + '/';
             }
             return '/';
         };
 
-        const BASE = getBase();
-        window.APP_BASE = BASE;
+        window.APP_BASE = getBase();
 
         window.process = {
             env: {
@@ -38,7 +38,7 @@
                 for(let key of keys) await caches.delete(key);
             }
             localStorage.clear();
-            location.href = window.APP_BASE;
+            location.reload();
         };
     </script>
     <style>
@@ -46,36 +46,11 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner { width: 40px; height: 40px; border: 4px solid #f1f5f9; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         #root { height: 100%; width: 100%; }
-        .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; }
+        .loader-wrapper { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #F8FAFC; z-index: 1000; position: fixed; top: 0; left: 0; }
         
-        /* PRINT OPTIMIZATION */
-        @media screen {
-            .print-only { display: none !important; }
-        }
         @media print {
-            @page {
-                size: A4;
-                margin: 0.5cm;
-            }
             .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { 
-                overflow: visible !important; 
-                height: auto !important; 
-                width: auto !important; 
-                background: white !important; 
-                color: black !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            #root { height: auto !important; }
-            main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
-            .page-transition { animation: none !important; transform: none !important; }
-            
-            /* Sharp Borders for Print */
-            .print-border { border: 0.5pt solid black !important; }
-            .print-border-b { border-bottom: 0.5pt solid black !important; }
-            .print-border-r { border-right: 0.5pt solid black !important; }
+            .loader-wrapper { display: none !important; }
         }
     </style>
 <script type="importmap">
@@ -83,43 +58,80 @@
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
     "react/": "https://esm.sh/react@19.0.0/",
-    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
     "@google/genai": "https://esm.sh/@google/genai@1.3.0",
     "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
     "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
   }
 }
 </script>
 </head>
 <body>
-    <div id="root">
-        <div class="loader-wrapper">
-            <div class="spinner"></div>
-            <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
-            <button id="reset-btn" onclick="window.forceReset()" class="btn" style="display:none; background: #ef4444;">PERBAIKI SISTEM</button>
-        </div>
+    <div id="app-loader" class="loader-wrapper">
+        <div class="spinner"></div>
+        <p id="status-text" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 20px; letter-spacing: 0.1em; text-transform: uppercase;">Menghubungkan Engine...</p>
+        <button id="reset-btn" onclick="window.forceReset()" style="display:none; margin-top: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">PERBAIKI SISTEM</button>
     </div>
+
+    <div id="root"></div>
+
     <script>
+        const statusText = document.getElementById('status-text');
+        const resetBtn = document.getElementById('reset-btn');
+
         async function start() {
-            if (!navigator.serviceWorker) return;
+            if (!navigator.serviceWorker) {
+                statusText.innerText = "Browser tidak mendukung Service Worker.";
+                return;
+            }
+
             try {
+                statusText.innerText = "Mendaftarkan Engine Transpiler...";
                 const swPath = window.APP_BASE + 'sw.js';
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
-                if (navigator.serviceWorker.controller) launch();
-                else navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-            } catch (err) { console.error(err); }
+                
+                // Jika sudah ada controller, jalankan aplikasi
+                if (navigator.serviceWorker.controller) {
+                    launch();
+                } else {
+                    // Tunggu controller aktif
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        location.reload();
+                    });
+                }
+            } catch (err) { 
+                console.error(err);
+                statusText.innerText = "Gagal memuat sistem: " + err.message;
+                resetBtn.style.display = "block";
+            }
         }
+
         function launch() {
+            statusText.innerText = "Memulai Aplikasi...";
             const script = document.createElement('script');
             script.type = 'module';
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
+
+            // Sembunyikan loader setelah 5 detik jika tidak ada aktivitas (fallback)
+            setTimeout(() => {
+                const loader = document.getElementById('app-loader');
+                if (loader) {
+                    // Pengecekan apakah React sudah merender sesuatu
+                    if (document.getElementById('root').innerHTML.length > 100) {
+                        loader.style.display = 'none';
+                    } else {
+                        statusText.innerText = "Terjadi kendala pada inisialisasi modul.";
+                        resetBtn.style.display = "block";
+                    }
+                }
+            }, 8000);
         }
+
         start();
     </script>
 </body>

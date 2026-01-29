@@ -1,10 +1,10 @@
 
 /**
  * Optimized Engine Transpiler with Caching - PUSDAL LH SUMA
- * Versi: 2.6.0 (GitHub Pages Path & Extension Fix)
+ * Versi: 2.7.0 (GitHub Pages Fix - Auto Extension & Path Sync)
  */
 
-const CACHE_NAME = 'engine-cache-v1';
+const CACHE_NAME = 'engine-cache-v2';
 const BABEL_SOURCES = [
   'https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js'
@@ -44,15 +44,18 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
   
-  // Ambil path bersih tanpa query params
-  let cleanPath = url.pathname;
+  // Deteksi jika ini adalah request untuk file internal aplikasi
+  let path = url.pathname;
   
-  // Cek apakah ini file sumber (TS/TSX) atau import modul lokal tanpa ekstensi
-  // Kita anggap path lokal tanpa titik (.) sebagai kemungkinan file TS/TSX
-  const isSource = cleanPath.endsWith('.tsx') || cleanPath.endsWith('.ts');
-  const isPotentialModule = isLocal && !cleanPath.includes('.') && !cleanPath.endsWith('/');
+  // Cek apakah request memiliki ekstensi atau tidak
+  const hasExtension = path.split('/').pop().includes('.');
+  const isPotentialSource = isLocal && !path.startsWith('/http') && (
+    path.endsWith('.ts') || 
+    path.endsWith('.tsx') || 
+    (!hasExtension && !path.endsWith('/'))
+  );
 
-  if (isLocal && (isSource || isPotentialModule)) {
+  if (isPotentialSource) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_NAME);
@@ -64,15 +67,16 @@ self.addEventListener('fetch', (event) => {
           if (!babelLoaded) loadBabel();
           
           let response = await fetch(event.request);
-          
-          // Jika 404 dan tidak ada ekstensi, coba cari dengan .ts atau .tsx
-          if (!response.ok && isPotentialModule) {
-            const trials = [cleanPath + '.ts', cleanPath + '.tsx'];
+          let finalPath = path;
+
+          // LOGIKA KRUSIAL: Jika 404 dan tidak ada ekstensi, coba cari file .ts atau .tsx
+          if (!response.ok && !hasExtension) {
+            const trials = [path + '.ts', path + '.tsx', path + '/index.ts', path + '/index.tsx'];
             for (const trial of trials) {
               const trialRes = await fetch(trial);
               if (trialRes.ok) {
                 response = trialRes;
-                cleanPath = trial; // Update path untuk Babel
+                finalPath = trial;
                 break;
               }
             }
@@ -80,31 +84,36 @@ self.addEventListener('fetch', (event) => {
 
           if (!response.ok) return response;
 
-          const content = await response.text();
+          // Hanya transpile jika itu file TypeScript/React
+          if (finalPath.endsWith('.ts') || finalPath.endsWith('.tsx') || finalPath.endsWith('.js') || !hasExtension) {
+            const content = await response.text();
 
-          if (!babelLoaded || typeof Babel === 'undefined') {
-            throw new Error("Transpiler (Babel) not ready.");
+            if (!babelLoaded || typeof Babel === 'undefined') {
+              throw new Error("Transpiler (Babel) not ready.");
+            }
+
+            const result = Babel.transform(content, {
+              presets: [
+                ['react', { runtime: 'automatic' }],
+                ['typescript', { isTSX: true, allExtensions: true }],
+                ['env', { modules: false }]
+              ],
+              filename: finalPath,
+              sourceMaps: 'inline'
+            }).code;
+
+            const newResponse = new Response(result, {
+              headers: { 'Content-Type': 'application/javascript' }
+            });
+
+            cache.put(event.request, newResponse.clone());
+            return newResponse;
           }
 
-          const result = Babel.transform(content, {
-            presets: [
-              ['react', { runtime: 'automatic' }],
-              ['typescript', { isTSX: true, allExtensions: true }],
-              ['env', { modules: false }]
-            ],
-            filename: cleanPath,
-            sourceMaps: 'inline'
-          }).code;
-
-          const newResponse = new Response(result, {
-            headers: { 'Content-Type': 'application/javascript' }
-          });
-
-          cache.put(event.request, newResponse.clone());
-          return newResponse;
+          return response;
         } catch (err) {
-          console.error(`[Engine] Transpilation failed for ${cleanPath}:`, err);
-          return new Response(`console.error("Engine Fail [${cleanPath}]: ${err.message}");`, {
+          console.error(`[Engine] Fail for ${path}:`, err);
+          return new Response(`console.error("Engine Error [${path}]: ${err.message}");`, {
             headers: { 'Content-Type': 'application/javascript' }
           });
         }
