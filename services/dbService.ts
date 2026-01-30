@@ -19,9 +19,11 @@ export const dbService = {
     },
 
     getAllProfiles: async (): Promise<Profile[]> => {
-        const { data, error } = await supabase.from('profiles').select('*').order('full_name', { ascending: true });
-        if (error) return [];
-        return data as Profile[];
+        try {
+            const { data, error } = await supabase.from('profiles').select('*').order('full_name', { ascending: true });
+            if (error) return [];
+            return data as Profile[];
+        } catch (err) { return []; }
     },
 
     deleteProfile: async (id: string) => {
@@ -64,10 +66,10 @@ export const dbService = {
     // --- Pengajuan Anggaran ---
     getAllRequests: async (): Promise<BudgetRequest[]> => {
         try {
-            // Memastikan kolom yang diperlukan dari join profile selalu didefinisikan secara eksplisit
+            // Menggunakan profiles(*) agar tidak error jika salah satu kolom (wa) belum ada di DB fisik
             const { data, error } = await supabase
                 .from('budget_requests')
-                .select('*, profiles(id, department, full_name, role, whatsapp_number)')
+                .select('*, profiles(*)')
                 .order('created_at', { ascending: false });
             
             if (error) throw error;

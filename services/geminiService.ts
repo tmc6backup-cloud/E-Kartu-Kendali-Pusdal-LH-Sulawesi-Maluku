@@ -1,11 +1,11 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize GoogleGenAI with API key directly from environment variable
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const analyzeBudgetRequest = async (title: string, amount: number, description: string) => {
   try {
+    // Inisialisasi dilakukan di dalam fungsi tepat sebelum pemanggilan
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: `Analisis pengajuan anggaran pemerintah berikut:
@@ -35,6 +35,8 @@ export const analyzeBudgetRequest = async (title: string, amount: number, descri
 
 export const getBudgetInsights = async (totalPending: number, totalApproved: number) => {
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Dashboard Pengajuan Anggaran:

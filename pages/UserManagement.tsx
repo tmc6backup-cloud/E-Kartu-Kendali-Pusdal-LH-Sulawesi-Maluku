@@ -64,10 +64,6 @@ const UserManagement: React.FC = () => {
         password: '',
         whatsapp_number: ''
     });
-    
-    const [showResetModal, setShowResetModal] = useState(false);
-    const [resetConfirmation, setResetConfirmation] = useState('');
-    const [isResetting, setIsResetting] = useState(false);
 
     const fetchProfiles = async () => {
         setLoading(true);
@@ -155,7 +151,14 @@ const UserManagement: React.FC = () => {
                 cancelEdit(); 
                 await fetchProfiles(); 
             }
-        } catch (err: any) { alert(err.message); } finally { setSubmitting(false); }
+        } catch (err: any) { 
+            console.error("Save Error:", err);
+            if (err.message?.includes('column "whatsapp_number" does not exist')) {
+                alert("ERROR DATABASE: Kolom WhatsApp belum ada di database Anda. Silakan jalankan skrip SQL di menu SQL Editor Supabase terlebih dahulu.");
+            } else {
+                alert(err.message || "Gagal menyimpan data.");
+            }
+        } finally { setSubmitting(false); }
     };
 
     const getRoleInfo = (role: string) => {
