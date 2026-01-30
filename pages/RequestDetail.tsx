@@ -21,11 +21,15 @@ import {
     MessageCircle,
     Edit3,
     RotateCcw,
-    ExternalLink
+    ExternalLink,
+    SearchCode,
+    Users,
+    Copy,
+    Share2
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
-import { BudgetRequest, BudgetStatus } from '../types.ts';
+import { BudgetRequest, BudgetStatus, Profile } from '../types.ts';
 import Logo from '../components/Logo.tsx';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
@@ -47,6 +51,8 @@ const RequestDetail: React.FC = () => {
     const [validatorNote, setValidatorNote] = useState("");
     const [accessDenied, setAccessDenied] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [validators, setValidators] = useState<Profile[]>([]);
+    const [copied, setCopied] = useState(false);
 
     const fetchRequest = async () => {
         if (!id) return;
@@ -63,6 +69,26 @@ const RequestDetail: React.FC = () => {
                     }
                 }
                 setRequest(data);
+                
+                let targetRole = '';
+                if (data.status === 'pending') targetRole = 'kepala_bidang';
+                else if (data.status === 'reviewed_bidang') targetRole = 'validator_program';
+                else if (data.status === 'reviewed_program') targetRole = 'validator_tu';
+                else if (data.status === 'reviewed_tu') targetRole = 'validator_ppk';
+                else if (data.status === 'approved') targetRole = 'pic_verifikator';
+                else if (data.status === 'reviewed_pic') targetRole = 'bendahara';
+
+                if (targetRole) {
+                    const profiles = await dbService.getProfilesByRole(targetRole);
+                    if (targetRole === 'kepala_bidang' || targetRole.startsWith('pic_wilayah_')) {
+                        const filtered = profiles.filter(p => 
+                            p.department?.toLowerCase().includes(data.requester_department?.toLowerCase() || '')
+                        );
+                        setValidators(filtered);
+                    } else {
+                        setValidators(profiles);
+                    }
+                }
             }
         } catch (err) { console.error(err); } finally { setLoading(false); }
     };
@@ -137,14 +163,26 @@ const RequestDetail: React.FC = () => {
         return null;
     }, [user, request]);
 
-    const handleWhatsAppContact = () => {
-        if (!request || !request.profiles?.whatsapp_number) {
-            alert("Nomor WhatsApp pengaju tidak tersedia. Harap minta pengaju mengupdate profil mereka.");
+    const handleWhatsAppContact = (target: Profile, type: 'validator' | 'requester') => {
+        if (!target.whatsapp_number) {
+            alert(`Nomor WhatsApp ${type === 'validator' ? 'petugas' : 'pengaju'} tidak tersedia.`);
             return;
         }
-        const phoneNumber = request.profiles.whatsapp_number.replace(/\D/g, '');
-        const text = encodeURIComponent(`Halo ${request.requester_name}, saya dari Pusdal LH Suma sedang meninjau berkas Anda: "${request.title}". Ada yang ingin saya konfirmasikan mengenai...`);
-        window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
+        const phoneNumber = target.whatsapp_number.replace(/\D/g, '');
+        let message = '';
+        if (type === 'validator') {
+            message = `Halo Bapak/Ibu ${target.full_name}, saya ${user?.full_name} baru saja mengajukan berkas: "${request?.title}". Mohon bantuannya untuk meninjau berkas tersebut. Terima kasih.`;
+        } else {
+            message = `Halo ${target.full_name}, saya ${user?.full_name} dari Pusdal LH Suma sedang meninjau berkas Anda: "${request?.title}". Ada beberapa hal yang ingin saya konfirmasikan...`;
+        }
+        window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    };
+
+    const copyLink = () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
@@ -193,7 +231,6 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black print:overflow-visible">
             
-            {/* Kop Surat Resmi KLH */}
             <div className="print-only mb-6 border-b-[3pt] border-black pb-4 break-inside-avoid">
                 <div className="flex items-center pl-12 pr-6">
                     <Logo className="w-32 h-32 object-contain mr-8" />
@@ -211,21 +248,25 @@ const RequestDetail: React.FC = () => {
                 <p className="text-[8.5pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
             </div>
 
-            <div className="flex items-center justify-between no-print">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)} className="p-3 bg-white border rounded-2xl shadow-sm hover:bg-slate-50 transition-all"><ArrowLeft size={20} /></button>
                     <div><h1 className="text-2xl font-black uppercase tracking-tight">Rincian Berkas</h1></div>
                 </div>
-                <div className="flex items-center gap-3">
-                    {/* Tombol WhatsApp untuk Validator */}
-                    {isValidatorRole(user?.role) && (
+                <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                        onClick={copyLink}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${copied ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
+                    >
+                        {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? 'Tersalin' : 'Salin Link'}
+                    </button>
+
+                    {isValidatorRole(user?.role) && request.profiles && (
                         <button 
-                            onClick={handleWhatsAppContact}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${request.profiles?.whatsapp_number ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 border-slate-200 text-slate-400'}`}
-                            title={request.profiles?.whatsapp_number ? "Hubungi Pengaju via WhatsApp" : "Pengaju belum mendaftarkan nomor WA"}
+                            onClick={() => handleWhatsAppContact(request.profiles!, 'requester')}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700 active:scale-95`}
                         >
-                            <MessageCircle size={18} />
-                            {request.profiles?.whatsapp_number ? "Chat Pengaju" : "WA Belum Set"}
+                            <MessageCircle size={18} /> Chat Pengaju
                         </button>
                     )}
                     <div className={`px-5 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-widest ${statusInfo.color}`}>{statusInfo.label}</div>
@@ -236,7 +277,6 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-4 print:mt-0">
                     
-                    {/* PANEL AKSI UNTUK VERIFIKATOR (NO PRINT) */}
                     {actionConfig && (
                         <div className={`no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-${actionConfig.color}-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500`}>
                             <div className={`flex items-center gap-4 border-b border-${actionConfig.color}-50 pb-6`}>
@@ -315,7 +355,6 @@ const RequestDetail: React.FC = () => {
                         <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
-                    {/* Lembar Pengesahan Printout */}
                     <div className="print-only mt-6 break-inside-avoid">
                         <table className="w-full border-collapse border-[1pt] border-black text-center">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
@@ -329,12 +368,50 @@ const RequestDetail: React.FC = () => {
                 </div>
 
                 <div className="xl:col-span-1 space-y-8 no-print">
+                    {request.requester_id === user?.id && request.status !== 'approved' && request.status !== 'reviewed_pic' && request.status !== 'rejected' && (
+                        <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl text-white space-y-6 animate-in slide-in-from-right-4 duration-500">
+                            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                                <Users size={20} className="text-emerald-400" />
+                                <h4 className="text-[11px] font-black uppercase tracking-widest">Hubungi Petugas</h4>
+                            </div>
+                            
+                            {validators.length > 0 ? (
+                                <div className="space-y-4">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">Pilih petugas yang berwenang memproses berkas Anda saat ini:</p>
+                                    <div className="space-y-3">
+                                        {validators.map((v) => (
+                                            <button 
+                                                key={v.id}
+                                                onClick={() => handleWhatsAppContact(v, 'validator')}
+                                                className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 hover:bg-white/10 transition-all text-left group"
+                                            >
+                                                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                                    <MessageCircle size={18} />
+                                                </div>
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className="text-[10px] font-black truncate uppercase">{v.full_name}</p>
+                                                    <p className="text-[8px] font-bold text-slate-500 truncate uppercase">{v.role.replace(/_/g, ' ')}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                    <SearchCode size={32} className="mx-auto mb-3 text-slate-600" />
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Petugas berwenang belum mendaftarkan nomor kontak.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {request.attachment_url && (
                         <div className="bg-white p-8 rounded-[40px] border border-blue-100 shadow-sm space-y-6 text-center">
                             <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest">Berkas Lampiran</h4>
                             <a href={request.attachment_url} target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"><Eye size={14} /> Lihat Berkas</a>
                         </div>
                     )}
+
                     <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm sticky top-24">
                         <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest text-center mb-10">Status Terkini</h4>
                         <div className="space-y-0 relative ml-4">

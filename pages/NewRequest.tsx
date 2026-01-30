@@ -28,9 +28,11 @@ import {
     Zap,
     Keyboard,
     Target,
-    ListChecks
+    ListChecks,
+    CheckCircle,
+    MessageCircle
 } from 'lucide-react';
-import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling } from '../types.ts';
+import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
@@ -55,8 +57,10 @@ const NewRequest: React.FC = () => {
     const [aiAnalyzing, setAiAnalyzing] = useState(false);
     const [aiResult, setAiResult] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [createdRequest, setCreatedRequest] = useState<BudgetRequest | null>(null);
+    const [targetValidators, setTargetValidators] = useState<Profile[]>([]);
 
-    // Track which items are in manual mode for Volkeg
     const [manualVolkeg, setManualVolkeg] = useState<Record<string, boolean>>({});
 
     const [items, setItems] = useState<CalculationItem[]>([
@@ -174,8 +178,11 @@ const NewRequest: React.FC = () => {
             }
             
             let initialStatus: BudgetStatus = status;
+            let targetRole = 'kepala_bidang';
+
             if (status === 'pending' && SKIP_STRUCTURAL_APPROVAL_DEPTS.includes(user?.department || '')) {
                 initialStatus = 'reviewed_bidang'; 
+                targetRole = 'validator_program';
             }
 
             const payload = {
@@ -196,14 +203,39 @@ const NewRequest: React.FC = () => {
                 attachment_url: attachment_url || undefined
             };
 
-            if (isEditMode) await dbService.updateRequest(id!, payload);
-            else await dbService.createRequest(payload);
+            let result: BudgetRequest;
+            if (isEditMode) {
+                await dbService.updateRequest(id!, payload);
+                result = { ...payload, id: id!, created_at: '', updated_at: '' } as BudgetRequest;
+            } else {
+                result = await dbService.createRequest(payload);
+            }
             
-            navigate('/requests');
+            if (status === 'pending') {
+                const validators = await dbService.getProfilesByRole(targetRole);
+                const filtered = validators.filter(v => 
+                    !v.department || v.department.toLowerCase().includes(user?.department?.toLowerCase() || '')
+                );
+                setTargetValidators(filtered);
+                setCreatedRequest(result);
+                setShowSuccessModal(true);
+            } else {
+                navigate('/requests');
+            }
         } catch (err: any) { 
             console.error(err);
             alert("Terjadi kesalahan.");
         } finally { setLoading(false); }
+    };
+
+    const notifyValidator = (v: Profile) => {
+        if (!v.whatsapp_number) {
+            alert("Petugas tidak memiliki nomor WhatsApp.");
+            return;
+        }
+        const msg = `Halo Bapak/Ibu ${v.full_name}, saya ${user?.full_name} baru saja mengajukan berkas: "${formData.title}". Mohon bantuannya untuk meninjau berkas tersebut. Terima kasih.`;
+        window.open(`https://wa.me/${v.whatsapp_number.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+        navigate('/requests');
     };
 
     if (pageLoading) return <div className="py-40 text-center"><Loader2 className="animate-spin mx-auto opacity-30" size={64} /></div>;
@@ -222,7 +254,6 @@ const NewRequest: React.FC = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-10">
                 <div className="xl:col-span-3 space-y-10">
-                    {/* Header Data */}
                     <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm space-y-10">
                         <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
                             <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg"><FileText size={20} /></div>
@@ -280,7 +311,6 @@ const NewRequest: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Rincian Komponen Biaya */}
                     <div className="space-y-8">
                         <div className="flex justify-between items-center px-4">
                             <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-3">
@@ -305,7 +335,6 @@ const NewRequest: React.FC = () => {
                             
                             return (
                                 <div key={item.id} className={`bg-white rounded-[40px] border-2 transition-all shadow-sm overflow-hidden ${isOver ? 'border-red-500 ring-4 ring-red-50' : 'border-slate-100'}`}>
-                                    {/* Sub-Header Pagu */}
                                     <div className="bg-slate-50 p-6 flex flex-wrap items-center gap-6 border-b border-slate-100">
                                         <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-[10px]">{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
@@ -338,7 +367,6 @@ const NewRequest: React.FC = () => {
                                         <button type="button" onClick={() => setItems(items.filter(i => i.id !== item.id))} className="p-3 text-slate-300 hover:text-red-600 transition-all"><Trash2 size={24} /></button>
                                     </div>
 
-                                    {/* Area Kalkulasi & Uraian */}
                                     <div className="p-8 md:p-10 space-y-10">
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
                                             <div className="space-y-6">
@@ -368,7 +396,6 @@ const NewRequest: React.FC = () => {
                                                     </button>
                                                 </div>
                                                 
-                                                {/* Visualisasi Faktor Terpisah */}
                                                 <div className="flex flex-wrap items-center gap-3">
                                                     {[1,2,3,4].map(n => (
                                                         <React.Fragment key={n}>
@@ -396,7 +423,6 @@ const NewRequest: React.FC = () => {
                                                     ))}
                                                 </div>
 
-                                                {/* LIVE FORMULA PREVIEW */}
                                                 {!isManual && (
                                                     <div className="mt-4 p-3 bg-blue-600/10 border border-blue-100 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
                                                         <ListChecks size={16} className="text-blue-600" />
@@ -411,7 +437,6 @@ const NewRequest: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Row 2: Volkeg, Harga Satuan, Subtotal */}
                                         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end px-2">
                                             <div className="md:col-span-3 space-y-3">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -466,7 +491,6 @@ const NewRequest: React.FC = () => {
                         })}
                     </div>
 
-                    {/* Catatan & File */}
                     <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-4">
                             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><FileText size={16} /> Justifikasi Kebutuhan</h3>
@@ -510,6 +534,54 @@ const NewRequest: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Sukses dengan Tombol WhatsApp */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-lg rounded-[48px] p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 text-center space-y-8">
+                        <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                            <CheckCircle size={48} />
+                        </div>
+                        <div className="space-y-3">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Berhasil Terkirim!</h2>
+                            <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Berkas Anda telah masuk antrian verifikasi.</p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Beritahu Verifikator Sekarang:</p>
+                            <div className="flex flex-col gap-3">
+                                {targetValidators.length > 0 ? targetValidators.map(v => (
+                                    <button 
+                                        key={v.id}
+                                        onClick={() => notifyValidator(v)}
+                                        className="w-full p-5 bg-emerald-600 text-white rounded-3xl flex items-center justify-between hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><MessageCircle size={20} /></div>
+                                            <div className="text-left">
+                                                <p className="text-[10px] font-black uppercase">{v.full_name}</p>
+                                                <p className="text-[8px] font-bold opacity-70 uppercase">{v.role.replace(/_/g,' ')}</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                )) : (
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                                        Petugas belum mendaftarkan nomor WhatsApp.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => navigate('/requests')}
+                            className="w-full py-5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-3xl font-black text-[10px] uppercase tracking-widest transition-all"
+                        >
+                            Ke Daftar Berkas
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

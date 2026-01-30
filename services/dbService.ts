@@ -26,6 +26,14 @@ export const dbService = {
         } catch (err) { return []; }
     },
 
+    getProfilesByRole: async (role: string): Promise<Profile[]> => {
+        try {
+            const { data, error } = await supabase.from('profiles').select('*').eq('role', role);
+            if (error) return [];
+            return data as Profile[];
+        } catch (err) { return []; }
+    },
+
     deleteProfile: async (id: string) => {
         const { error } = await supabase.from('profiles').delete().eq('id', id);
         return { success: !error, error: error?.message };
@@ -66,7 +74,6 @@ export const dbService = {
     // --- Pengajuan Anggaran ---
     getAllRequests: async (): Promise<BudgetRequest[]> => {
         try {
-            // Menggunakan profiles(*) agar tidak error jika salah satu kolom (wa) belum ada di DB fisik
             const { data, error } = await supabase
                 .from('budget_requests')
                 .select('*, profiles(*)')
