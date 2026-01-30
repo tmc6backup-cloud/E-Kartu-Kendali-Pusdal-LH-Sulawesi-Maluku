@@ -126,20 +126,9 @@ const RequestDetail: React.FC = () => {
     const handleAction = async (status: BudgetStatus, isReject: boolean = false) => {
         if (!id || !user || !request) return;
         
-        // Custom validation for PIC Verifikator
-        if (status === 'reviewed_pic' && !isReject) {
-            if (isReceiptOnly) {
-                if (!request.spj_url) {
-                    alert("Dokumen Kuitansi (SPJ) harus diunggah oleh pengaju terlebih dahulu.");
-                    return;
-                }
-            } else {
-                if (!request.sppd_url || !request.report_url || !request.spj_url) {
-                    alert("Dokumen SPJ (SPPD, Laporan, Kuitansi) harus diunggah oleh pengaju terlebih dahulu.");
-                    return;
-                }
-            }
-        }
+        // Custom validation logic: 
+        // Berdasarkan permintaan user, PIC sekarang bisa melanjutkan verifikasi 
+        // meskipun dokumen belum lengkap. Jadi peringatan alert dihapus.
 
         if (isReject && !validatorNote.trim()) {
             alert("Harap berikan alasan penolakan/revisi agar pengaju dapat memperbaikinya.");
@@ -148,29 +137,26 @@ const RequestDetail: React.FC = () => {
 
         setActionLoading(true);
         try {
-            // PERBAIKAN LOGIKA: Inisialisasi noteField sebagai null untuk mencegah default pic_note yang salah
-            let noteField: keyof BudgetRequest | null = null;
+            // PENENTUAN KOLOM CATATAN YANG KETAT BERDASARKAN ROLE
+            let noteField: keyof BudgetRequest = 'pic_note';
             const role = user.role;
 
-            if (role === 'kepala_bidang') {
-                noteField = 'structural_note';
-            } else if (role === 'validator_program') {
+            if (role === 'validator_program') {
                 noteField = 'program_note';
+            } else if (role === 'kepala_bidang') {
+                noteField = 'structural_note';
             } else if (role === 'validator_tu') {
                 noteField = 'tu_note';
             } else if (role === 'validator_ppk') {
                 noteField = 'ppk_note';
-            } else if (role === 'pic_verifikator' || role === 'pic_tu' || role?.startsWith('pic_wilayah_')) {
-                noteField = 'pic_note';
             } else {
-                // Fallback terakhir jika tidak ada yang cocok
                 noteField = 'pic_note';
             }
 
             const success = await dbService.updateStatus(
                 id, 
                 status, 
-                validatorNote.trim() && noteField ? { field: noteField, value: validatorNote } : undefined
+                validatorNote.trim() ? { field: noteField, value: validatorNote } : undefined
             );
             
             if (success) {
@@ -460,7 +446,7 @@ const RequestDetail: React.FC = () => {
                                         {request.spj_url ? (
                                             <a href={request.spj_url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[8px] font-black uppercase flex items-center gap-2"><Eye size={12} /> Buka</a>
                                         ) : (
-                                            <span className="text-[8px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-xl uppercase">BELUM ADA</span>
+                                                    <span className="text-[8px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-xl uppercase">BELUM ADA</span>
                                         )}
                                     </div>
                                 </div>
