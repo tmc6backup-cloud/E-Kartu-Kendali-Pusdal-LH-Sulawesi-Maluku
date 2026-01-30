@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.budget_requests (
     status TEXT DEFAULT 'pending',
     ai_analysis TEXT,
     attachment_url TEXT,
+    structural_note TEXT,
     program_note TEXT,
     tu_note TEXT,
     ppk_note TEXT,
@@ -51,11 +52,14 @@ CREATE TABLE IF NOT EXISTS public.budget_requests (
 );
 
 -- 4. Aktifkan RLS (Row Level Security) jika diperlukan, atau pastikan anon access aktif di dashboard Supabase.
--- Pastikan kolom whatsapp_number ada di profiles
 DO $$ 
 BEGIN 
     IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='profiles' AND COLUMN_NAME='whatsapp_number') THEN
         ALTER TABLE public.profiles ADD COLUMN whatsapp_number TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='budget_requests' AND COLUMN_NAME='structural_note') THEN
+        ALTER TABLE public.budget_requests ADD COLUMN structural_note TEXT;
     END IF;
 END $$;
 

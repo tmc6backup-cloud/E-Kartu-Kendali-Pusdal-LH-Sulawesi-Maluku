@@ -11,7 +11,8 @@ import {
     User,
     Paperclip,
     FileText,
-    Edit2
+    Edit2,
+    MessageSquareQuote
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -27,7 +28,8 @@ const StatusBadge = ({ status }: { status: string }) => {
         reviewed_tu: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Antrian PPK' },
         approved: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Disetujui (SPJ)' },
         reviewed_pic: { bg: 'bg-cyan-50', text: 'text-cyan-700', label: 'Verifikasi PIC OK' },
-        rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ditolak/Revisi' }
+        rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ditolak/Revisi' },
+        realized: { bg: 'bg-emerald-600', text: 'text-white', label: 'Selesai' }
     };
     const s = config[status as keyof typeof config] || { bg: 'bg-slate-100', text: 'text-slate-600', label: status.toUpperCase() };
     return <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border ${s.bg} ${s.text} border-current/20`}>{s.label}</span>;
@@ -86,7 +88,7 @@ const RequestList: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
-            {/* Kop Laporan - Logo Diperbesar ke w-32 (128px) agar proporsional */}
+            {/* Kop Laporan */}
             <div className="print-only mb-8 break-inside-avoid">
                 <div className="flex items-center gap-10 border-b-[5px] border-black pb-4 pl-8 pr-8">
                     <Logo className="w-32 h-32 object-contain" />
@@ -133,6 +135,7 @@ const RequestList: React.FC = () => {
                             <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-b-[1pt] print:border-black">
                                 <th className="px-8 py-6 print:py-3 print:px-4">Kegiatan & Bidang</th>
                                 {user?.role !== 'pengaju' && <th className="px-8 py-6 print:py-3 print:px-4">Pengusul</th>}
+                                <th className="px-8 py-6 print:py-3 print:px-4">Catatan Validator</th>
                                 <th className="px-8 py-6 text-right print:py-3 print:px-4">Volume</th>
                                 <th className="px-8 py-6 text-center print:py-3 print:px-4">Status</th>
                                 <th className="px-8 py-6 text-right no-print">Aksi</th>
@@ -140,63 +143,76 @@ const RequestList: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100 print:divide-y-0">
                             {loading ? (
-                                <tr><td colSpan={user?.role === 'pengaju' ? 4 : 5} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
+                                <tr><td colSpan={user?.role === 'pengaju' ? 5 : 6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
-                                filteredRequests.map((req) => (
-                                    <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black break-inside-avoid">
-                                        <td className="px-8 py-7 print:py-3 print:px-4">
-                                            <div className="space-y-1.5">
-                                                <div className="flex items-center gap-3">
-                                                    <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[10pt]">{req.title}</p>
-                                                    {req.attachment_url && isValidator && (
-                                                        <span className="no-print p-1.5 bg-blue-50 text-blue-600 rounded-lg flex items-center gap-1 shadow-sm border border-blue-100">
-                                                            <Paperclip size={12} />
-                                                            <span className="text-[8px] font-black">FILE</span>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[8pt]">
-                                                    <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded print:bg-transparent print:border print:border-black">{req.category}</span>
-                                                    <span>• {req.requester_department}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        {user?.role !== 'pengaju' && (
-                                            <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[9pt] print:py-3 print:px-4">
-                                                <div className="flex items-center gap-2">
-                                                    <User size={12} className="text-slate-300 no-print" />
-                                                    {req.requester_name}
+                                filteredRequests.map((req) => {
+                                    const lastNote = req.pic_note || req.ppk_note || req.tu_note || req.program_note;
+                                    return (
+                                        <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black break-inside-avoid">
+                                            <td className="px-8 py-7 print:py-3 print:px-4">
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center gap-3">
+                                                        <p className="font-black text-slate-900 text-sm uppercase leading-snug line-clamp-2 max-w-md print:text-[10pt]">{req.title}</p>
+                                                        {req.attachment_url && isValidator && (
+                                                            <span className="no-print p-1.5 bg-blue-50 text-blue-600 rounded-lg flex items-center gap-1 shadow-sm border border-blue-100">
+                                                                <Paperclip size={12} />
+                                                                <span className="text-[8px] font-black">FILE</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase print:text-black print:text-[8pt]">
+                                                        <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded print:bg-transparent print:border print:border-black">{req.category}</span>
+                                                        <span>• {req.requester_department}</span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                        )}
-                                        <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[9pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
-                                        <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
-                                        <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
-                                            {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (
-                                                <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                            {user?.role !== 'pengaju' && (
+                                                <td className="px-8 py-7 text-xs font-black text-slate-700 uppercase print:text-[9pt] print:py-3 print:px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <User size={12} className="text-slate-300 no-print" />
+                                                        {req.requester_name}
+                                                    </div>
+                                                </td>
                                             )}
-                                            
-                                            {req.status === 'draft' ? (
-                                                <Link 
-                                                    to={`/requests/edit/${req.id}`} 
-                                                    className="px-5 py-3 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all active:scale-95"
-                                                >
-                                                    Lanjutkan <Edit2 size={14} />
-                                                </Link>
-                                            ) : (
-                                                <Link 
-                                                    to={`/requests/${req.id}`} 
-                                                    className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 active:scale-95 transition-all"
-                                                >
-                                                    Tinjau <ChevronRight size={14} />
-                                                </Link>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
+                                            <td className="px-8 py-7 print:py-3 print:px-4">
+                                                {lastNote ? (
+                                                    <div className={`flex items-start gap-2 max-w-[200px] ${req.status === 'rejected' ? 'text-red-500' : 'text-slate-400'}`}>
+                                                        <MessageSquareQuote size={12} className="shrink-0 mt-0.5" />
+                                                        <p className="text-[9px] font-bold uppercase truncate italic">{lastNote}</p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[9px] font-bold text-slate-200 uppercase">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[9pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
+                                            <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
+                                            <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
+                                                {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (
+                                                    <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                                )}
+                                                
+                                                {req.status === 'draft' ? (
+                                                    <Link 
+                                                        to={`/requests/edit/${req.id}`} 
+                                                        className="px-5 py-3 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all active:scale-95"
+                                                    >
+                                                        Lanjutkan <Edit2 size={14} />
+                                                    </Link>
+                                                ) : (
+                                                    <Link 
+                                                        to={`/requests/${req.id}`} 
+                                                        className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 active:scale-95 transition-all"
+                                                    >
+                                                        Tinjau <ChevronRight size={14} />
+                                                    </Link>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="py-32 text-center">
+                                    <td colSpan={user?.role === 'pengaju' ? 5 : 6} className="py-32 text-center">
                                         <Database size={48} className="mx-auto text-slate-100 mb-4" />
                                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Tidak ada data berkas.</p>
                                     </td>

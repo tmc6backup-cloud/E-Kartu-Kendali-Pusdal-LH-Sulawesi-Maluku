@@ -30,7 +30,8 @@ import {
     FileCheck,
     FileText,
     Receipt,
-    Send
+    Send,
+    MessageSquareText
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -147,15 +148,29 @@ const RequestDetail: React.FC = () => {
 
         setActionLoading(true);
         try {
-            let noteField = 'pic_note';
-            if (user.role === 'validator_program') noteField = 'program_note';
-            else if (user.role === 'validator_tu') noteField = 'tu_note';
-            else if (user.role === 'validator_ppk') noteField = 'ppk_note';
+            // PERBAIKAN LOGIKA: Inisialisasi noteField sebagai null untuk mencegah default pic_note yang salah
+            let noteField: keyof BudgetRequest | null = null;
+            const role = user.role;
+
+            if (role === 'kepala_bidang') {
+                noteField = 'structural_note';
+            } else if (role === 'validator_program') {
+                noteField = 'program_note';
+            } else if (role === 'validator_tu') {
+                noteField = 'tu_note';
+            } else if (role === 'validator_ppk') {
+                noteField = 'ppk_note';
+            } else if (role === 'pic_verifikator' || role === 'pic_tu' || role?.startsWith('pic_wilayah_')) {
+                noteField = 'pic_note';
+            } else {
+                // Fallback terakhir jika tidak ada yang cocok
+                noteField = 'pic_note';
+            }
 
             const success = await dbService.updateStatus(
                 id, 
                 status, 
-                validatorNote.trim() ? { field: noteField, value: validatorNote } : undefined
+                validatorNote.trim() && noteField ? { field: noteField, value: validatorNote } : undefined
             );
             
             if (success) {
@@ -297,6 +312,8 @@ const RequestDetail: React.FC = () => {
         return statusOrder.indexOf(request.status) >= statusOrder.indexOf(stepStatus);
     };
 
+    const hasAnyNotes = request.structural_note || request.program_note || request.tu_note || request.ppk_note || request.pic_note;
+
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black print:overflow-visible">
             
@@ -346,7 +363,65 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-4 print:mt-0">
                     
-                    {/* Panel Verifikasi untuk Validator */}
+                    {/* RIWAYAT CATATAN & ARAHAN */}
+                    {hasAnyNotes && (
+                        <div className={`no-print bg-white p-8 md:p-10 rounded-[48px] border-4 shadow-2xl space-y-6 animate-in slide-in-from-top-4 duration-500 ${request.status === 'rejected' ? 'border-red-100' : 'border-slate-100'}`}>
+                            <div className="flex items-center gap-4 border-b border-slate-50 pb-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${request.status === 'rejected' ? 'bg-red-600 text-white shadow-red-100' : 'bg-slate-900 text-white shadow-slate-100 shadow-lg'}`}>
+                                    <MessageSquareText size={20} />
+                                </div>
+                                <div>
+                                    <h3 className={`text-sm font-black uppercase tracking-tight ${request.status === 'rejected' ? 'text-red-600' : 'text-slate-900'}`}>Riwayat Catatan & Arahan</h3>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Disposisi resmi dari tiap tahapan verifikasi</p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-4">
+                                {request.structural_note && (
+                                    <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-[32px] space-y-2">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-emerald-700 uppercase tracking-widest">
+                                            <UserCheck size={12} /> Verifikasi Struktural (Kabid)
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.structural_note}"</p>
+                                    </div>
+                                )}
+                                {request.program_note && (
+                                    <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-[32px] space-y-2">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-amber-700 uppercase tracking-widest">
+                                            <GanttChart size={12} /> Validasi Program & Anggaran
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.program_note}"</p>
+                                    </div>
+                                )}
+                                {request.tu_note && (
+                                    <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-[32px] space-y-2">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-indigo-700 uppercase tracking-widest">
+                                            <FileSearch size={12} /> Validasi Administrasi (TU)
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.tu_note}"</p>
+                                    </div>
+                                )}
+                                {request.ppk_note && (
+                                    <div className="p-6 bg-purple-50/50 border border-purple-100 rounded-[32px] space-y-2">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-purple-700 uppercase tracking-widest">
+                                            <Stamp size={12} /> Pengesahan Pejabat PPK
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.ppk_note}"</p>
+                                    </div>
+                                )}
+                                {request.pic_note && (
+                                    <div className="p-6 bg-cyan-50/50 border border-cyan-100 rounded-[32px] space-y-2">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
+                                            <ShieldIcon size={12} /> Verifikasi Kelengkapan SPJ (PIC)
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.pic_note}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PANEL VERIFIKASI (Input untuk Verifikator) */}
                     {actionConfig && (
                         <div className={`no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-${actionConfig.color}-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500`}>
                             <div className={`flex items-center gap-4 border-b border-${actionConfig.color}-50 pb-6`}>
@@ -404,7 +479,7 @@ const RequestDetail: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Alur Penyelesaian SPJ oleh Pengaju */}
+                    {/* DOKUMEN PENYELESAIAN (Input untuk Pengaju) */}
                     {request.requester_id === user?.id && request.status === 'approved' && (
                         <div className="no-print bg-emerald-900 p-8 md:p-10 rounded-[48px] shadow-2xl text-white space-y-10 animate-in slide-in-from-top-4 duration-500 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
@@ -521,7 +596,6 @@ const RequestDetail: React.FC = () => {
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
                                             {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
-                                            {/* Updated below: Removed print-only to show formula in UI preview as requested */}
                                             <p className="text-[9px] md:text-[8px] text-slate-400 font-medium italic mt-1 leading-none print:text-[6.5pt] print:text-black">
                                                 ({item.f1_val} {item.f1_unit} 
                                                 {item.f2_val > 1 ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
