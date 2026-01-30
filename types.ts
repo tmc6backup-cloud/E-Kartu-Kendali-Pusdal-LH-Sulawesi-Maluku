@@ -1,4 +1,5 @@
 
+
 export type UserRole = 
   | 'pengaju' 
   | 'admin' 
@@ -36,7 +37,8 @@ export interface BudgetCeiling {
   updated_at?: string;
 }
 
-export type BudgetStatus = 'draft' | 'pending' | 'reviewed_bidang' | 'reviewed_program' | 'reviewed_tu' | 'approved' | 'reviewed_pic' | 'rejected';
+// Added 'realized' to BudgetStatus to support finalized payments
+export type BudgetStatus = 'draft' | 'pending' | 'reviewed_bidang' | 'reviewed_program' | 'reviewed_tu' | 'approved' | 'reviewed_pic' | 'rejected' | 'realized';
 
 export interface CalculationItem {
   id: string;

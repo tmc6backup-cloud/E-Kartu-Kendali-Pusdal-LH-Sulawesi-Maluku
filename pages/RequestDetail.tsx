@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -25,7 +26,13 @@ import {
     SearchCode,
     Users,
     Copy,
-    Share2
+    Share2,
+    UploadCloud,
+    FileCheck,
+    FileText,
+    Receipt,
+    // Fix: Added missing Send import
+    Send
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -53,6 +60,10 @@ const RequestDetail: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [validators, setValidators] = useState<Profile[]>([]);
     const [copied, setCopied] = useState(false);
+
+    // States for SPJ Documents
+    const [spjLoading, setSpjLoading] = useState(false);
+    const [files, setFiles] = useState<{sppd?: File, report?: File, receipt?: File}>({});
 
     const fetchRequest = async () => {
         if (!id) return;
@@ -102,7 +113,16 @@ const RequestDetail: React.FC = () => {
     }, [request]);
 
     const handleAction = async (status: BudgetStatus, isReject: boolean = false) => {
-        if (!id || !user) return;
+        if (!id || !user || !request) return;
+        
+        // Custom validation for PIC Verifikator
+        if (status === 'reviewed_pic' && !isReject) {
+            if (!request.sppd_url || !request.report_url || !request.spj_url) {
+                alert("Dokumen SPJ (SPPD, Laporan, Kuitansi) harus diunggah oleh pengaju terlebih dahulu.");
+                return;
+            }
+        }
+
         if (isReject && !validatorNote.trim()) {
             alert("Harap berikan alasan penolakan/revisi agar pengaju dapat memperbaikinya.");
             return;
@@ -133,6 +153,33 @@ const RequestDetail: React.FC = () => {
         }
     };
 
+    const handleSpjUpload = async () => {
+        if (!id || !request) return;
+        // Fix: Changed request.receipt_url to request.spj_url based on type definition
+        if (!files.sppd && !request.sppd_url) return alert("Pilih file SPPD");
+        if (!files.report && !request.report_url) return alert("Pilih file Laporan");
+        if (!files.receipt && !request.spj_url) return alert("Pilih file Kuitansi");
+
+        setSpjLoading(true);
+        try {
+            const updates: any = {};
+            if (files.sppd) updates.sppd_url = await dbService.uploadAttachment(files.sppd);
+            if (files.report) updates.report_url = await dbService.uploadAttachment(files.report);
+            if (files.receipt) updates.spj_url = await dbService.uploadAttachment(files.receipt);
+
+            const success = await dbService.updateRequest(id, updates);
+            if (success) {
+                alert("Dokumen SPJ Berhasil diunggah. Silakan hubungi PIC Verifikator.");
+                fetchRequest();
+                setFiles({});
+            }
+        } catch (err) {
+            alert("Gagal mengunggah dokumen.");
+        } finally {
+            setSpjLoading(false);
+        }
+    };
+
     const actionConfig = useMemo(() => {
         if (!user || !request) return null;
         
@@ -158,7 +205,8 @@ const RequestDetail: React.FC = () => {
             return { title: 'Verifikasi SPJ', subtitle: 'PIC Verifikator Kelengkapan Berkas', targetStatus: 'reviewed_pic' as BudgetStatus, icon: <ShieldIcon size={24} />, color: 'cyan' };
         }
         if (role === 'bendahara' && status === 'reviewed_pic') {
-            return { title: 'Penyelesaian Pembayaran', subtitle: 'Bendahara Pengeluaran', targetStatus: 'approved' as BudgetStatus, icon: <Coins size={24} />, color: 'emerald', buttonLabel: 'Konfirmasi Pembayaran Selesai' };
+            // Fix: targetStatus set to 'realized' which is now in BudgetStatus type
+            return { title: 'Penyelesaian Pembayaran', subtitle: 'Bendahara Pengeluaran', targetStatus: 'realized' as BudgetStatus, icon: <Coins size={24} />, color: 'emerald', buttonLabel: 'Konfirmasi Pembayaran Selesai' };
         }
         return null;
     }, [user, request]);
@@ -171,9 +219,9 @@ const RequestDetail: React.FC = () => {
         const phoneNumber = target.whatsapp_number.replace(/\D/g, '');
         let message = '';
         if (type === 'validator') {
-            message = `Halo Bapak/Ibu ${target.full_name}, saya ${user?.full_name} baru saja mengajukan berkas: "${request?.title}". Mohon bantuannya untuk meninjau berkas tersebut. Terima kasih.`;
+            message = `Halo Bapak/Ibu ${target.full_name}, saya ${user?.full_name} baru saja mengunggah dokumen SPJ untuk berkas: "${request?.title}". Mohon bantuannya untuk meninjau berkas tersebut. Terima kasih.`;
         } else {
-            message = `Halo ${target.full_name}, saya ${user?.full_name} dari Pusdal LH Suma sedang meninjau berkas Anda: "${request?.title}". Ada beberapa hal yang ingin saya konfirmasikan...`;
+            message = `Halo ${target.full_name}, saya ${user?.full_name} dari Pusdal LH Suma sedang meninjau kelengkapan SPJ Anda: "${request?.title}". Mohon segera melengkapi...`;
         }
         window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
     };
@@ -208,9 +256,11 @@ const RequestDetail: React.FC = () => {
         reviewed_bidang: { label: 'ANTRIAN PROGRAM', color: 'bg-blue-50 text-blue-700' },
         reviewed_program: { label: 'ANTRIAN PROGRAM OK', color: 'bg-indigo-50 text-indigo-700' },
         reviewed_tu: { label: 'ANTRIAN PPK', color: 'bg-purple-50 text-purple-700' },
-        approved: { label: 'DISETUJUI (SPJ)', color: 'bg-emerald-50 text-emerald-700' },
+        approved: { label: 'DISETUJUI (SIAP SPJ)', color: 'bg-emerald-50 text-emerald-700' },
         reviewed_pic: { label: 'SPJ TERVERIFIKASI', color: 'bg-cyan-50 text-cyan-700' },
-        rejected: { label: 'REVISI / DITOLAK', color: 'bg-red-50 text-red-700' }
+        rejected: { label: 'REVISI / DITOLAK', color: 'bg-red-50 text-red-700' },
+        // Added status info for 'realized'
+        realized: { label: 'REALISASI SELESAI', color: 'bg-emerald-600 text-white' }
     }[request.status] || { label: request.status.toUpperCase(), color: 'bg-slate-50 text-slate-700' };
 
     const detailedSteps = [
@@ -277,12 +327,35 @@ const RequestDetail: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 print:block">
                 <div className="xl:col-span-3 space-y-8 print:w-full print:space-y-4 print:mt-0">
                     
+                    {/* Panel Verifikasi untuk Validator */}
                     {actionConfig && (
                         <div className={`no-print bg-white p-8 md:p-10 rounded-[48px] border-4 border-${actionConfig.color}-100 shadow-2xl space-y-8 animate-in slide-in-from-top-4 duration-500`}>
                             <div className={`flex items-center gap-4 border-b border-${actionConfig.color}-50 pb-6`}>
                                 <div className={`w-12 h-12 bg-${actionConfig.color}-600 text-white rounded-2xl flex items-center justify-center shadow-lg`}>{actionConfig.icon}</div>
                                 <div><h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{actionConfig.title}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{actionConfig.subtitle}</p></div>
                             </div>
+
+                            {/* Show SPJ Documents for PIC Verifikator */}
+                            {user?.role?.startsWith('pic_') && request.status === 'approved' && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {[
+                                        { label: 'File SPPD', url: request.sppd_url, icon: <FileCheck className="text-blue-500" /> },
+                                        { label: 'Laporan Perjadin', url: request.report_url, icon: <FileText className="text-emerald-500" /> },
+                                        { label: 'Kuitansi/SPJ', url: request.spj_url, icon: <Receipt className="text-amber-500" /> }
+                                    ].map((doc, i) => (
+                                        <div key={i} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-3 text-center">
+                                            {doc.icon}
+                                            <p className="text-[9px] font-black uppercase">{doc.label}</p>
+                                            {doc.url ? (
+                                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[8px] font-black uppercase flex items-center gap-2"><Eye size={12} /> Buka</a>
+                                            ) : (
+                                                <span className="text-[8px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-xl uppercase">BELUM ADA</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><MessageSquareQuote size={14} className="text-blue-500" /> Masukkan Catatan / Disposisi</label>
                                 <textarea className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl text-xs font-bold uppercase focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner" rows={3} placeholder="Sebutkan arahan atau alasan revisi..." value={validatorNote} onChange={(e) => setValidatorNote(e.target.value)} />
@@ -293,6 +366,54 @@ const RequestDetail: React.FC = () => {
                                     {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />} {actionConfig.buttonLabel || 'Setujui & Teruskan'}
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Alur Penyelesaian SPJ oleh Pengaju */}
+                    {request.requester_id === user?.id && request.status === 'approved' && (
+                        <div className="no-print bg-emerald-900 p-8 md:p-10 rounded-[48px] shadow-2xl text-white space-y-10 animate-in slide-in-from-top-4 duration-500 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                            <div className="relative flex items-center gap-4">
+                                <div className="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg"><UploadCloud size={28} /></div>
+                                <div>
+                                    <h3 className="text-lg font-black uppercase tracking-tight">Penyelesaian Administrasi (SPJ)</h3>
+                                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Silakan lengkapi dokumen setelah kegiatan selesai</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {[
+                                    { id: 'sppd', label: 'Lampiran SPPD', icon: <FileCheck />, current: request.sppd_url },
+                                    { id: 'report', label: 'Laporan Perjadin', icon: <FileText />, current: request.report_url },
+                                    { id: 'receipt', label: 'Kuitansi/SPJ', icon: <Receipt />, current: request.spj_url }
+                                ].map((doc) => (
+                                    <div key={doc.id} className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-emerald-200">{doc.label}</label>
+                                        <div className="relative group">
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                                onChange={(e) => setFiles(prev => ({...prev, [doc.id]: e.target.files?.[0]}))} 
+                                            />
+                                            <div className={`p-6 bg-white/10 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-3 transition-all ${files[doc.id as keyof typeof files] ? 'border-emerald-400 bg-emerald-400/20' : 'border-white/20 hover:border-white/40'}`}>
+                                                {files[doc.id as keyof typeof files] ? <CheckCircle size={24} className="text-emerald-400" /> : doc.icon}
+                                                <p className="text-[9px] font-black uppercase text-center truncate w-full">
+                                                    {files[doc.id as keyof typeof files]?.name || (doc.current ? 'Update Berkas' : 'Pilih Berkas')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button 
+                                onClick={handleSpjUpload} 
+                                disabled={spjLoading}
+                                className="w-full py-5 bg-white text-emerald-900 hover:bg-emerald-50 rounded-3xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all"
+                            >
+                                {spjLoading ? <Loader2 className="animate-spin" /> : <Send className="rotate-45" size={20} />} 
+                                Kirim Kelengkapan SPJ
+                            </button>
                         </div>
                     )}
 
@@ -355,6 +476,7 @@ const RequestDetail: React.FC = () => {
                         <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
+                    {/* Alamat Pengaju yang Ditampilkan di Kartu Kendali (Print) */}
                     <div className="print-only mt-6 break-inside-avoid">
                         <table className="w-full border-collapse border-[1pt] border-black text-center">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
@@ -368,7 +490,9 @@ const RequestDetail: React.FC = () => {
                 </div>
 
                 <div className="xl:col-span-1 space-y-8 no-print">
-                    {request.requester_id === user?.id && request.status !== 'approved' && request.status !== 'reviewed_pic' && request.status !== 'rejected' && (
+                    {/* Panel Hubungi Verifikator (Untuk Pengaju) */}
+                    {/* Fix: Added 'realized' comparison to resolve type mismatch warning */}
+                    {request.requester_id === user?.id && request.status !== 'realized' && request.status !== 'rejected' && (
                         <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl text-white space-y-6 animate-in slide-in-from-right-4 duration-500">
                             <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                                 <Users size={20} className="text-emerald-400" />
@@ -377,7 +501,9 @@ const RequestDetail: React.FC = () => {
                             
                             {validators.length > 0 ? (
                                 <div className="space-y-4">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">Pilih petugas yang berwenang memproses berkas Anda saat ini:</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">
+                                        {request.status === 'approved' ? 'Hubungi PIC Verifikator setelah berkas SPJ diunggah:' : 'Pilih petugas yang berwenang memproses berkas Anda saat ini:'}
+                                    </p>
                                     <div className="space-y-3">
                                         {validators.map((v) => (
                                             <button 
@@ -407,7 +533,7 @@ const RequestDetail: React.FC = () => {
 
                     {request.attachment_url && (
                         <div className="bg-white p-8 rounded-[40px] border border-blue-100 shadow-sm space-y-6 text-center">
-                            <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest">Berkas Lampiran</h4>
+                            <h4 className="text-[11px] font-black text-blue-900 uppercase tracking-widest">Berkas Usulan Awal</h4>
                             <a href={request.attachment_url} target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"><Eye size={14} /> Lihat Berkas</a>
                         </div>
                     )}
