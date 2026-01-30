@@ -1,16 +1,25 @@
 
--- 1. Tabel Profiles (Manajemen User & Otoritas)
+-- 1. Migrasi Kolom WhatsApp (Menjamin kolom ada tanpa menghapus data)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='profiles' AND COLUMN_NAME='whatsapp_number') THEN
+        ALTER TABLE public.profiles ADD COLUMN whatsapp_number TEXT;
+    END IF;
+END $$;
+
+-- 2. Memastikan Tabel Profiles Memiliki Struktur Benar
 CREATE TABLE IF NOT EXISTS public.profiles (
     id TEXT PRIMARY KEY, -- user_nama_lengkap
     full_name TEXT NOT NULL,
     password TEXT NOT NULL,
-    role TEXT NOT NULL, -- pengaju, admin, validator_program, etc
-    department TEXT, -- Nama Bidang/Unit
+    role TEXT NOT NULL, 
+    department TEXT, 
+    whatsapp_number TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Tabel Budget Ceilings (Pagu Anggaran Tahunan)
+-- 3. Tabel Budget Ceilings
 CREATE TABLE IF NOT EXISTS public.budget_ceilings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     department TEXT NOT NULL,
@@ -23,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.budget_ceilings (
     UNIQUE(department, ro_code, komponen_code, subkomponen_code, year)
 );
 
--- 3. Tabel Budget Requests (Pengajuan Anggaran)
+-- 4. Tabel Budget Requests
 CREATE TABLE IF NOT EXISTS public.budget_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     requester_id TEXT REFERENCES public.profiles(id),
@@ -33,12 +42,12 @@ CREATE TABLE IF NOT EXISTS public.budget_requests (
     category TEXT NOT NULL,
     location TEXT,
     execution_date DATE,
-    execution_end_date DATE, -- Kolom baru yang ditambahkan
+    execution_end_date DATE,
     execution_duration TEXT,
     amount NUMERIC NOT NULL DEFAULT 0,
     description TEXT,
-    calculation_items JSONB DEFAULT '[]', -- Menyimpan array CalculationItem termasuk detail_barang
-    status TEXT DEFAULT 'pending', -- draft, pending, approved, etc
+    calculation_items JSONB DEFAULT '[]', 
+    status TEXT DEFAULT 'pending', 
     ai_analysis TEXT,
     attachment_url TEXT,
     report_url TEXT,
@@ -56,7 +65,5 @@ CREATE TABLE IF NOT EXISTS public.budget_requests (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indeks untuk pencarian cepat
-CREATE INDEX IF NOT EXISTS idx_requests_status ON public.budget_requests(status);
-CREATE INDEX IF NOT EXISTS idx_requests_dept ON public.budget_requests(requester_department);
-CREATE INDEX IF NOT EXISTS idx_ceilings_year ON public.budget_ceilings(year);
+-- Jalankan ini untuk memicu refresh cache schema di beberapa versi Supabase
+NOTIFY pgrst, 'reload schema';

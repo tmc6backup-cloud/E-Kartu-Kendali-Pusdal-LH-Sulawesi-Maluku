@@ -94,7 +94,7 @@ const Dashboard: React.FC = () => {
             <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        {isGlobalViewer ? 'Monitoring Kantor' : 'Dashboard Bidang'}
+                        {isGlobalViewer ? 'Monitoring Kantor' : 'Dashboard'}
                         {isGlobalViewer && <div className="p-1.5 bg-slate-900 text-white rounded-lg"><ShieldCheck size={18} /></div>}
                     </h1>
                     <p className="text-slate-400 font-bold text-[10px] flex items-center gap-2 uppercase tracking-widest mt-1">

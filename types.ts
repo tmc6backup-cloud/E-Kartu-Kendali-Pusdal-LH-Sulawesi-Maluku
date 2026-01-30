@@ -20,6 +20,7 @@ export interface Profile {
   password?: string;
   role: UserRole;
   department?: string;
+  whatsapp_number?: string;
   created_at?: string;
   updated_at?: string;
 }

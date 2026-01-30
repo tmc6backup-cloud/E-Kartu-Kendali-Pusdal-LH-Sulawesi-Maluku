@@ -95,12 +95,12 @@ const LoginPage: React.FC = () => {
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Nama Lengkap</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Username</label>
                             <div className="relative">
                                 <UserCircle2 className="absolute left-4 top-4 text-slate-300" size={20} />
                                 <input 
                                     type="text"
-                                    placeholder="Username / Nama SK"
+                                    placeholder="Username"
                                     className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl outline-none text-sm font-bold focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
@@ -111,7 +111,7 @@ const LoginPage: React.FC = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password Otoritas</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-4 text-slate-300" size={20} />
                                 <input 

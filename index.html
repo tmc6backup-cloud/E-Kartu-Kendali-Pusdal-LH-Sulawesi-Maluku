@@ -17,24 +17,24 @@
             return '/';
         };
         window.APP_BASE = getBase();
-        window.process = {
-            env: {
-                API_KEY: "GANTI_DENGAN_API_KEY_GEMINI_ANDA",
-                SUPABASE_URL: "https://syptvhtbxflhjgdepbqs.supabase.co",
-                SUPABASE_ANON_KEY: "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"
-            }
-        };
+        
+        // Memastikan window.process ada tanpa menimpa variabel yang diinjeksi secara eksternal
+        if (!window.process) window.process = { env: {} };
+        if (!window.process.env) window.process.env = {};
+        
+        // Nilai fallback jika env vars tidak diinjeksi
+        window.process.env.SUPABASE_URL = window.process.env.SUPABASE_URL || "https://syptvhtbxflhjgdepbqs.supabase.co";
+        window.process.env.SUPABASE_ANON_KEY = window.process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR";
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; }
         
-        /* Menyembunyikan scrollbar untuk semua elemen di layar */
         * {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         *::-webkit-scrollbar {
-            display: none; /* Chrome, Safari and Opera */
+            display: none;
         }
 
         .splash-screen {
@@ -95,7 +95,6 @@
         #root { opacity: 0; transition: opacity 0.5s ease; height: 100%; width: 100%; overflow-y: auto; }
         #root.loaded { opacity: 1; }
         
-        /* Utility untuk kontrol visibilitas Cetak */
         .print-only { display: none !important; }
 
         .force-btn {
@@ -121,7 +120,6 @@
             .no-print { display: none !important; } 
             .print-only { display: block !important; }
             
-            /* Memaksa elemen agar tidak memiliki scrollbar saat cetak */
             * { 
                 overflow: visible !important; 
                 scrollbar-width: none !important;

@@ -64,7 +64,12 @@ export const dbService = {
     // --- Pengajuan Anggaran ---
     getAllRequests: async (): Promise<BudgetRequest[]> => {
         try {
-            const { data, error } = await supabase.from('budget_requests').select('*, profiles(department, full_name)').order('created_at', { ascending: false });
+            // Memastikan kolom yang diperlukan dari join profile selalu didefinisikan secara eksplisit
+            const { data, error } = await supabase
+                .from('budget_requests')
+                .select('*, profiles(id, department, full_name, role, whatsapp_number)')
+                .order('created_at', { ascending: false });
+            
             if (error) throw error;
             return data as BudgetRequest[];
         } catch (err) {
@@ -74,8 +79,18 @@ export const dbService = {
     },
 
     getRequestById: async (id: string): Promise<BudgetRequest | null> => {
-        const { data, error } = await supabase.from('budget_requests').select('*, profiles(*)').eq('id', id).single();
-        return error ? null : data as BudgetRequest;
+        try {
+            const { data, error } = await supabase
+                .from('budget_requests')
+                .select('*, profiles(*)')
+                .eq('id', id)
+                .single();
+            
+            if (error) return null;
+            return data as BudgetRequest;
+        } catch (err) {
+            return null;
+        }
     },
 
     createRequest: async (request: Omit<BudgetRequest, 'id' | 'created_at' | 'updated_at'>) => {
@@ -94,9 +109,11 @@ export const dbService = {
         return !error;
     },
 
-    deleteAllRequests: async () => {
-        const { error } = await supabase.from('budget_requests').delete().neq('id', '0');
-        return { success: !error, error: error?.message };
+    updateStatus: async (id: string, status: BudgetStatus, note?: { field: string, value: string }) => {
+        const updatePayload: any = { status, updated_at: new Date().toISOString() };
+        if (note) updatePayload[note.field] = note.value;
+        const { error } = await supabase.from('budget_requests').update(updatePayload).eq('id', id);
+        return !error;
     },
 
     uploadAttachment: async (file: File): Promise<string | null> => {
@@ -111,13 +128,6 @@ export const dbService = {
             console.error("Storage Error:", err);
             return null;
         }
-    },
-
-    updateStatus: async (id: string, status: BudgetStatus, note?: { field: string, value: string }) => {
-        const updatePayload: any = { status, updated_at: new Date().toISOString() };
-        if (note) updatePayload[note.field] = note.value;
-        const { error } = await supabase.from('budget_requests').update(updatePayload).eq('id', id);
-        return !error;
     },
 
     getStats: async (role: string, userName: string, department?: string) => {
@@ -141,7 +151,6 @@ export const dbService = {
             const departmentMap: Record<string, any> = {};
             let totalOfficeCeiling = 0;
 
-            // 1. Proses Pagu (Budget Ceilings)
             ceilingData.forEach(c => {
                 const deptName = (c.department || 'LAINNYA').trim();
                 const deptNameLower = deptName.toLowerCase();
@@ -160,13 +169,11 @@ export const dbService = {
                 }
             });
 
-            // 2. Proses Pengajuan (Requests)
             const summary = data.reduce((acc: any, curr: any) => {
                 const amt = Number(curr.amount) || 0;
                 const currDept = (curr.requester_department || 'LAINNYA').trim();
                 const currDeptLower = currDept.toLowerCase();
 
-                // Hanya proses jika user memiliki akses ke bidang ini
                 if (isGlobal || userDepts.includes(currDeptLower)) {
                     acc.totalAmount += amt;
                     acc.totalCount += 1;
@@ -185,7 +192,6 @@ export const dbService = {
                         }
                     }
 
-                    // Update detail per departemen
                     const deptKey = Object.keys(departmentMap).find(k => k.toLowerCase() === currDeptLower);
                     if (deptKey) {
                         const status = curr.status;

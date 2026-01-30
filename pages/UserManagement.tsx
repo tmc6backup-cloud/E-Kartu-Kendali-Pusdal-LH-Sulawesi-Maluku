@@ -27,7 +27,8 @@ import {
     Briefcase,
     LayoutGrid,
     ChevronDown,
-    ShieldAlert
+    ShieldAlert,
+    MessageCircle
 } from 'lucide-react';
 import { dbService } from '../services/dbService.ts';
 import { Profile, UserRole } from '../types.ts';
@@ -60,7 +61,8 @@ const UserManagement: React.FC = () => {
         full_name: '', 
         role: 'pengaju' as UserRole, 
         selectedDepts: [DEPARTMENTS[0]], 
-        password: '' 
+        password: '',
+        whatsapp_number: ''
     });
     
     const [showResetModal, setShowResetModal] = useState(false);
@@ -95,14 +97,15 @@ const UserManagement: React.FC = () => {
             full_name: profile.full_name, 
             role: profile.role, 
             selectedDepts: currentDepts,
-            password: profile.password || '' 
+            password: profile.password || '',
+            whatsapp_number: profile.whatsapp_number || ''
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const cancelEdit = () => {
         setEditingProfile(null);
-        setFormData({ full_name: '', role: 'pengaju', selectedDepts: [DEPARTMENTS[0]], password: '' });
+        setFormData({ full_name: '', role: 'pengaju', selectedDepts: [DEPARTMENTS[0]], password: '', whatsapp_number: '' });
     };
 
     const toggleDepartment = (dept: string) => {
@@ -143,7 +146,8 @@ const UserManagement: React.FC = () => {
                 full_name: formData.full_name.trim(), 
                 role: formData.role, 
                 department: departmentString,
-                password: formData.password
+                password: formData.password,
+                whatsapp_number: formData.whatsapp_number.trim()
             };
             const result = await dbService.syncProfile(updatedProfile);
             if (result) { 
@@ -152,22 +156,6 @@ const UserManagement: React.FC = () => {
                 await fetchProfiles(); 
             }
         } catch (err: any) { alert(err.message); } finally { setSubmitting(false); }
-    };
-
-    const handleResetDatabase = async () => {
-        if (resetConfirmation !== 'HAPUS') {
-            alert("Harap ketik 'HAPUS' untuk konfirmasi.");
-            return;
-        }
-        setIsResetting(true);
-        try {
-            const result = await dbService.deleteAllRequests();
-            if (result.success) {
-                alert("Database pengajuan anggaran berhasil dikosongkan.");
-                setShowResetModal(false);
-                setResetConfirmation('');
-            } else { alert("Gagal meriset database: " + result.error); }
-        } catch (err: any) { alert("Terjadi kesalahan sistem."); } finally { setIsResetting(false); }
     };
 
     const getRoleInfo = (role: string) => {
@@ -240,6 +228,21 @@ const UserManagement: React.FC = () => {
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Nomor WhatsApp (Aktif)</label>
+                                <div className="relative">
+                                    <MessageCircle className="absolute left-5 top-5 text-slate-300" size={18} />
+                                    <input 
+                                        type="text" 
+                                        className="w-full pl-14 pr-6 py-5 bg-white border border-slate-200 rounded-3xl outline-none font-black text-sm focus:border-blue-600 transition-all shadow-sm" 
+                                        value={formData.whatsapp_number} 
+                                        onChange={(e) => setFormData({...formData, whatsapp_number: e.target.value})} 
+                                        placeholder="628123456789" 
+                                    />
+                                </div>
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider ml-1">Gunakan kode negara, contoh: 628123456789</p>
                             </div>
 
                             <div className="space-y-3">
@@ -353,6 +356,11 @@ const UserManagement: React.FC = () => {
                                                                             <Building2 size={10} className="text-slate-300" /> {d}
                                                                         </span>
                                                                     ))}
+                                                                    {p.whatsapp_number && (
+                                                                        <span className="text-[8px] font-black bg-emerald-50 text-emerald-600 border border-emerald-100 px-2.5 py-1 rounded-xl uppercase shadow-sm flex items-center gap-1.5">
+                                                                            <MessageCircle size={10} /> {p.whatsapp_number}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>

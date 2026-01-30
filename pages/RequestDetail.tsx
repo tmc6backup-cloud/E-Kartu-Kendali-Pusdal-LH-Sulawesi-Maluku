@@ -20,7 +20,8 @@ import {
     Check,
     MessageCircle,
     Edit3,
-    RotateCcw
+    RotateCcw,
+    ExternalLink
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -136,6 +137,16 @@ const RequestDetail: React.FC = () => {
         return null;
     }, [user, request]);
 
+    const handleWhatsAppContact = () => {
+        if (!request || !request.profiles?.whatsapp_number) {
+            alert("Nomor WhatsApp pengaju tidak tersedia. Harap minta pengaju mengupdate profil mereka.");
+            return;
+        }
+        const phoneNumber = request.profiles.whatsapp_number.replace(/\D/g, '');
+        const text = encodeURIComponent(`Halo ${request.requester_name}, saya dari Pusdal LH Suma sedang meninjau berkas Anda: "${request.title}". Ada yang ingin saya konfirmasikan mengenai...`);
+        window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
+    };
+
     if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
     
     if (accessDenied) {
@@ -182,7 +193,7 @@ const RequestDetail: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 page-transition print:space-y-0 print:pb-0 print:m-0 print:bg-white print:text-black print:overflow-visible">
             
-            {/* Kop Surat Resmi KLH - Logo diperbesar ke w-32 (128px), pl-12 (48px) untuk geser kanan, items-center agar sejajar */}
+            {/* Kop Surat Resmi KLH */}
             <div className="print-only mb-6 border-b-[3pt] border-black pb-4 break-inside-avoid">
                 <div className="flex items-center pl-12 pr-6">
                     <Logo className="w-32 h-32 object-contain mr-8" />
@@ -206,6 +217,17 @@ const RequestDetail: React.FC = () => {
                     <div><h1 className="text-2xl font-black uppercase tracking-tight">Rincian Berkas</h1></div>
                 </div>
                 <div className="flex items-center gap-3">
+                    {/* Tombol WhatsApp untuk Validator */}
+                    {isValidatorRole(user?.role) && (
+                        <button 
+                            onClick={handleWhatsAppContact}
+                            className={`flex items-center gap-2 px-5 py-3 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${request.profiles?.whatsapp_number ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 border-slate-200 text-slate-400'}`}
+                            title={request.profiles?.whatsapp_number ? "Hubungi Pengaju via WhatsApp" : "Pengaju belum mendaftarkan nomor WA"}
+                        >
+                            <MessageCircle size={18} />
+                            {request.profiles?.whatsapp_number ? "Chat Pengaju" : "WA Belum Set"}
+                        </button>
+                    )}
                     <div className={`px-5 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-widest ${statusInfo.color}`}>{statusInfo.label}</div>
                     <button onClick={() => window.print()} className="p-3 bg-white border rounded-2xl shadow-sm hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"><Printer size={20} /></button>
                 </div>

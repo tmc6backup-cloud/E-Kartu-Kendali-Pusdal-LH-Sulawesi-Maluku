@@ -104,7 +104,7 @@ const RequestList: React.FC = () => {
                         {user?.role === 'pengaju' ? 'Berkas Saya' : 'Monitoring Berkas'}
                     </h1>
                     <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest">
-                        {user?.role === 'pengaju' ? 'Daftar pengajuan anggaran pribadi' : 'Manajemen Kartu Kendali Anggaran'}
+                        {user?.role === 'pengaju' ? 'Daftar pengajuan anggaran' : 'Manajemen Kartu Kendali Anggaran'}
                     </p>
                 </div>
                 <div className="flex items-center gap-3 no-print">
