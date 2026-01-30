@@ -521,7 +521,13 @@ const RequestDetail: React.FC = () => {
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
                                             {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
-                                            <p className="print-only text-[6.5pt] mt-0.5 italic">({item.f1_val} {item.f1_unit} {item.f2_val > 1 ? `x ${item.f2_val} ${item.f2_unit}` : ''} {item.f3_val > 1 ? `x ${item.f3_val} ${item.f3_unit}` : ''} {item.f4_val > 1 ? `x ${item.f4_val} ${item.f4_unit}` : ''})</p>
+                                            {/* Updated below: Removed print-only to show formula in UI preview as requested */}
+                                            <p className="text-[9px] md:text-[8px] text-slate-400 font-medium italic mt-1 leading-none print:text-[6.5pt] print:text-black">
+                                                ({item.f1_val} {item.f1_unit} 
+                                                {item.f2_val > 1 ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
+                                                {item.f3_val > 1 ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
+                                                {item.f4_val > 1 ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
+                                            </p>
                                         </td>
                                         <td className="px-6 py-4 text-center border-r print:border-black print:py-1.5 print:px-2">
                                             <span className="text-xs font-black print:text-[8pt]">{item.volkeg} {item.satkeg}</span>
