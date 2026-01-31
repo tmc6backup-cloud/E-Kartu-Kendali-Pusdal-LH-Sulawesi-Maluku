@@ -139,20 +139,23 @@ export const dbService = {
         }
     },
 
-    getStats: async (role: string, userName: string, department?: string) => {
+    getStats: async (role: string, userName: string, department?: string, selectedYear: number = new Date().getFullYear()) => {
         const isGlobal = ['admin', 'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'bendahara'].includes(role);
-        const currentYear = new Date().getFullYear();
         const userDepts = department ? department.split(', ').map(d => d.trim().toLowerCase()) : [];
         
         try {
+            console.log(`[Stats Query] Fetching for TA: ${selectedYear}`);
             const [requestsRes, ceilingsRes] = await Promise.all([
-                supabase.from('budget_requests').select('amount, status, category, created_at, realization_amount, realization_date, requester_department, calculation_items'),
-                supabase.from('budget_ceilings').select('department, amount, year, ro_code').eq('year', currentYear)
+                supabase.from('budget_requests').select('amount, status, category, created_at, realization_amount, realization_date, requester_department'),
+                supabase.from('budget_ceilings').select('department, amount, year, ro_code').eq('year', selectedYear)
             ]);
 
             const data = requestsRes.data || [];
             const ceilingData = ceilingsRes.data || [];
             
+            console.log(`[Stats Query] Found ${data.length} requests in DB total.`);
+            console.log(`[Stats Query] Found ${ceilingData.length} ceilings for ${selectedYear}.`);
+
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const monthlyTrend = months.map(m => ({ name: m, amount: 0, realized: 0 }));
 
@@ -173,19 +176,22 @@ export const dbService = {
                             queue: { pending: 0, reviewed_bidang: 0, reviewed_program: 0, reviewed_tu: 0, approved: 0, reviewed_pic: 0, realized: 0 }
                         };
                     }
-                    const amt = Number(c.amount) || 0;
+                    const amt = parseFloat(c.amount as any) || 0;
                     departmentMap[deptName].ceiling += amt;
                     totalOfficeCeiling += amt;
                 }
             });
 
             const summary = data.reduce((acc: any, curr: any) => {
-                const amt = Number(curr.amount) || 0;
-                const realizedAmt = Number(curr.realization_amount) || 0;
+                const amt = parseFloat(curr.amount as any) || 0;
+                const realizedAmt = parseFloat(curr.realization_amount as any) || 0;
                 const currDept = (curr.requester_department || 'LAINNYA').trim();
                 const currDeptLower = currDept.toLowerCase();
 
-                if (isGlobal || userDepts.includes(currDeptLower)) {
+                const date = curr.created_at ? new Date(curr.created_at) : null;
+                const isCorrectYear = date && date.getFullYear() === selectedYear;
+
+                if ((isGlobal || userDepts.includes(currDeptLower)) && isCorrectYear) {
                     acc.totalAmount += amt;
                     acc.totalCount += 1;
                     
@@ -194,18 +200,16 @@ export const dbService = {
                     if (curr.status === 'realized') acc.totalRealized += realizedAmt;
                     if (curr.status === 'rejected') acc.rejectedCount += 1;
                     
-                    if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + (curr.status === 'realized' ? realizedAmt : amt);
+                    if (curr.category) {
+                        const val = curr.status === 'realized' ? realizedAmt : amt;
+                        categoryMap[curr.category] = (categoryMap[curr.category] || 0) + val;
+                    }
 
-                    if (curr.created_at) {
-                        const date = new Date(curr.created_at);
-                        if (date.getFullYear() === currentYear) {
-                            const mIdx = date.getMonth();
-                            if (monthlyTrend[mIdx]) {
-                                monthlyTrend[mIdx].amount += amt;
-                                if (curr.status === 'realized') {
-                                    monthlyTrend[mIdx].realized += realizedAmt;
-                                }
-                            }
+                    const mIdx = date.getMonth();
+                    if (mIdx >= 0 && mIdx < 12) {
+                        monthlyTrend[mIdx].amount += amt;
+                        if (curr.status === 'realized') {
+                            monthlyTrend[mIdx].realized += realizedAmt;
                         }
                     }
 
@@ -224,9 +228,11 @@ export const dbService = {
                 return acc;
             }, { totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0, totalRealized: 0 });
 
-            const categories = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
+            const categories = Object.entries(categoryMap)
+                .map(([name, value]) => ({ name, value }))
+                .filter(c => c.value > 0);
 
-            return {
+            const result = {
                 ...summary,
                 totalOfficeCeiling,
                 monthlyTrend,
@@ -240,6 +246,9 @@ export const dbService = {
                     queue: d.queue
                 })).sort((a, b) => b.total - a.total)
             };
+            
+            console.log("[Stats Result] Data processed successfully.", result);
+            return result;
         } catch (err) {
             console.error("[Stats Error]", err);
             return {
