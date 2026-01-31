@@ -118,8 +118,8 @@ export const dbService = {
         return !error;
     },
 
-    updateStatus: async (id: string, status: BudgetStatus, note?: { field: string, value: string }) => {
-        const updatePayload: any = { status, updated_at: new Date().toISOString() };
+    updateStatus: async (id: string, status: BudgetStatus, note?: { field: string, value: string }, extraData?: Partial<BudgetRequest>) => {
+        const updatePayload: any = { status, updated_at: new Date().toISOString(), ...extraData };
         if (note) updatePayload[note.field] = note.value;
         const { error } = await supabase.from('budget_requests').update(updatePayload).eq('id', id);
         return !error;
@@ -154,7 +154,7 @@ export const dbService = {
             const ceilingData = ceilingsRes.data || [];
             
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const monthlyTrend = months.map(m => ({ name: m, amount: 0 }));
+            const monthlyTrend = months.map(m => ({ name: m, amount: 0, realized: 0 }));
 
             const categoryMap: Record<string, number> = {};
             const departmentMap: Record<string, any> = {};
@@ -168,6 +168,7 @@ export const dbService = {
                     if (!departmentMap[deptName]) {
                         departmentMap[deptName] = { 
                             proposed: 0, 
+                            realizedTotal: 0,
                             ceiling: 0, 
                             queue: { pending: 0, reviewed_bidang: 0, reviewed_program: 0, reviewed_tu: 0, approved: 0, reviewed_pic: 0, realized: 0 }
                         };
@@ -180,6 +181,7 @@ export const dbService = {
 
             const summary = data.reduce((acc: any, curr: any) => {
                 const amt = Number(curr.amount) || 0;
+                const realizedAmt = Number(curr.realization_amount) || 0;
                 const currDept = (curr.requester_department || 'LAINNYA').trim();
                 const currDeptLower = currDept.toLowerCase();
 
@@ -187,17 +189,23 @@ export const dbService = {
                     acc.totalAmount += amt;
                     acc.totalCount += 1;
                     
-                    if (!['approved', 'rejected', 'reviewed_pic'].includes(curr.status)) acc.pendingCount += 1;
-                    if (['approved', 'reviewed_pic'].includes(curr.status)) acc.approvedAmount += amt;
+                    if (!['approved', 'rejected', 'reviewed_pic', 'realized'].includes(curr.status)) acc.pendingCount += 1;
+                    if (['approved', 'reviewed_pic', 'realized'].includes(curr.status)) acc.approvedAmount += amt;
+                    if (curr.status === 'realized') acc.totalRealized += realizedAmt;
                     if (curr.status === 'rejected') acc.rejectedCount += 1;
                     
-                    if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + amt;
+                    if (curr.category) categoryMap[curr.category] = (categoryMap[curr.category] || 0) + (curr.status === 'realized' ? realizedAmt : amt);
 
                     if (curr.created_at) {
                         const date = new Date(curr.created_at);
                         if (date.getFullYear() === currentYear) {
                             const mIdx = date.getMonth();
-                            if (monthlyTrend[mIdx]) monthlyTrend[mIdx].amount += amt;
+                            if (monthlyTrend[mIdx]) {
+                                monthlyTrend[mIdx].amount += amt;
+                                if (curr.status === 'realized') {
+                                    monthlyTrend[mIdx].realized += realizedAmt;
+                                }
+                            }
                         }
                     }
 
@@ -207,11 +215,14 @@ export const dbService = {
                         if (status in departmentMap[deptKey].queue) departmentMap[deptKey].queue[status]++;
                         if (status !== 'rejected' && status !== 'draft') {
                             departmentMap[deptKey].proposed += amt;
+                            if (status === 'realized') {
+                                departmentMap[deptKey].realizedTotal += realizedAmt;
+                            }
                         }
                     }
                 }
                 return acc;
-            }, { totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0 });
+            }, { totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0, totalRealized: 0 });
 
             const categories = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
 
@@ -224,6 +235,7 @@ export const dbService = {
                     name,
                     total: d.ceiling,
                     spent: d.proposed,
+                    realized: d.realizedTotal,
                     remaining: Math.max(0, d.ceiling - d.proposed),
                     queue: d.queue
                 })).sort((a, b) => b.total - a.total)
@@ -231,7 +243,7 @@ export const dbService = {
         } catch (err) {
             console.error("[Stats Error]", err);
             return {
-                totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0,
+                totalAmount: 0, pendingCount: 0, approvedAmount: 0, rejectedCount: 0, totalCount: 0, totalRealized: 0,
                 totalOfficeCeiling: 0, monthlyTrend: [], categories: [], deptBudgets: []
             };
         }

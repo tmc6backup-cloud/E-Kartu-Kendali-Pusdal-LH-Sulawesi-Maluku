@@ -31,7 +31,8 @@ import {
     FileText,
     Receipt,
     Send,
-    MessageSquareText
+    MessageSquareText,
+    Banknote
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -62,6 +63,7 @@ const RequestDetail: React.FC = () => {
     const [request, setRequest] = useState<BudgetRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [validatorNote, setValidatorNote] = useState("");
+    const [realizationAmount, setRealizationAmount] = useState<number>(0);
     const [accessDenied, setAccessDenied] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [validators, setValidators] = useState<Profile[]>([]);
@@ -91,6 +93,7 @@ const RequestDetail: React.FC = () => {
                     }
                 }
                 setRequest(data);
+                setRealizationAmount(data.realization_amount || data.amount || 0);
                 
                 let targetRole = '';
                 if (data.status === 'pending') targetRole = 'kepala_bidang';
@@ -126,10 +129,6 @@ const RequestDetail: React.FC = () => {
     const handleAction = async (status: BudgetStatus, isReject: boolean = false) => {
         if (!id || !user || !request) return;
         
-        // Custom validation logic: 
-        // Berdasarkan permintaan user, PIC sekarang bisa melanjutkan verifikasi 
-        // meskipun dokumen belum lengkap. Jadi peringatan alert dihapus.
-
         if (isReject && !validatorNote.trim()) {
             alert("Harap berikan alasan penolakan/revisi agar pengaju dapat memperbaikinya.");
             return;
@@ -137,7 +136,6 @@ const RequestDetail: React.FC = () => {
 
         setActionLoading(true);
         try {
-            // PENENTUAN KOLOM CATATAN YANG KETAT BERDASARKAN ROLE
             let noteField: keyof BudgetRequest = 'pic_note';
             const role = user.role;
 
@@ -153,10 +151,17 @@ const RequestDetail: React.FC = () => {
                 noteField = 'pic_note';
             }
 
+            const extraData: Partial<BudgetRequest> = {};
+            if (status === 'realized') {
+                extraData.realization_amount = realizationAmount;
+                extraData.realization_date = new Date().toISOString();
+            }
+
             const success = await dbService.updateStatus(
                 id, 
                 status, 
-                validatorNote.trim() ? { field: noteField, value: validatorNote } : undefined
+                validatorNote.trim() ? { field: noteField, value: validatorNote } : undefined,
+                extraData
             );
             
             if (success) {
@@ -415,6 +420,24 @@ const RequestDetail: React.FC = () => {
                                 <div><h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{actionConfig.title}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{actionConfig.subtitle}</p></div>
                             </div>
 
+                            {/* Input Khusus Bendahara: Nominal Realisasi */}
+                            {user?.role === 'bendahara' && request.status === 'reviewed_pic' && (
+                                <div className="space-y-4 p-6 bg-emerald-50 rounded-3xl border border-emerald-100">
+                                    <label className="text-[10px] font-black text-emerald-700 uppercase tracking-widest ml-1 flex items-center gap-2"><Banknote size={14} /> Nominal Realisasi Pembayaran (IDR)</label>
+                                    <div className="relative group">
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black text-emerald-300 group-focus-within:text-emerald-600 transition-colors">Rp</span>
+                                        <input 
+                                            type="number" 
+                                            className="w-full pl-16 pr-6 py-5 bg-white border-2 border-emerald-100 rounded-2xl text-xl font-black outline-none focus:border-emerald-600 transition-all shadow-lg shadow-emerald-100/50" 
+                                            value={realizationAmount} 
+                                            onChange={(e) => setRealizationAmount(Number(e.target.value))} 
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] font-bold text-emerald-600 uppercase italic">* Masukkan nominal yang benar-benar dibayarkan sesuai bukti bayar.</p>
+                                </div>
+                            )}
+
                             {/* Show SPJ Documents for PIC Verifikator */}
                             {user?.role?.startsWith('pic_') && request.status === 'approved' && (
                                 <div className={`grid grid-cols-1 ${isReceiptOnly ? 'md:grid-cols-1 max-w-sm mx-auto' : 'md:grid-cols-3'} gap-4`}>
@@ -600,6 +623,12 @@ const RequestDetail: React.FC = () => {
                                     <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[9pt] print:py-3 print:px-4">TOTAL KESELURUHAN</td>
                                     <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:py-3 print:px-4">Rp {request.amount.toLocaleString('id-ID')}</td>
                                 </tr>
+                                {request.status === 'realized' && (
+                                    <tr className="bg-emerald-600 text-white print:bg-gray-50 print:text-black print:border-t-[1pt] print:border-black break-inside-avoid">
+                                        <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[9pt] print:py-3 print:px-4 flex items-center justify-end gap-2"><Banknote size={16} /> TOTAL REALISASI DIBAYARKAN</td>
+                                        <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:py-3 print:px-4">Rp {request.realization_amount?.toLocaleString('id-ID')}</td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

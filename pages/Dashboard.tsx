@@ -13,7 +13,7 @@ import {
     AreaChart,
     Area
 } from 'recharts';
-import { Clock, CheckCircle2, BrainCircuit, Database, PieChart as PieIcon, ArrowUpRight, AlertTriangle, Building2, FileText, ListChecks, TrendingUp, ShieldCheck, Loader2, RefreshCw, Wallet, Coins } from 'lucide-react';
+import { Clock, CheckCircle2, BrainCircuit, Database, PieChart as PieIcon, ArrowUpRight, AlertTriangle, Building2, FileText, ListChecks, TrendingUp, ShieldCheck, Loader2, RefreshCw, Wallet, Coins, Banknote } from 'lucide-react';
 import { getBudgetInsights } from '../services/geminiService.ts';
 import { dbService } from '../services/dbService.ts';
 import { AuthContext } from '../App.tsx';
@@ -28,6 +28,7 @@ const Dashboard: React.FC = () => {
         totalAmount: 0,
         pendingCount: 0,
         approvedAmount: 0,
+        totalRealized: 0,
         rejectedCount: 0,
         totalCount: 0,
         totalOfficeCeiling: 0,
@@ -47,7 +48,7 @@ const Dashboard: React.FC = () => {
         try {
             const dbStats = await dbService.getStats(user.role, user.full_name, user.department);
             setStats(dbStats);
-            fetchAiInsight(dbStats.totalAmount, dbStats.approvedAmount);
+            fetchAiInsight(dbStats.totalAmount, dbStats.totalRealized);
         } catch (err: any) {
             console.error(err);
             setConnectionError(true);
@@ -60,10 +61,10 @@ const Dashboard: React.FC = () => {
         fetchData();
     }, [user]);
 
-    const fetchAiInsight = async (total: number, approved: number) => {
+    const fetchAiInsight = async (total: number, realized: number) => {
         setIsInsightLoading(true);
         try {
-            const text = await getBudgetInsights(total, approved);
+            const text = await getBudgetInsights(total, realized);
             setInsight(text || "Analisis data selesai.");
         } catch (err) {
             setInsight("Gunakan dashboard untuk pemantauan real-time.");
@@ -85,7 +86,7 @@ const Dashboard: React.FC = () => {
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
     // Cek apakah trend memiliki data (tidak semua nol)
-    const hasTrendData = stats.monthlyTrend.some((m: any) => m.amount > 0);
+    const hasTrendData = stats.monthlyTrend.some((m: any) => m.amount > 0 || m.realized > 0);
     // Cek apakah kategori memiliki data
     const hasCategoryData = stats.categories && stats.categories.length > 0;
 
@@ -120,7 +121,7 @@ const Dashboard: React.FC = () => {
                 {[
                     { label: 'Total Usulan', val: `Rp ${(stats.totalAmount/1000000).toFixed(1)}jt`, icon: <FileText className="text-blue-600" />, bg: 'bg-blue-50' },
                     { label: 'Menunggu Validasi', val: stats.pendingCount, icon: <Clock className="text-amber-600" />, bg: 'bg-amber-50' },
-                    { label: 'Telah Disetujui', val: `Rp ${(stats.approvedAmount/1000000).toFixed(1)}jt`, icon: <CheckCircle2 className="text-emerald-600" />, bg: 'bg-emerald-50' },
+                    { label: 'Total Realisasi', val: `Rp ${(stats.totalRealized/1000000).toFixed(1)}jt`, icon: <Banknote className="text-emerald-600" />, bg: 'bg-emerald-50' },
                     { label: 'Pagu Bidang', val: `Rp ${(stats.totalOfficeCeiling/1000000).toFixed(1)}jt`, icon: <Wallet className="text-indigo-600" />, bg: 'bg-indigo-50' }
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
@@ -138,13 +139,13 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col min-h-[450px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        <TrendingUp size={20} className="text-blue-600" /> Trend Pengajuan {isGlobalViewer ? 'Kantor' : 'Bidang'}
+                        <TrendingUp size={20} className="text-blue-600" /> Tren Usulan vs Realisasi
                     </h3>
                     
                     {!hasTrendData ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-200">
                             <Database size={40} className="text-slate-200 mb-4" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada pengajuan di TA {new Date().getFullYear()}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada data di TA {new Date().getFullYear()}</p>
                         </div>
                     ) : (
                         <div className="h-[300px] w-full mt-auto">
@@ -157,7 +158,9 @@ const Dashboard: React.FC = () => {
                                         formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Jumlah']}
                                         contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={3} />
+                                    <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', paddingBottom: '10px' }} />
+                                    <Area name="Usulan/Draft" type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.05} strokeWidth={2} />
+                                    <Area name="Realisasi Dibayar" type="monotone" dataKey="realized" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={3} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -166,7 +169,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col min-h-[450px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
-                        <PieIcon size={20} className="text-indigo-600" /> Komposisi Kategori
+                        <PieIcon size={20} className="text-indigo-600" /> Komposisi Biaya Terpakai
                     </h3>
 
                     {!hasCategoryData ? (
@@ -203,7 +206,7 @@ const Dashboard: React.FC = () => {
                 {stats.deptBudgets.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {stats.deptBudgets.map((dept: any, i: number) => {
-                            const percent = dept.total > 0 ? (dept.spent / dept.total) * 100 : 0;
+                            const percent = dept.total > 0 ? (dept.realized / dept.total) * 100 : 0;
                             return (
                                 <div key={i} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all">
                                     <div className="flex items-start justify-between mb-8">
@@ -217,29 +220,29 @@ const Dashboard: React.FC = () => {
                                     <div className="space-y-6">
                                         <div className="flex justify-between items-end">
                                             <div className="space-y-1">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase">Pagu Tersisa</p>
-                                                <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {dept.remaining.toLocaleString('id-ID')}</p>
+                                                <p className="text-[8px] font-black text-slate-400 uppercase">Sisa Pagu Riil</p>
+                                                <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {(dept.total - dept.realized).toLocaleString('id-ID')}</p>
                                             </div>
                                             <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black ${percent > 90 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                {percent.toFixed(1)}% Terpakai
+                                                {percent.toFixed(1)}% Realisasi
                                             </div>
                                         </div>
 
                                         <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                                             <div 
-                                                className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-blue-600'}`}
+                                                className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
                                                 style={{ width: `${Math.min(percent, 100)}%` }}
                                             ></div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                                             <div className="space-y-1">
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Total Pagu</p>
-                                                <p className="text-xs font-black text-slate-600">Rp {(dept.total/1000000).toFixed(1)}jt</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Persetujuan</p>
+                                                <p className="text-xs font-black text-slate-600">Rp {(dept.spent/1000000).toFixed(1)}jt</p>
                                             </div>
                                             <div className="space-y-1 text-right">
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Realisasi</p>
-                                                <p className="text-xs font-black text-slate-600">Rp {(dept.spent/1000000).toFixed(1)}jt</p>
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase">Realisasi Bayar</p>
+                                                <p className="text-xs font-black text-emerald-600">Rp {(dept.realized/1000000).toFixed(1)}jt</p>
                                             </div>
                                         </div>
                                     </div>
