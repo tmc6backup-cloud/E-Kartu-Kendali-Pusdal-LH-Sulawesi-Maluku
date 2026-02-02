@@ -17,10 +17,11 @@ import {
     ChevronDown,
     Landmark,
     TrendingUp,
-    PieChart
+    PieChart,
+    X,
+    CheckCircle
 } from 'lucide-react';
 
-// Daftar departemen yang disinkronkan dengan UserManagement
 const ALL_DEPARTMENTS = [
     "PUSDAL LH SUMA",
     "Bagian Tata Usaha",
@@ -33,7 +34,6 @@ const ALL_DEPARTMENTS = [
     "Sub Bagian Keuangan"
 ];
 
-// Default RO Codes yang sering digunakan
 const DEFAULT_RO_CODES = ["FBA", "BDH", "EBD", "EBB", "EBA", "BDB"];
 
 const AdminPagu: React.FC = () => {
@@ -41,10 +41,11 @@ const AdminPagu: React.FC = () => {
     const [requests, setRequests] = useState<BudgetRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [tableMissing, setTableMissing] = useState(false);
-    const [saving, setSaving] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [year, setYear] = useState(new Date().getFullYear());
     const [isCustomRo, setIsCustomRo] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const formRef = useRef<HTMLDivElement>(null);
     
     const currentYear = new Date().getFullYear();
@@ -69,9 +70,6 @@ const AdminPagu: React.FC = () => {
             setCeilings(cData);
             setRequests(rData);
         } catch (err: any) {
-            if (err.message === "DATABASE_TABLE_MISSING") {
-                setTableMissing(true);
-            }
             console.error(err);
         } finally {
             setLoading(false);
@@ -82,61 +80,76 @@ const AdminPagu: React.FC = () => {
         fetchData();
     }, [year]);
 
-    // Total Pagu Kantor (Seluruh Bidang)
     const officeTotal = useMemo(() => {
         return ceilings.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     }, [ceilings]);
 
-    // Mendapatkan daftar departemen unik yang ada di data ceilings (dari DB) 
     const departmentsToShow = useMemo(() => {
         const fromData = Array.from(new Set(ceilings.map(c => c.department)));
-        return Array.from(new Set([...ALL_DEPARTMENTS, ...fromData]));
+        const combined = Array.from(new Set([...ALL_DEPARTMENTS, ...fromData]));
+        return combined.filter(d => ceilings.some(c => c.department === d));
     }, [ceilings]);
 
-    const handleSave = async (dept: string, ro: string, komp: string, subk: string, amount: number) => {
-        if (!dept || !ro || amount <= 0) {
+    const handleSave = async () => {
+        if (!newEntry.dept || !newEntry.ro || newEntry.amount <= 0) {
             alert("Harap lengkapi Departemen, RO, dan Nominal Pagu.");
             return;
         }
-        const key = `${dept}-${ro}-${komp}-${subk}`;
-        setSaving(key);
-        
+
+        setSaving(true);
         try {
             const success = await dbService.updateCeiling(
-                dept, 
-                ro, 
-                amount, 
+                newEntry.dept, 
+                newEntry.ro, 
+                newEntry.amount, 
                 year, 
-                komp || '', 
-                subk || ''
+                newEntry.komponen || '', 
+                newEntry.subkomponen || '',
+                editingId || undefined
             );
 
             if (success) {
                 await fetchData();
-                // Reset form setelah simpan
-                setNewEntry({ ...newEntry, komponen: '', subkomponen: '', amount: 0 });
-                setIsCustomRo(false);
+                handleResetForm();
             } else {
-                alert("Gagal menyimpan data ke database.");
+                alert("Gagal menyimpan data ke database. Silakan coba lagi.");
             }
         } catch (err) {
-            alert("Terjadi kesalahan saat menyimpan.");
+            console.error(err);
+            alert("Terjadi kesalahan sistem saat menyimpan.");
         } finally {
-            setSaving(null);
+            setSaving(false);
         }
     };
 
+    const handleResetForm = () => {
+        setNewEntry({
+            dept: ALL_DEPARTMENTS[0],
+            ro: DEFAULT_RO_CODES[0],
+            komponen: '',
+            subkomponen: '',
+            amount: 0
+        });
+        setEditingId(null);
+        setIsCustomRo(false);
+    };
+
     const handleEditClick = (c: BudgetCeiling) => {
+        setEditingId(c.id);
         setNewEntry({
             dept: c.department,
             ro: c.ro_code,
-            komponen: c.komponen_code,
-            subkomponen: c.subkomponen_code,
-            amount: c.amount
+            komponen: c.komponen_code || '',
+            subkomponen: c.subkomponen_code || '',
+            amount: Number(c.amount)
         });
+        
         if (!DEFAULT_RO_CODES.includes(c.ro_code)) {
             setIsCustomRo(true);
+        } else {
+            setIsCustomRo(false);
         }
+        
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
@@ -152,7 +165,7 @@ const AdminPagu: React.FC = () => {
 
     const getUtilization = (dept: string, ro: string, komp: string, subk: string) => {
         return requests
-            .filter(r => r.requester_department === dept && (r.status === 'approved' || r.status === 'reviewed_pic'))
+            .filter(r => r.requester_department === dept && (['approved', 'reviewed_pic', 'realized'].includes(r.status)))
             .reduce((acc, curr) => {
                 const matchItems = (curr.calculation_items || []).filter(item => 
                     item.ro_code === ro && 
@@ -163,19 +176,6 @@ const AdminPagu: React.FC = () => {
             }, 0);
     };
 
-    if (tableMissing) return (
-        <div className="flex flex-col items-center justify-center py-40 max-w-2xl mx-auto text-center space-y-8 animate-in fade-in duration-500">
-            <div className="w-24 h-24 bg-red-50 text-red-500 rounded-[32px] flex items-center justify-center shadow-xl shadow-red-100">
-                <Database size={48} />
-            </div>
-            <div className="space-y-4">
-                <h1 className="text-3xl font-black text-slate-900 uppercase">Database Belum Siap</h1>
-                <p className="text-slate-500 font-medium">Pastikan tabel 'budget_ceilings' sudah dibuat di Supabase.</p>
-            </div>
-            <button onClick={fetchData} className="px-10 py-5 bg-slate-900 text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl">Refresh Koneksi</button>
-        </div>
-    );
-
     if (loading) return (
         <div className="flex flex-col items-center justify-center py-40">
             <Loader2 className="animate-spin text-blue-600 mb-6 opacity-30" size={64} />
@@ -185,7 +185,6 @@ const AdminPagu: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto space-y-10 pb-20 page-transition">
-            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3 uppercase">
@@ -207,7 +206,6 @@ const AdminPagu: React.FC = () => {
                 </div>
             </div>
 
-            {/* Rekapitulasi Global Satu Kantor */}
             <div className="bg-slate-900 rounded-[48px] p-10 text-white shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
@@ -234,23 +232,33 @@ const AdminPagu: React.FC = () => {
                 </div>
             </div>
 
-            {/* Input Form */}
-            <div ref={formRef} className="bg-white rounded-[40px] border border-slate-200 p-10 shadow-sm space-y-8 scroll-mt-24">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg">
-                        <Plus size={24} />
+            <div ref={formRef} className={`rounded-[40px] border-2 p-10 shadow-sm space-y-8 scroll-mt-24 transition-all duration-500 ${editingId ? 'bg-blue-50 border-blue-300 ring-4 ring-blue-500/10' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${editingId ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white'}`}>
+                            {editingId ? <Edit2 size={20} /> : <Plus size={24} />}
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">
+                                {editingId ? 'Koreksi Alokasi Pagu' : 'Input / Update Alokasi'}
+                            </h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                {editingId ? 'Memperbarui data pagu yang sudah ada' : `Input data pagu untuk tahun anggaran ${year}`}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Input / Update Alokasi</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Input data pagu untuk tahun anggaran {year}</p>
-                    </div>
+                    {editingId && (
+                        <button onClick={handleResetForm} className="flex items-center gap-2 px-4 py-2 bg-white text-slate-500 hover:text-red-500 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm">
+                            <X size={14} /> Batal Edit
+                        </button>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
                     <div className="space-y-2">
                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Pilih Bidang</label>
                         <select 
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold uppercase"
+                            className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold uppercase shadow-sm outline-none focus:border-blue-500"
                             value={newEntry.dept}
                             onChange={(e) => setNewEntry({...newEntry, dept: e.target.value})}
                         >
@@ -267,13 +275,13 @@ const AdminPagu: React.FC = () => {
                         {isCustomRo ? (
                             <input 
                                 type="text" placeholder="E.BA.994"
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600"
+                                className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600 shadow-sm"
                                 value={newEntry.ro}
                                 onChange={(e) => setNewEntry({...newEntry, ro: e.target.value.toUpperCase()})}
                             />
                         ) : (
                             <select 
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold uppercase"
+                                className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold uppercase shadow-sm outline-none focus:border-blue-500"
                                 value={newEntry.ro}
                                 onChange={(e) => setNewEntry({...newEntry, ro: e.target.value})}
                             >
@@ -285,7 +293,7 @@ const AdminPagu: React.FC = () => {
                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Komponen</label>
                         <input 
                             type="text" placeholder="051"
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600"
+                            className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600 shadow-sm"
                             value={newEntry.komponen}
                             onChange={(e) => setNewEntry({...newEntry, komponen: e.target.value.toUpperCase()})}
                         />
@@ -294,7 +302,7 @@ const AdminPagu: React.FC = () => {
                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Subkomp</label>
                         <input 
                             type="text" placeholder="A"
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600"
+                            className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold uppercase outline-none focus:border-blue-600 shadow-sm"
                             value={newEntry.subkomponen}
                             onChange={(e) => setNewEntry({...newEntry, subkomponen: e.target.value.toUpperCase()})}
                         />
@@ -303,29 +311,25 @@ const AdminPagu: React.FC = () => {
                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nominal (Rp)</label>
                         <input 
                             type="number"
-                            className="w-full p-4 bg-slate-900 text-white border border-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10"
+                            className="w-full p-4 bg-slate-900 text-white border border-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 shadow-sm"
                             value={newEntry.amount}
                             onChange={(e) => setNewEntry({...newEntry, amount: Number(e.target.value)})}
                         />
                     </div>
                 </div>
                 <button 
-                    onClick={() => handleSave(newEntry.dept, newEntry.ro, newEntry.komponen, newEntry.subkomponen, newEntry.amount)}
-                    disabled={!!saving}
-                    className="w-full py-5 bg-blue-600 text-white hover:bg-blue-700 rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-100 disabled:opacity-50 flex items-center justify-center gap-3"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-3 ${editingId ? 'bg-blue-600 text-white shadow-blue-100 hover:bg-blue-700' : 'bg-slate-900 text-white shadow-slate-200 hover:bg-slate-800'}`}
                 >
-                    {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                    Simpan & Daftarkan Pagu
+                    {saving ? <Loader2 className="animate-spin" size={20} /> : (editingId ? <CheckCircle size={20} /> : <Save size={20} />)}
+                    {editingId ? 'Simpan Perubahan Pagu' : 'Simpan & Daftarkan Pagu Baru'}
                 </button>
             </div>
 
-            {/* List Pagu per Bidang */}
             <div className="space-y-16">
-                {departmentsToShow.map((deptName, idx) => {
+                {departmentsToShow.length > 0 ? departmentsToShow.map((deptName, idx) => {
                     const deptCeilings = ceilings.filter(c => c.department === deptName);
-                    if (deptCeilings.length === 0) return null;
-
-                    // Hitung Total Pagu per Bidang ini
                     const totalDeptPagu = deptCeilings.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
 
                     return (
@@ -367,20 +371,21 @@ const AdminPagu: React.FC = () => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {deptCeilings.map(c => {
-                                            const spent = getUtilization(c.department, c.ro_code, c.komponen_code, c.subkomponen_code);
-                                            const sisa = c.amount - spent;
-                                            const percent = c.amount > 0 ? (spent / c.amount) * 100 : 0;
+                                            const spent = getUtilization(c.department, c.ro_code, c.komponen_code || '', c.subkomponen_code || '');
+                                            const sisa = Number(c.amount) - spent;
+                                            const percent = Number(c.amount) > 0 ? (spent / Number(c.amount)) * 100 : 0;
                                             const isDeleting = deletingId === c.id;
+                                            const isBeingEdited = editingId === c.id;
 
                                             return (
-                                                <tr key={c.id} className={`hover:bg-slate-50/50 transition-all group ${isDeleting ? 'opacity-50' : ''}`}>
+                                                <tr key={c.id} className={`hover:bg-slate-50/50 transition-all group ${isDeleting ? 'opacity-50 grayscale' : ''} ${isBeingEdited ? 'bg-blue-50/50' : ''}`}>
                                                     <td className="px-8 py-6">
-                                                        <span className="p-2 bg-slate-100 rounded-lg text-slate-900 font-black text-[10px] uppercase tracking-tighter">
+                                                        <span className={`p-2 rounded-lg font-black text-[10px] uppercase tracking-tighter transition-colors ${isBeingEdited ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-900'}`}>
                                                             {c.ro_code}.{c.komponen_code}.{c.subkomponen_code}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-6 text-right font-bold text-slate-900 font-mono text-sm">
-                                                        Rp {c.amount.toLocaleString('id-ID')}
+                                                        Rp {Number(c.amount).toLocaleString('id-ID')}
                                                     </td>
                                                     <td className="px-8 py-6 text-right font-bold text-slate-400 font-mono text-xs">
                                                         Rp {spent.toLocaleString('id-ID')}
@@ -392,7 +397,7 @@ const AdminPagu: React.FC = () => {
                                                             </span>
                                                             <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                                 <div 
-                                                                    className={`h-full ${percent > 90 ? 'bg-red-500' : 'bg-emerald-500'} transition-all`}
+                                                                    className={`h-full ${percent > 90 ? 'bg-red-500' : 'bg-emerald-500'} transition-all duration-700`}
                                                                     style={{ width: `${Math.min(percent, 100)}%` }}
                                                                 ></div>
                                                             </div>
@@ -400,16 +405,28 @@ const AdminPagu: React.FC = () => {
                                                     </td>
                                                     <td className="px-8 py-6 text-right">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                            <button onClick={() => handleEditClick(c)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Edit2 size={16} /></button>
-                                                            <button onClick={() => handleDelete(c.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16} /></button>
+                                                            <button 
+                                                                onClick={() => handleEditClick(c)} 
+                                                                className={`p-2.5 rounded-xl transition-all shadow-sm ${isBeingEdited ? 'bg-blue-600 text-white' : 'bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-100'}`} 
+                                                                title="Ubah Data"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDelete(c.id)} 
+                                                                disabled={isDeleting}
+                                                                className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 bg-white rounded-xl transition-all shadow-sm" 
+                                                                title="Hapus Data"
+                                                            >
+                                                                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                        {/* Footer Baris Total per Bidang */}
-                                        <tr className="bg-slate-50/50">
-                                            <td className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total {deptName}</td>
+                                        <tr className="bg-slate-50/30">
+                                            <td className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Akumulasi {deptName}</td>
                                             <td className="px-8 py-6 text-right font-black text-slate-900 font-mono text-base border-t border-slate-200">
                                                 Rp {totalDeptPagu.toLocaleString('id-ID')}
                                             </td>
@@ -420,9 +437,7 @@ const AdminPagu: React.FC = () => {
                             </div>
                         </div>
                     );
-                })}
-
-                {ceilings.length === 0 && (
+                }) : (
                     <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
                         <Database size={48} className="mx-auto text-slate-200 mb-4" />
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Belum ada data pagu terdaftar untuk TA {year}</p>

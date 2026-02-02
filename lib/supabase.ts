@@ -1,13 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get credentials from environment variables with specific fallbacks
+// Pastikan kredensial tersedia
 const supabaseUrl = process.env.SUPABASE_URL || 'https://syptvhtbxflhjgdepbqs.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR';
-
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('YOUR_SUPABASE')) {
-    console.error("CRITICAL: Supabase credentials are missing or invalid.");
-}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -15,13 +11,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         autoRefreshToken: true,
     },
     global: {
-        headers: { 'x-application-name': 'e-kartu-kendali-suma' },
+        headers: { 'x-application-name': 'e-kendali-pusdal-suma-secure' },
     },
 });
 
-// Test Connection Helper (Optional for debugging)
-supabase.from('profiles').select('id', { count: 'exact', head: true })
-    .then(({ error }) => {
-        if (error) console.warn("Supabase Connection Check:", error.message);
-        else console.log("Supabase Connection: OK");
-    });
+// Health Check Sederhana
+export const checkDatabaseHealth = async () => {
+    try {
+        const { error } = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+        if (error) throw error;
+        return { online: true };
+    } catch (err) {
+        console.error("Database Connection Failed:", err);
+        return { online: false, error: err };
+    }
+};

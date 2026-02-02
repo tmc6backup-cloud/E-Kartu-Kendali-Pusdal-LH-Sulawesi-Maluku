@@ -40,6 +40,7 @@ export type BudgetStatus = 'draft' | 'pending' | 'reviewed_bidang' | 'reviewed_p
 
 export interface CalculationItem {
   id: string;
+  header?: string;
   title: string;
   detail_barang?: string;
   kro_code: string;

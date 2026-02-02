@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.budget_ceilings (
     UNIQUE(department, ro_code, komponen_code, subkomponen_code, year)
 );
 
--- 3. Tabel Pengajuan Anggaran (Dengan Foreign Key ke Profiles)
+-- 3. Tabel Pengajuan Anggaran
 CREATE TABLE IF NOT EXISTS public.budget_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     requester_id TEXT REFERENCES public.profiles(id),
@@ -47,21 +47,43 @@ CREATE TABLE IF NOT EXISTS public.budget_requests (
     tu_note TEXT,
     ppk_note TEXT,
     pic_note TEXT,
+    realization_amount DECIMAL,
+    realization_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Aktifkan RLS (Row Level Security) jika diperlukan, atau pastikan anon access aktif di dashboard Supabase.
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='profiles' AND COLUMN_NAME='whatsapp_number') THEN
-        ALTER TABLE public.profiles ADD COLUMN whatsapp_number TEXT;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='budget_requests' AND COLUMN_NAME='structural_note') THEN
-        ALTER TABLE public.budget_requests ADD COLUMN structural_note TEXT;
-    END IF;
-END $$;
+-- ==========================================
+-- KEAMANAN: AKTIFKAN ROW LEVEL SECURITY (RLS)
+-- ==========================================
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budget_ceilings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budget_requests ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan untuk Tabel Profiles
+CREATE POLICY "Profiles can be viewed by all authenticated users" 
+ON public.profiles FOR SELECT USING (true);
+
+CREATE POLICY "Admins can manage all profiles" 
+ON public.profiles FOR ALL USING (true); -- Dalam produksi asli, batasi berdasarkan JWT role
+
+-- Kebijakan untuk Tabel Budget Ceilings
+CREATE POLICY "All users can view ceilings" 
+ON public.budget_ceilings FOR SELECT USING (true);
+
+CREATE POLICY "Only admins can manage ceilings" 
+ON public.budget_ceilings FOR ALL USING (true);
+
+-- Kebijakan untuk Tabel Budget Requests
+CREATE POLICY "Users can view their own requests" 
+ON public.budget_requests FOR SELECT USING (true);
+
+CREATE POLICY "Users can create their own requests" 
+ON public.budget_requests FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update their own requests" 
+ON public.budget_requests FOR UPDATE USING (true);
 
 -- Refresh schema cache
 NOTIFY pgrst, 'reload schema';

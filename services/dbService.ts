@@ -42,7 +42,11 @@ export const dbService = {
     // --- Pagu Anggaran (Ceilings) ---
     getCeilings: async (year: number = new Date().getFullYear()): Promise<BudgetCeiling[]> => {
         try {
-            const { data, error } = await supabase.from('budget_ceilings').select('*').eq('year', year);
+            const { data, error } = await supabase
+                .from('budget_ceilings')
+                .select('*')
+                .eq('year', year)
+                .order('department', { ascending: true });
             if (error) throw error;
             return data as BudgetCeiling[];
         } catch (err: any) {
@@ -51,19 +55,40 @@ export const dbService = {
         }
     },
 
-    updateCeiling: async (department: string, ro_code: string, amount: number, year: number, komponen_code: string = '', subkomponen_code: string = ''): Promise<boolean> => {
-        const { error } = await supabase.from('budget_ceilings').upsert({
+    updateCeiling: async (department: string, ro_code: string, amount: number, year: number, komponen_code: string = '', subkomponen_code: string = '', id?: string): Promise<boolean> => {
+        const payload: any = {
             department: department,
             ro_code: ro_code,
             komponen_code: komponen_code || '',
             subkomponen_code: subkomponen_code || '',
-            amount: amount,
-            year: year,
+            amount: Number(amount),
+            year: Number(year),
             updated_at: new Date().toISOString()
-        }, { 
-            onConflict: 'department,ro_code,komponen_code,subkomponen_code,year' 
-        });
-        return !error;
+        };
+
+        try {
+            if (id) {
+                // Jika sedang EDIT (ada ID), lakukan UPDATE berdasarkan ID
+                const { error } = await supabase
+                    .from('budget_ceilings')
+                    .update(payload)
+                    .eq('id', id);
+                if (error) throw error;
+                return true;
+            } else {
+                // Jika BARU, gunakan UPSERT berdasarkan Unique Constraint
+                const { error } = await supabase
+                    .from('budget_ceilings')
+                    .upsert(payload, { 
+                        onConflict: 'department,ro_code,komponen_code,subkomponen_code,year' 
+                    });
+                if (error) throw error;
+                return true;
+            }
+        } catch (err) {
+            console.error("Update Ceiling Error:", err);
+            return false;
+        }
     },
 
     deleteCeiling: async (id: string) => {
@@ -144,7 +169,6 @@ export const dbService = {
         const userDepts = department ? department.split(', ').map(d => d.trim().toLowerCase()) : [];
         
         try {
-            console.log(`[Stats Query] Fetching for TA: ${selectedYear}`);
             const [requestsRes, ceilingsRes] = await Promise.all([
                 supabase.from('budget_requests').select('amount, status, category, created_at, realization_amount, realization_date, requester_department'),
                 supabase.from('budget_ceilings').select('department, amount, year, ro_code').eq('year', selectedYear)
@@ -153,9 +177,6 @@ export const dbService = {
             const data = requestsRes.data || [];
             const ceilingData = ceilingsRes.data || [];
             
-            console.log(`[Stats Query] Found ${data.length} requests in DB total.`);
-            console.log(`[Stats Query] Found ${ceilingData.length} ceilings for ${selectedYear}.`);
-
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const monthlyTrend = months.map(m => ({ name: m, amount: 0, realized: 0 }));
 
@@ -247,7 +268,6 @@ export const dbService = {
                 })).sort((a, b) => b.total - a.total)
             };
             
-            console.log("[Stats Result] Data processed successfully.", result);
             return result;
         } catch (err) {
             console.error("[Stats Error]", err);

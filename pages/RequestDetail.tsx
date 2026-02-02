@@ -393,7 +393,7 @@ const RequestDetail: React.FC = () => {
                                         <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.tu_note}"</p>
                                     </div>
                                 )}
-                                {request.ppk_note && (
+                                {request.program_note && (
                                     <div className="p-6 bg-purple-50/50 border border-purple-100 rounded-[32px] space-y-2">
                                         <div className="flex items-center gap-2 text-[9px] font-black text-purple-700 uppercase tracking-widest">
                                             <Stamp size={12} /> Pengesahan Pejabat PPK
@@ -616,6 +616,7 @@ const RequestDetail: React.FC = () => {
                                     <tr key={idx} className="print:border-b-[0.5pt] print:border-black break-inside-avoid">
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-2"><p className="text-[8px] font-black print:text-[7pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt]">{item.kode_akun}</p></td>
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
+                                            {item.header && <p className="text-[8px] font-black text-blue-800 uppercase print:text-[7pt] print:text-black underline mb-1">{item.header}</p>}
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
                                             {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
                                             <p className="text-[9px] md:text-[8px] text-slate-400 font-medium italic mt-1 leading-none print:text-[6.5pt] print:text-black">
