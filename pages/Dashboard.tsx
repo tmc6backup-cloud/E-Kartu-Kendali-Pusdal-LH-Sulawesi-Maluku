@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [connectionError, setConnectionError] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [renderKey, setRenderKey] = useState(0); // Key untuk paksa re-render chart
     
     const [stats, setStats] = useState<any>({
         totalAmount: 0,
@@ -39,22 +40,16 @@ const Dashboard: React.FC = () => {
         monthlyTrend: []
     });
 
-    const availableYears = useMemo(() => {
-        const current = new Date().getFullYear();
-        return Array.from({ length: 5 }, (_, i) => current - 2 + i);
-    }, []);
-    
     const isGlobalViewer = useMemo(() => 
         ['admin', 'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'bendahara'].includes(user?.role || ''),
     [user]);
 
-    // Verifikasi keberadaan data untuk chart
     const hasTrendData = useMemo(() => 
-        stats.monthlyTrend && stats.monthlyTrend.length > 0 && stats.monthlyTrend.some((m: any) => (Number(m.amount) || 0) > 0 || (Number(m.realized) || 0) > 0), 
+        stats.monthlyTrend && stats.monthlyTrend.length > 0 && stats.monthlyTrend.some((m: any) => (m.amount > 0 || m.realized > 0)), 
     [stats.monthlyTrend]);
 
     const hasCategoryData = useMemo(() => 
-        stats.categories && stats.categories.length > 0 && stats.categories.some((c: any) => (Number(c.value) || 0) > 0), 
+        stats.categories && stats.categories.length > 0, 
     [stats.categories]);
 
     const fetchData = async () => {
@@ -63,7 +58,16 @@ const Dashboard: React.FC = () => {
         setConnectionError(false);
         try {
             const dbStats = await dbService.getStats(user.role, user.full_name, user.department, selectedYear);
-            setStats(dbStats);
+            
+            // Konversi data ke format yang aman untuk Recharts
+            const safeTrend = dbStats.monthlyTrend.map((m: any) => ({
+                ...m,
+                amount: Number(m.amount) || 0,
+                realized: Number(m.realized) || 0
+            }));
+
+            setStats({ ...dbStats, monthlyTrend: safeTrend });
+            setRenderKey(prev => prev + 1); // Trigger re-render chart
             fetchAiInsight(dbStats.totalAmount, dbStats.totalRealized);
         } catch (err: any) {
             console.error(err);
@@ -83,7 +87,7 @@ const Dashboard: React.FC = () => {
             const text = await getBudgetInsights(total, realized);
             setInsight(text || "Analisis data selesai.");
         } catch (err) {
-            setInsight("Gunakan dashboard untuk pemantauan real-time.");
+            setInsight("Data telah disinkronkan dengan database pusat.");
         } finally {
             setIsInsightLoading(false);
         }
@@ -92,15 +96,7 @@ const Dashboard: React.FC = () => {
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center py-40">
             <Loader2 className="animate-spin text-blue-600 mb-6 opacity-30" size={64} />
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Menyusun Data Statistik...</p>
-        </div>
-    );
-
-    if (connectionError) return (
-        <div className="flex flex-col items-center justify-center py-40 text-center space-y-6">
-            <AlertTriangle size={48} className="text-red-500" />
-            <h2 className="text-xl font-black text-slate-900 uppercase">Gagal Terhubung</h2>
-            <button onClick={fetchData} className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase flex items-center gap-2"><RefreshCw size={16} /> Muat Ulang</button>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Sinkronisasi Data...</p>
         </div>
     );
 
@@ -113,7 +109,7 @@ const Dashboard: React.FC = () => {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
                         {isGlobalViewer ? 'Monitoring Kantor' : 'Dashboard'}
-                        {isGlobalViewer && <div className="p-1.5 bg-slate-900 text-white rounded-lg"><ShieldCheck size={18} /></div>}
+                        {isGlobalViewer && <div className="p-1.5 bg-slate-900 text-white rounded-lg shadow-lg"><ShieldCheck size={18} /></div>}
                     </h1>
                     <div className="flex items-center gap-4 mt-2">
                         <p className="text-slate-400 font-bold text-[10px] flex items-center gap-2 uppercase tracking-widest">
@@ -127,7 +123,7 @@ const Dashboard: React.FC = () => {
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                             >
-                                {availableYears.map(y => <option key={y} value={y}>TA {y}</option>)}
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>TA {y}</option>)}
                             </select>
                         </div>
                     </div>
@@ -151,7 +147,7 @@ const Dashboard: React.FC = () => {
                     { label: 'Total Usulan', val: `Rp ${(stats.totalAmount/1000000).toFixed(1)}jt`, icon: <FileText className="text-blue-600" />, bg: 'bg-blue-50' },
                     { label: 'Menunggu Validasi', val: stats.pendingCount, icon: <Clock className="text-amber-600" />, bg: 'bg-amber-50' },
                     { label: 'Total Realisasi', val: `Rp ${(stats.totalRealized/1000000).toFixed(1)}jt`, icon: <Banknote className="text-emerald-600" />, bg: 'bg-emerald-50' },
-                    { label: 'Pagu Bidang', val: `Rp ${(stats.totalOfficeCeiling/1000000).toFixed(1)}jt`, icon: <Wallet className="text-indigo-600" />, bg: 'bg-indigo-50' }
+                    { label: 'Pagu Kantor', val: `Rp ${(stats.totalOfficeCeiling/1000000).toFixed(1)}jt`, icon: <Wallet className="text-indigo-600" />, bg: 'bg-indigo-50' }
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
                         <div className={`absolute -right-4 -top-4 w-20 h-20 ${stat.bg} rounded-full opacity-40 group-hover:scale-150 transition-transform duration-700`}></div>
@@ -167,124 +163,114 @@ const Dashboard: React.FC = () => {
             {/* Visualisasi Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Area Chart: Tren */}
-                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col">
+                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col h-[500px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase mb-4">
                         <TrendingUp size={20} className="text-blue-600" /> Tren Usulan & Realisasi
                     </h3>
                     
-                    <div className="w-full h-[350px] bg-slate-50/30 rounded-[32px] overflow-hidden relative border border-slate-50">
+                    <div className="relative flex-1 w-full min-h-0">
                         {!hasTrendData ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
                                 <Database size={48} className="text-slate-200 mb-4" />
-                                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Data TA {selectedYear} Kosong</h4>
+                                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Belum Ada Data</h4>
                             </div>
                         ) : (
-                            <ResponsiveContainer width="99%" height="100%">
-                                <AreaChart 
-                                    key={`chart-area-${selectedYear}`}
-                                    data={stats.monthlyTrend} 
-                                    margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-                                >
-                                    <defs>
-                                        <linearGradient id="colorUsulan" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                        </linearGradient>
-                                        <linearGradient id="colorRealisasi" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis 
-                                        dataKey="name" 
-                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        dy={10}
-                                    />
-                                    <YAxis 
-                                        width={60} 
-                                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tickFormatter={(val) => `Rp${(val/1000000).toFixed(0)}jt`} 
-                                    />
-                                    <Tooltip 
-                                        formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Nominal']}
-                                        contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', padding: '16px' }}
-                                        labelStyle={{ fontWeight: 'black', textTransform: 'uppercase', marginBottom: '8px', color: '#1e293b' }}
-                                    />
-                                    <Legend 
-                                        verticalAlign="top" 
-                                        align="right" 
-                                        height={40} 
-                                        wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingBottom: '20px' }} 
-                                    />
-                                    <Area 
-                                        name="Usulan" 
-                                        type="monotone" 
-                                        dataKey="amount" 
-                                        stroke="#3b82f6" 
-                                        fill="url(#colorUsulan)" 
-                                        strokeWidth={4} 
-                                        isAnimationActive={false}
-                                    />
-                                    <Area 
-                                        name="Realisasi" 
-                                        type="monotone" 
-                                        dataKey="realized" 
-                                        stroke="#10b981" 
-                                        fill="url(#colorRealisasi)" 
-                                        strokeWidth={4} 
-                                        isAnimationActive={false}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <div className="absolute inset-0">
+                                <ResponsiveContainer key={`area-${renderKey}`} width="100%" height="100%">
+                                    <AreaChart 
+                                        data={stats.monthlyTrend} 
+                                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="colorUsulan" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis 
+                                            dataKey="name" 
+                                            tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                        />
+                                        <YAxis 
+                                            width={60} 
+                                            tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tickFormatter={(val) => `Rp${(val/1000000).toFixed(0)}jt`} 
+                                        />
+                                        <Tooltip 
+                                            formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Total']}
+                                            contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', padding: '16px' }}
+                                        />
+                                        <Area 
+                                            name="Usulan" 
+                                            type="monotone" 
+                                            dataKey="amount" 
+                                            stroke="#3b82f6" 
+                                            fill="url(#colorUsulan)" 
+                                            strokeWidth={4} 
+                                            isAnimationActive={false}
+                                        />
+                                        <Area 
+                                            name="Realisasi" 
+                                            type="monotone" 
+                                            dataKey="realized" 
+                                            stroke="#10b981" 
+                                            fill="url(#colorReal)" 
+                                            strokeWidth={4} 
+                                            isAnimationActive={false}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Pie Chart: Kategori */}
-                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col">
+                <div className="bg-white p-8 rounded-[48px] border border-slate-200 shadow-sm space-y-6 flex flex-col h-[500px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase mb-4">
                         <PieIcon size={20} className="text-indigo-600" /> Komposisi Anggaran
                     </h3>
 
-                    <div className="w-full h-[350px] bg-slate-50/30 rounded-[32px] overflow-hidden relative border border-slate-50">
+                    <div className="relative flex-1 w-full min-h-0">
                         {!hasCategoryData ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
                                 <PieIcon size={48} className="text-slate-200 mb-4" />
-                                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Data Kategori Kosong</h4>
+                                <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Belum Ada Kategori</h4>
                             </div>
                         ) : (
-                            <ResponsiveContainer width="99%" height="100%">
-                                <PieChart key={`chart-pie-${selectedYear}`}>
-                                    <Pie 
-                                        data={stats.categories} 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius={70} 
-                                        outerRadius={105} 
-                                        paddingAngle={6} 
-                                        dataKey="value" 
-                                        stroke="none"
-                                        isAnimationActive={false}
-                                    >
-                                        {stats.categories.map((e: any, i: number) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
-                                    </Pie>
-                                    <Tooltip 
-                                        formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Total']}
-                                        contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', padding: '16px' }}
-                                    />
-                                    <Legend 
-                                        verticalAlign="bottom" 
-                                        align="center" 
-                                        iconType="circle" 
-                                        wrapperStyle={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '30px' }} 
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <div className="absolute inset-0">
+                                <ResponsiveContainer key={`pie-${renderKey}`} width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie 
+                                            data={stats.categories} 
+                                            cx="50%" 
+                                            cy="50%" 
+                                            innerRadius={70} 
+                                            outerRadius={100} 
+                                            paddingAngle={5} 
+                                            dataKey="value" 
+                                            stroke="none"
+                                            isAnimationActive={false}
+                                        >
+                                            {stats.categories.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(val: number) => [`Rp ${val.toLocaleString('id-ID')}`, 'Total']}
+                                            contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', padding: '16px' }}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36}/>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -294,64 +280,59 @@ const Dashboard: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex items-center gap-3 px-2">
                     <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center shadow-lg"><Building2 size={16} /></div>
-                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Status Pagu Bidang ({selectedYear})</h3>
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Status Pagu Per Bidang Kerja</h3>
                 </div>
                 
-                {stats.deptBudgets.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {stats.deptBudgets.map((dept: any, i: number) => {
-                            const realizedVal = Number(dept.realized || 0);
-                            const totalVal = Number(dept.total || 0);
-                            const percent = totalVal > 0 ? (realizedVal / totalVal) * 100 : 0;
-                            return (
-                                <div key={i} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all group">
-                                    <div className="flex items-start justify-between mb-8">
-                                        <div>
-                                            <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-tight mb-1">{dept.name}</h4>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Alokasi TA {selectedYear}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {stats.deptBudgets.length > 0 ? stats.deptBudgets.map((dept: any, i: number) => {
+                        const percent = dept.total > 0 ? (dept.realized / dept.total) * 100 : 0;
+                        return (
+                            <div key={i} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all group">
+                                <div className="flex items-start justify-between mb-8">
+                                    <div className="max-w-[70%]">
+                                        <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-tight mb-1">{dept.name}</h4>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Alokasi Anggaran Terdaftar</p>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 rounded-2xl text-slate-400 group-hover:text-blue-600 transition-colors"><Coins size={20} /></div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-end">
+                                        <div className="space-y-1">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase">Sisa Saldo Pagu</p>
+                                            <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {(dept.total - dept.realized).toLocaleString('id-ID')}</p>
                                         </div>
-                                        <div className="p-3 bg-slate-50 rounded-2xl text-slate-400 group-hover:text-blue-600 transition-colors"><Coins size={20} /></div>
+                                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black ${percent > 90 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                            {percent.toFixed(1)}% Terpakai
+                                        </div>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-end">
-                                            <div className="space-y-1">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase">Sisa Pagu Riil</p>
-                                                <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">Rp {(totalVal - realizedVal).toLocaleString('id-ID')}</p>
-                                            </div>
-                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black ${percent > 90 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                {percent.toFixed(1)}% Terpakai
-                                            </div>
-                                        </div>
+                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                            style={{ width: `${Math.min(percent, 100)}%` }}
+                                        ></div>
+                                    </div>
 
-                                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div 
-                                                className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                                style={{ width: `${Math.min(percent, 100)}%` }}
-                                            ></div>
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                                        <div className="space-y-1">
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Total Pagu</p>
+                                            <p className="text-xs font-black text-slate-600">Rp {(dept.total/1000000).toFixed(1)}jt</p>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                                            <div className="space-y-1">
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Usulan OK</p>
-                                                <p className="text-xs font-black text-slate-600">Rp {(Number(dept.spent || 0)/1000000).toFixed(1)}jt</p>
-                                            </div>
-                                            <div className="space-y-1 text-right">
-                                                <p className="text-[8px] font-bold text-emerald-400 uppercase">Realisasi Bayar</p>
-                                                <p className="text-xs font-black text-emerald-600">Rp {(realizedVal/1000000).toFixed(1)}jt</p>
-                                            </div>
+                                        <div className="space-y-1 text-right">
+                                            <p className="text-[8px] font-bold text-emerald-400 uppercase">Realisasi Bayar</p>
+                                            <p className="text-xs font-black text-emerald-600">Rp {(dept.realized/1000000).toFixed(1)}jt</p>
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
-                        <Building2 size={48} className="mx-auto text-slate-100 mb-4" />
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Belum ada alokasi pagu bidang terdaftar untuk TA {selectedYear}</p>
-                    </div>
-                )}
+                            </div>
+                        );
+                    }) : (
+                        <div className="col-span-full py-16 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
+                             <p className="text-xs font-black text-slate-300 uppercase tracking-widest">Data Bidang Belum Dimuat</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
