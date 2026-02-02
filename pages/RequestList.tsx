@@ -12,7 +12,8 @@ import {
     Paperclip,
     FileText,
     Edit2,
-    MessageSquareQuote
+    MessageSquareQuote,
+    RefreshCw
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -146,7 +147,9 @@ const RequestList: React.FC = () => {
                                 <tr><td colSpan={user?.role === 'pengaju' ? 5 : 6} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-500" /></td></tr>
                             ) : filteredRequests.length > 0 ? (
                                 filteredRequests.map((req) => {
-                                    const lastNote = req.pic_note || req.ppk_note || req.tu_note || req.program_note;
+                                    const lastNote = req.pic_note || req.ppk_note || req.tu_note || req.program_note || req.structural_note;
+                                    const canEdit = (req.status === 'draft' || req.status === 'rejected') && req.requester_id === user?.id;
+
                                     return (
                                         <tr key={req.id} className="hover:bg-slate-50/50 transition-all group print:border-b-[0.5pt] print:border-black break-inside-avoid">
                                             <td className="px-8 py-7 print:py-3 print:px-4">
@@ -187,16 +190,16 @@ const RequestList: React.FC = () => {
                                             <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[9pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
                                             <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>
                                             <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
-                                                {(isAdmin || (req.status === 'draft' && req.requester_id === user?.id)) && (
+                                                {(isAdmin || (canEdit)) && (
                                                     <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
                                                 )}
                                                 
-                                                {req.status === 'draft' ? (
+                                                {canEdit ? (
                                                     <Link 
                                                         to={`/requests/edit/${req.id}`} 
-                                                        className="px-5 py-3 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all active:scale-95"
+                                                        className={`px-5 py-3 ${req.status === 'rejected' ? 'bg-red-600 hover:bg-red-700 shadow-red-100' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-100'} text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 shadow-lg transition-all active:scale-95`}
                                                     >
-                                                        Lanjutkan <Edit2 size={14} />
+                                                        {req.status === 'rejected' ? 'Perbaiki' : 'Lanjutkan'} {req.status === 'rejected' ? <RefreshCw size={14} /> : <Edit2 size={14} />}
                                                     </Link>
                                                 ) : (
                                                     <Link 

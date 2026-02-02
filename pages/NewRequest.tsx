@@ -30,7 +30,10 @@ import {
     Target,
     ListChecks,
     CheckCircle,
-    MessageCircle
+    MessageCircle,
+    AlertCircle,
+    MessageSquareText,
+    RefreshCw
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
@@ -60,6 +63,7 @@ const NewRequest: React.FC = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdRequest, setCreatedRequest] = useState<BudgetRequest | null>(null);
     const [targetValidators, setTargetValidators] = useState<Profile[]>([]);
+    const [existingRequest, setExistingRequest] = useState<BudgetRequest | null>(null);
 
     const [manualVolkeg, setManualVolkeg] = useState<Record<string, boolean>>({});
 
@@ -100,6 +104,7 @@ const NewRequest: React.FC = () => {
             const fetchExisting = async () => {
                 const data = await dbService.getRequestById(id!);
                 if (data) {
+                    setExistingRequest(data);
                     setFormData({
                         title: data.title, category: data.category, location: data.location,
                         executionDate: data.execution_date || '',
@@ -240,17 +245,44 @@ const NewRequest: React.FC = () => {
 
     if (pageLoading) return <div className="py-40 text-center"><Loader2 className="animate-spin mx-auto opacity-30" size={64} /></div>;
 
+    const lastNote = existingRequest?.pic_note || existingRequest?.ppk_note || existingRequest?.tu_note || existingRequest?.program_note || existingRequest?.structural_note;
+
     return (
         <div className="max-w-[1400px] mx-auto space-y-10 pb-20 page-transition">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)} className="p-3 bg-white border rounded-2xl shadow-sm hover:bg-slate-50 transition-all"><ArrowLeft size={20} /></button>
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Usulan Anggaran</h1>
+                        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                            {existingRequest?.status === 'rejected' ? 'Perbaikan Berkas' : 'Usulan Anggaran'}
+                        </h1>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 flex items-center gap-2">TA {currentYear} • {user?.department}</p>
                     </div>
                 </div>
             </div>
+
+            {/* Banner Informasi Rejection */}
+            {existingRequest?.status === 'rejected' && (
+                <div className="bg-red-50 border-2 border-red-200 p-8 rounded-[40px] flex items-start gap-6 shadow-xl shadow-red-100/20 animate-in slide-in-from-top-4">
+                    <div className="w-14 h-14 bg-red-600 text-white rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                        <RefreshCw size={28} />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-black text-red-700 uppercase tracking-tight">Mode Perbaikan Aktif</h3>
+                        <p className="text-sm font-bold text-red-600 uppercase tracking-wide leading-relaxed">
+                            Berkas ini telah ditolak/revisi oleh validator. Mohon periksa catatan verifikator untuk memperbaiki poin-poin yang kurang.
+                        </p>
+                        {lastNote && (
+                            <div className="mt-4 p-4 bg-white/50 border border-red-100 rounded-2xl">
+                                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest flex items-center gap-2 mb-1">
+                                    <MessageSquareText size={14} /> Catatan Terakhir:
+                                </p>
+                                <p className="text-xs font-black text-slate-700 uppercase italic">"{lastNote}"</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-10">
                 <div className="xl:col-span-3 space-y-10">
@@ -510,7 +542,7 @@ const NewRequest: React.FC = () => {
                         <button type="button" onClick={(e) => handleSubmit(e, 'draft')} disabled={loading} className="px-10 py-5 bg-white border-2 border-slate-200 text-slate-500 hover:bg-slate-50 rounded-3xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 transition-all"><Save size={18} /> Simpan Draf</button>
                         <button type="button" onClick={(e) => handleSubmit(e, 'pending')} disabled={loading} className="px-16 py-5 bg-slate-900 text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-slate-800 shadow-2xl transition-all active:scale-95 disabled:opacity-50">
                             {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />} 
-                            Kirim Pengajuan
+                            {existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan'}
                         </button>
                     </div>
                 </div>

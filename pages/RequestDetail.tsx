@@ -1,6 +1,6 @@
 
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
     ArrowLeft, 
     Printer,
@@ -32,7 +32,8 @@ import {
     Receipt,
     Send,
     MessageSquareText,
-    Banknote
+    Banknote,
+    RefreshCw
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -312,9 +313,9 @@ const RequestDetail: React.FC = () => {
                 <div className="flex items-center pl-12 pr-6">
                     <Logo className="w-32 h-32 object-contain mr-8" />
                     <div className="flex-1 text-center pr-12">
-                        <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
-                        <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
-                        <h3 className="text-[14.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
+                        <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidih /</h2>
+                        <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidih RI</h3>
+                        <h3 className="text-[14.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidih Sulawesi Maluku</h3>
                         <p className="text-[8.5pt] mt-3 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Email: sekretariat@pusdalsuma.go.id</p>
                     </div>
                 </div>
@@ -409,6 +410,18 @@ const RequestDetail: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {/* TOMBOL PERBAIKI KHUSUS PENGAJU SAAT REJECTED */}
+                            {request.status === 'rejected' && request.requester_id === user?.id && (
+                                <div className="pt-4 animate-bounce">
+                                    <Link 
+                                        to={`/requests/edit/${request.id}`}
+                                        className="w-full py-5 bg-red-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl hover:bg-red-700 transition-all active:scale-95"
+                                    >
+                                        <RefreshCw size={20} /> Perbaiki & Ajukan Ulang Sekarang
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     )}
 
