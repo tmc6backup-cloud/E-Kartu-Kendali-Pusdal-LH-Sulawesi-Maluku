@@ -68,7 +68,7 @@ export const dbService = {
 
         try {
             if (id) {
-                // Jika sedang EDIT (ada ID), lakukan UPDATE berdasarkan ID
+                // Jika sedang EDIT (ada ID), lakukan UPDATE berdasarkan ID primer
                 const { error } = await supabase
                     .from('budget_ceilings')
                     .update(payload)

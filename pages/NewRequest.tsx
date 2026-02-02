@@ -82,10 +82,24 @@ const NewRequest: React.FC = () => {
         executionDate: '', executionEndDate: '', executionDuration: '', description: '', totalAmount: 0
     });
 
+    // LOGIKA AKSES PAGU BERSAMA (SHARED BUDGET)
     const userDeptCeilings = useMemo(() => {
         if (!user?.department) return [];
         const userDepts = user.department.split(', ').map(d => d.trim().toLowerCase());
-        return ceilings.filter(c => userDepts.includes(c.department.trim().toLowerCase()));
+
+        return ceilings.filter(c => {
+            const cDeptLower = c.department.trim().toLowerCase();
+            
+            // 1. Pagu milik bidangnya sendiri (Internal Bidang)
+            if (userDepts.includes(cDeptLower)) return true;
+            
+            // 2. AKSES GLOBAL: Pagu Kantor Pusat (PUSDAL LH SUMA)
+            // Sesuai permintaan, semua bidang kini bisa mengakses pagu yang didaftarkan di unit PUSDAL LH SUMA
+            // (Termasuk kode EBA.994.002.B Operasional Bidang Wilayah yang telah dipindahkan kesini)
+            if (cDeptLower === 'pusdal lh suma') return true;
+
+            return false;
+        });
     }, [ceilings, user]);
 
     useEffect(() => {
@@ -157,13 +171,15 @@ const NewRequest: React.FC = () => {
     };
 
     const getPaguStatus = (ro: string, komp: string, subk: string) => {
-        const ceiling = ceilings.find(c => 
+        // Cari pagu di daftar yang diizinkan (termasuk pagu kantor pusat yang dishare)
+        const ceiling = userDeptCeilings.find(c => 
             c.ro_code === ro &&
             c.komponen_code === komp && 
-            c.subkomponen_code === subk &&
-            (user?.department || '').includes(c.department)
+            c.subkomponen_code === subk
         );
         const initialAmount = ceiling?.amount || 0;
+        
+        // Hitung pengunaan untuk kode spesifik ini di seluruh bidang (karena shared budget)
         const spent = allRequests.reduce((acc, req) => {
             const matchItems = (req.calculation_items || []).filter(i => 
                 i.ro_code === ro && i.komponen_code === komp && i.subkomponen_code === subk
@@ -371,7 +387,7 @@ const NewRequest: React.FC = () => {
                                     <div className="bg-slate-50 p-6 flex flex-wrap items-center gap-6 border-b border-slate-100">
                                         <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-[10px]">{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Alokasi Pagu Anggaran</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Alokasi Pagu Anggaran (Shared/Pusat)</p>
                                             <select 
                                                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none focus:border-blue-500 transition-all"
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
@@ -384,12 +400,16 @@ const NewRequest: React.FC = () => {
                                                     }
                                                 }}
                                             >
-                                                <option value="">-- PILIH KODE PAGU BIDANG --</option>
-                                                {userDeptCeilings.map(c => <option key={c.id} value={c.id}>{c.ro_code}.{c.komponen_code}.{c.subkomponen_code}</option>)}
+                                                <option value="">-- PILIH KODE PAGU --</option>
+                                                {userDeptCeilings.map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        [{c.department.substring(0,10)}] {c.ro_code}.{c.komponen_code}.{c.subkomponen_code}
+                                                    </option>
+                                                ))}
                                             </select>
                                             {item.ro_code && (
                                                 <p className={`text-[9px] font-black mt-2 flex items-center gap-2 ${paguInfo.sisa < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                    <Info size={12} /> Sisa Pagu: Rp {paguInfo.sisa.toLocaleString('id-ID')}
+                                                    <Info size={12} /> Sisa Pagu Gabungan: Rp {paguInfo.sisa.toLocaleString('id-ID')}
                                                 </p>
                                             )}
                                         </div>
