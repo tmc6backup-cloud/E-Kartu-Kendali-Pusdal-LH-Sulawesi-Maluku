@@ -313,9 +313,9 @@ const RequestDetail: React.FC = () => {
                 <div className="flex items-center pl-12 pr-6">
                     <Logo className="w-32 h-32 object-contain mr-8" />
                     <div className="flex-1 text-center pr-12">
-                        <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidih /</h2>
-                        <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidih RI</h3>
-                        <h3 className="text-[14.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidih Sulawesi Maluku</h3>
+                        <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
+                        <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
+                        <h3 className="text-[14.5pt] font-black uppercase leading-tight mt-1">Pusat Pengendalian Lingkungan Hidup Sulawesi Maluku</h3>
                         <p className="text-[8.5pt] mt-3 leading-tight italic font-medium">Jln. Perintis Kemerdekaan KM. 17, Makassar. Email: sekretariat@pusdalsuma.go.id</p>
                     </div>
                 </div>
