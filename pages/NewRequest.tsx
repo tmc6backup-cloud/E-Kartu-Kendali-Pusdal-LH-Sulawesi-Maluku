@@ -34,7 +34,8 @@ import {
     AlertCircle,
     MessageSquareText,
     RefreshCw,
-    Heading
+    Heading,
+    ShieldAlert
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
@@ -89,15 +90,8 @@ const NewRequest: React.FC = () => {
 
         return ceilings.filter(c => {
             const cDeptLower = c.department.trim().toLowerCase();
-            
-            // 1. Pagu milik bidangnya sendiri (Internal Bidang)
             if (userDepts.includes(cDeptLower)) return true;
-            
-            // 2. AKSES GLOBAL: Pagu Kantor Pusat (PUSDAL LH SUMA)
-            // Sesuai permintaan, semua bidang kini bisa mengakses pagu yang didaftarkan di unit PUSDAL LH SUMA
-            // (Termasuk kode EBA.994.002.B Operasional Bidang Wilayah yang telah dipindahkan kesini)
             if (cDeptLower === 'pusdal lh suma') return true;
-
             return false;
         });
     }, [ceilings, user]);
@@ -110,6 +104,7 @@ const NewRequest: React.FC = () => {
                     dbService.getAllRequests()
                 ]);
                 setCeilings(cData);
+                // Filter requests untuk menghitung sisa pagu
                 setAllRequests(rData.filter(r => r.id !== id && r.status !== 'rejected' && r.status !== 'draft'));
             } catch (err) { console.error(err); } finally { setPageLoading(false); }
         };
@@ -171,7 +166,6 @@ const NewRequest: React.FC = () => {
     };
 
     const getPaguStatus = (ro: string, komp: string, subk: string) => {
-        // Cari pagu di daftar yang diizinkan (termasuk pagu kantor pusat yang dishare)
         const ceiling = userDeptCeilings.find(c => 
             c.ro_code === ro &&
             c.komponen_code === komp && 
@@ -179,7 +173,6 @@ const NewRequest: React.FC = () => {
         );
         const initialAmount = ceiling?.amount || 0;
         
-        // Hitung pengunaan untuk kode spesifik ini di seluruh bidang (karena shared budget)
         const spent = allRequests.reduce((acc, req) => {
             const matchItems = (req.calculation_items || []).filter(i => 
                 i.ro_code === ro && i.komponen_code === komp && i.subkomponen_code === subk
@@ -189,8 +182,24 @@ const NewRequest: React.FC = () => {
         return { paguAwal: initialAmount, terpakai: spent, sisa: initialAmount - spent };
     };
 
+    // Deteksi apakah ada item yang over budget
+    const hasOverBudgetItems = useMemo(() => {
+        return items.some(item => {
+            if (!item.ro_code) return false;
+            const status = getPaguStatus(item.ro_code, item.komponen_code, item.subkomponen_code);
+            return item.jumlah > status.sisa;
+        });
+    }, [items, allRequests, userDeptCeilings]);
+
     const handleSubmit = async (e: React.FormEvent, status: BudgetStatus = 'pending') => {
         e.preventDefault();
+        
+        // Proteksi Tambahan pada Submit
+        if (status === 'pending' && hasOverBudgetItems) {
+            alert("MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Silakan sesuaikan kembali rincian biaya Anda.");
+            return;
+        }
+
         setLoading(true);
         try {
             let attachment_url = '';
@@ -277,6 +286,19 @@ const NewRequest: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Banner Peringatan Over Budget Global */}
+            {hasOverBudgetItems && (
+                <div className="bg-red-600 p-6 rounded-[32px] flex items-center gap-6 shadow-2xl shadow-red-200 animate-pulse">
+                    <div className="w-12 h-12 bg-white/20 text-white rounded-2xl flex items-center justify-center shrink-0">
+                        <ShieldAlert size={28} />
+                    </div>
+                    <div>
+                        <h3 className="text-white text-sm font-black uppercase tracking-tight">Pengajuan Anda Melebihi Pagu!</h3>
+                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Ada rincian biaya yang melebihi sisa saldo anggaran. Tombol pengajuan akan dinonaktifkan hingga biaya disesuaikan.</p>
+                    </div>
+                </div>
+            )}
 
             {/* Banner Informasi Rejection */}
             {existingRequest?.status === 'rejected' && (
@@ -384,12 +406,12 @@ const NewRequest: React.FC = () => {
                             
                             return (
                                 <div key={item.id} className={`bg-white rounded-[40px] border-2 transition-all shadow-sm overflow-hidden ${isOver ? 'border-red-500 ring-4 ring-red-50' : 'border-slate-100'}`}>
-                                    <div className="bg-slate-50 p-6 flex flex-wrap items-center gap-6 border-b border-slate-100">
-                                        <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-[10px]">{idx + 1}</div>
+                                    <div className={`p-6 flex flex-wrap items-center gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
+                                        <div className={`w-8 h-8 ${isOver ? 'bg-red-600' : 'bg-slate-900'} text-white rounded-lg flex items-center justify-center font-black text-[10px]`}>{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Alokasi Pagu Anggaran (Shared/Pusat)</p>
+                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pagu Anggaran (Shared/Pusat)</p>
                                             <select 
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none focus:border-blue-500 transition-all"
+                                                className={`w-full bg-white border rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
                                                 onChange={(e) => {
                                                     const sel = userDeptCeilings.find(c => c.id === e.target.value);
@@ -408,9 +430,12 @@ const NewRequest: React.FC = () => {
                                                 ))}
                                             </select>
                                             {item.ro_code && (
-                                                <p className={`text-[9px] font-black mt-2 flex items-center gap-2 ${paguInfo.sisa < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                    <Info size={12} /> Sisa Pagu Gabungan: Rp {paguInfo.sisa.toLocaleString('id-ID')}
-                                                </p>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <p className={`text-[9px] font-black flex items-center gap-2 ${paguInfo.sisa < 0 || isOver ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        <Info size={12} /> {isOver ? 'SALDO TIDAK MENCUKUPI' : 'Sisa Pagu Gabungan'}: Rp {paguInfo.sisa.toLocaleString('id-ID')}
+                                                    </p>
+                                                    {isOver && <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase animate-pulse">OVER BUDGET</span>}
+                                                </div>
                                             )}
                                         </div>
                                         <div className="w-32">
@@ -499,17 +524,17 @@ const NewRequest: React.FC = () => {
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                                                     <Target size={14} className="text-emerald-500" /> Total Volkeg
                                                 </label>
-                                                <div className="flex bg-slate-900 text-white rounded-3xl overflow-hidden shadow-xl ring-4 ring-slate-100">
+                                                <div className={`flex rounded-3xl overflow-hidden shadow-xl ring-4 ${isOver ? 'bg-red-950 ring-red-100' : 'bg-slate-900 ring-slate-100'}`}>
                                                     <input 
                                                         type="number" 
                                                         readOnly={!isManual}
-                                                        className={`w-full py-6 text-center text-lg font-black outline-none bg-transparent ${isManual ? 'cursor-text text-amber-400' : 'cursor-default opacity-90'}`}
+                                                        className={`w-full py-6 text-center text-lg font-black outline-none bg-transparent text-white ${isManual ? 'cursor-text text-amber-400' : 'cursor-default opacity-90'}`}
                                                         value={item.volkeg} 
                                                         onChange={(e) => handleItemChange(item.id, 'volkeg', e.target.value)} 
                                                     />
                                                     <input 
                                                         type="text" 
-                                                        className="w-20 py-6 bg-slate-800 text-[11px] font-black text-emerald-400 text-center uppercase outline-none border-l border-white/5" 
+                                                        className={`w-20 py-6 text-[11px] font-black text-center uppercase outline-none border-l border-white/5 ${isOver ? 'bg-red-900 text-white' : 'bg-slate-800 text-emerald-400'}`} 
                                                         value={item.satkeg} 
                                                         onChange={(e) => handleItemChange(item.id, 'satkeg', e.target.value)} 
                                                         placeholder="SAT"
@@ -522,10 +547,10 @@ const NewRequest: React.FC = () => {
                                                     <Coins size={14} className="text-amber-500" /> Harga Satuan (Rp)
                                                 </label>
                                                 <div className="relative group">
-                                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black text-slate-300 group-focus-within:text-blue-500 transition-colors">Rp</span>
+                                                    <span className={`absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black transition-colors ${isOver ? 'text-red-300' : 'text-slate-300 group-focus-within:text-blue-500'}`}>Rp</span>
                                                     <input 
                                                         type="number" 
-                                                        className="w-full pl-16 pr-6 py-6 bg-white border-2 border-slate-100 rounded-3xl text-xl font-black outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100/50" 
+                                                        className={`w-full pl-16 pr-6 py-6 border-2 rounded-3xl text-xl font-black outline-none transition-all shadow-lg ${isOver ? 'bg-red-50 border-red-500 text-red-900' : 'bg-white border-slate-100 focus:border-blue-600 shadow-slate-100/50'}`} 
                                                         value={item.hargaSatuan} 
                                                         onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} 
                                                         placeholder="0"
@@ -533,11 +558,11 @@ const NewRequest: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-[40px] text-right border border-white/5 shadow-2xl relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 blur-2xl rounded-full -mr-12 -mt-12"></div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 relative z-10">Subtotal Item Terkalkulasi</p>
-                                                <p className="text-3xl font-black font-mono text-emerald-400 tracking-tighter relative z-10">
-                                                    <span className="text-xs text-emerald-600 mr-2">IDR</span>
+                                            <div className={`md:col-span-5 p-8 rounded-[40px] text-right border border-white/5 shadow-2xl relative overflow-hidden ${isOver ? 'bg-red-600' : 'bg-gradient-to-br from-slate-900 to-slate-800'}`}>
+                                                <div className={`absolute top-0 right-0 w-24 h-24 blur-2xl rounded-full -mr-12 -mt-12 ${isOver ? 'bg-white/20' : 'bg-emerald-500/10'}`}></div>
+                                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-1.5 relative z-10">Subtotal Item Terkalkulasi</p>
+                                                <p className="text-3xl font-black font-mono text-white tracking-tighter relative z-10">
+                                                    <span className="text-xs mr-2">{isOver ? 'OVER' : 'IDR'}</span>
                                                     {item.jumlah.toLocaleString('id-ID')}
                                                 </p>
                                             </div>
@@ -565,25 +590,38 @@ const NewRequest: React.FC = () => {
 
                     <div className="flex flex-col sm:flex-row justify-end gap-6 pt-6">
                         <button type="button" onClick={(e) => handleSubmit(e, 'draft')} disabled={loading} className="px-10 py-5 bg-white border-2 border-slate-200 text-slate-500 hover:bg-slate-50 rounded-3xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 transition-all"><Save size={18} /> Simpan Draf</button>
-                        <button type="button" onClick={(e) => handleSubmit(e, 'pending')} disabled={loading} className="px-16 py-5 bg-slate-900 text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-slate-800 shadow-2xl transition-all active:scale-95 disabled:opacity-50">
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />} 
-                            {existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan'}
+                        <button 
+                            type="button" 
+                            onClick={(e) => handleSubmit(e, 'pending')} 
+                            disabled={loading || hasOverBudgetItems} 
+                            className={`px-16 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${hasOverBudgetItems ? 'bg-red-100 text-red-300 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : (hasOverBudgetItems ? <ShieldAlert size={20} /> : <Send size={20} />)} 
+                            {hasOverBudgetItems ? 'Pagu Melebihi Batas' : (existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan')}
                         </button>
                     </div>
                 </div>
 
                 <div className="xl:col-span-1">
-                    <div className="bg-slate-900 p-10 rounded-[48px] shadow-2xl text-white sticky top-24 space-y-10 border border-white/5 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-emerald-500"></div>
+                    <div className={`p-10 rounded-[48px] shadow-2xl text-white sticky top-24 space-y-10 border border-white/5 overflow-hidden transition-all ${hasOverBudgetItems ? 'bg-red-700' : 'bg-slate-900'}`}>
+                        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${hasOverBudgetItems ? 'from-white/20 to-white/40' : 'from-blue-600 to-emerald-500'}`}></div>
                         <div className="space-y-6">
                             <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Kumulatif</p>
-                                <p className="text-3xl font-black font-mono tracking-tighter text-white">Rp {formData.totalAmount.toLocaleString('id-ID')}</p>
+                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-3">Total Kumulatif</p>
+                                <p className={`text-3xl font-black font-mono tracking-tighter ${hasOverBudgetItems ? 'text-red-100' : 'text-white'}`}>Rp {formData.totalAmount.toLocaleString('id-ID')}</p>
                             </div>
                             <div className="h-px bg-white/10"></div>
+                            
+                            {hasOverBudgetItems && (
+                                <div className="p-4 bg-white/10 rounded-2xl border border-white/10 flex items-start gap-3 animate-pulse">
+                                    <ShieldAlert className="text-white shrink-0" size={16} />
+                                    <p className="text-[9px] font-black uppercase leading-relaxed text-white">MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Kurangi nominal biaya atau volkeg.</p>
+                                </div>
+                            )}
+
                             <div className="space-y-4">
-                                <div className="flex justify-between text-[9px] font-black uppercase text-slate-400"><span>Jumlah Item</span><span className="text-white">{items.length} Baris</span></div>
-                                <div className="flex justify-between text-[9px] font-black uppercase text-slate-400"><span>Estimasi</span><span className="text-amber-400">PENDING</span></div>
+                                <div className="flex justify-between text-[9px] font-black uppercase text-white/50"><span>Jumlah Item</span><span className="text-white">{items.length} Baris</span></div>
+                                <div className="flex justify-between text-[9px] font-black uppercase text-white/50"><span>Status Pagu</span><span className={hasOverBudgetItems ? 'text-red-300' : 'text-emerald-400'}>{hasOverBudgetItems ? 'MELEBIHI' : 'TERSEDIA'}</span></div>
                             </div>
                         </div>
                         <button type="button" onClick={() => aiAnalyzing ? null : analyzeBudgetRequest(formData.title, formData.totalAmount, formData.description).then(setAiResult)} className="w-full py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"><Sparkles size={16} className="text-emerald-400" /> Analisis Validitas AI</button>
@@ -592,7 +630,7 @@ const NewRequest: React.FC = () => {
                 </div>
             </div>
 
-            {/* Modal Sukses dengan Tombol WhatsApp */}
+            {/* Modal Sukses */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-lg rounded-[48px] p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 text-center space-y-8">

@@ -1,7 +1,7 @@
 
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
-import { Bell, Search, LogOut, X, Clock, CheckCircle2, AlertCircle, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
+import { Bell, Search, LogOut, X, Clock, CheckCircle2, AlertCircle, MessageSquare, ArrowRight, Loader2, Sparkles, Megaphone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dbService } from '../services/dbService.ts';
 import Logo from './Logo.tsx';
@@ -24,11 +24,15 @@ const Header: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+    const [toastData, setToastData] = useState<{title: string, count: number} | null>(null);
+    const [lastQueueCount, setLastQueueCount] = useState<number>(0);
     const notificationRef = useRef<HTMLDivElement>(null);
 
-    const fetchRealNotifications = async () => {
+    const fetchRealNotifications = async (isInitial = false) => {
         if (!user) return;
-        setLoading(true);
+        if (isInitial) setLoading(true);
+        
         try {
             const allRequests = await dbService.getAllRequests();
             const now = new Date();
@@ -38,40 +42,71 @@ const Header: React.FC = () => {
                 let targetStatus = '';
                 let queueName = '';
                 
-                if (user.role === 'validator_program') { targetStatus = 'reviewed_bidang'; queueName = 'Program & Anggaran'; }
-                else if (user.role === 'kepala_bidang') { targetStatus = 'pending'; queueName = 'Struktural'; }
+                // Pemetaan Status Validator
+                if (user.role === 'kepala_bidang') { targetStatus = 'pending'; queueName = 'Struktural'; }
+                else if (user.role === 'validator_program') { targetStatus = 'reviewed_bidang'; queueName = 'Program & Anggaran'; }
                 else if (user.role === 'validator_tu') { targetStatus = 'reviewed_program'; queueName = 'TU'; }
                 else if (user.role === 'validator_ppk') { targetStatus = 'reviewed_tu'; queueName = 'PPK'; }
+                else if (user.role?.startsWith('pic_')) { targetStatus = 'approved'; queueName = 'Verifikasi SPJ'; }
+                else if (user.role === 'bendahara') { targetStatus = 'reviewed_pic'; queueName = 'Pembayaran'; }
                 else if (user.role === 'admin') { targetStatus = 'pending'; queueName = 'Sistem'; }
 
-                const myQueue = allRequests.filter(r => r.status === targetStatus);
+                let myQueue = allRequests.filter(r => r.status === targetStatus);
                 
-                if (myQueue.length > 0) {
+                // Filter tambahan untuk Kabid & PIC Wilayah agar hanya melihat bidangnya
+                if (user.role === 'kepala_bidang' || user.role?.startsWith('pic_wilayah_')) {
+                    const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+                    myQueue = myQueue.filter(r => myDepts.includes(r.requester_department?.toLowerCase() || ''));
+                }
+
+                const currentCount = myQueue.length;
+
+                // Tampilkan Toast jika ada penambahan berkas baru
+                if (!isInitial && currentCount > lastQueueCount) {
+                    setToastData({ title: queueName, count: currentCount });
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 8000);
+                }
+                
+                setLastQueueCount(currentCount);
+
+                if (currentCount > 0) {
                     newNotifications.push({
                         id: 'queue_alert',
                         type: 'pending',
-                        title: 'Antrian Berkas Baru',
-                        desc: `Ada ${myQueue.length} berkas menunggu validasi ${queueName} Anda.`,
-                        time: 'Saat Ini',
+                        title: `Antrian ${queueName}`,
+                        desc: `Ada ${currentCount} berkas menunggu tindakan Anda saat ini.`,
+                        time: 'Real-time',
                         icon: <Clock className="text-amber-500" />,
                         requestId: undefined
                     });
                 }
             } else {
-                const myRequests = allRequests.filter(r => r.requester_name === user.full_name);
+                // Notifikasi untuk Personil Biasa
+                const myRequests = allRequests.filter(r => r.requester_id === user.id);
                 
                 myRequests.forEach(r => {
                     const updatedAt = new Date(r.updated_at);
                     const diffHours = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
 
-                    if (diffHours < 48) {
+                    if (diffHours < 24) { // Notifikasi 24 jam terakhir
                         if (r.status === 'approved') {
                             newNotifications.push({
                                 id: `app_${r.id}`,
                                 type: 'approved',
                                 title: 'Usulan Disetujui',
-                                desc: `Persetujuan PPK selesai untuk: ${r.title.substring(0, 30)}...`,
+                                desc: `Persetujuan PPK selesai. Silakan lengkapi SPJ untuk: ${r.title.substring(0, 20)}...`,
                                 icon: <CheckCircle2 className="text-emerald-500" />,
+                                requestId: r.id,
+                                time: 'Baru saja'
+                            });
+                        } else if (r.status === 'rejected') {
+                            newNotifications.push({
+                                id: `rej_${r.id}`,
+                                type: 'rejected',
+                                title: 'Perlu Revisi',
+                                desc: `Berkas dikembalikan: ${r.title.substring(0, 20)}...`,
+                                icon: <AlertCircle className="text-red-500" />,
                                 requestId: r.id,
                                 time: 'Baru saja'
                             });
@@ -83,41 +118,39 @@ const Header: React.FC = () => {
             setNotifications(newNotifications);
             setHasUnread(newNotifications.length > 0);
         } catch (err) {
-            console.error("Failed to fetch real notifications", err);
+            console.error("Failed to fetch notifications", err);
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
     };
 
     const getRoleLabel = () => {
         let prefix = "";
         const dept = user?.department || "PERSONIL SUMA";
-
         if (user?.role === 'admin') return 'ADMIN UTAMA - PUSDAL LH SUMA';
         
         switch (user?.role) {
             case 'kepala_bidang': prefix = "KEPALA BIDANG"; break;
-            case 'validator_program': prefix = "VALIDATOR BAGIAN PROGRAM & ANGGARAN"; break;
+            case 'validator_program': prefix = "VALIDATOR PROGRAM"; break;
             case 'validator_tu': prefix = "KASUBAG TATA USAHA"; break;
-            case 'validator_ppk': prefix = "PEJABAT PEMBUAT KOMITMEN"; break;
-            case 'bendahara': prefix = "BENDAHARA PENGELUARAN"; break;
-            case 'pic_tu': prefix = "PIC TATA USAHA"; break;
-            case 'pic_verifikator': prefix = "PIC VERIFIKATOR SPJ"; break;
+            case 'validator_ppk': prefix = "PEJABAT PPK"; break;
+            case 'bendahara': prefix = "BENDAHARA"; break;
+            case 'pic_tu': prefix = "PIC TU"; break;
+            case 'pic_verifikator': prefix = "PIC VERIFIKATOR"; break;
             default:
                 if (user?.role?.startsWith('pic_wilayah_')) {
                     const num = user.role.split('_').pop();
-                    prefix = `PIC BIDANG WILAYAH ${num}`;
+                    prefix = `PIC WILAYAH ${num}`;
                 } else {
                     prefix = "PERSONIL";
                 }
         }
-
         return `${prefix} – ${dept.toUpperCase()}`;
     };
 
     useEffect(() => {
-        fetchRealNotifications();
-        const interval = setInterval(fetchRealNotifications, 60000);
+        fetchRealNotifications(true);
+        const interval = setInterval(() => fetchRealNotifications(false), 30000); // Poll setiap 30 detik
         
         const handleClickOutside = (event: MouseEvent) => {
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
@@ -129,13 +162,13 @@ const Header: React.FC = () => {
             document.removeEventListener('mousedown', handleClickOutside);
             clearInterval(interval);
         };
-    }, [user]);
+    }, [user, lastQueueCount]);
 
     const toggleNotifications = () => {
         setIsNotificationsOpen(!isNotificationsOpen);
         if (!isNotificationsOpen) {
             setHasUnread(false);
-            fetchRealNotifications();
+            fetchRealNotifications(false);
         }
     };
 
@@ -150,6 +183,25 @@ const Header: React.FC = () => {
 
     return (
         <>
+            {/* Toast Notification Card */}
+            {showToast && toastData && (
+                <div className="fixed top-20 right-8 z-[100] animate-in slide-in-from-right-8 duration-500">
+                    <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 rounded-[32px] shadow-2xl shadow-blue-500/20 flex items-center gap-6 min-w-[320px]">
+                        <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                            <Megaphone size={28} />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Update Antrian</p>
+                            <h4 className="text-white text-sm font-black uppercase tracking-tight">Berkas Baru Masuk!</h4>
+                            <p className="text-slate-400 text-[11px] font-bold">Ada pengajuan baru di antrian {toastData.title}.</p>
+                        </div>
+                        <button onClick={() => setShowToast(false)} className="text-white/40 hover:text-white transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 no-print">
                 <div className="flex items-center gap-6 flex-1">
                     <div className="lg:hidden flex items-center gap-2">
