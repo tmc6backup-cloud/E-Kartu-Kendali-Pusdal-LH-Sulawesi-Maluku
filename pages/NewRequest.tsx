@@ -362,7 +362,7 @@ const NewRequest: React.FC = () => {
                                     <input type="text" className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase shadow-sm" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="CTH: MAKASSAR" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estimasi Durasi</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estimasi Lama Kegiatan</label>
                                     <input type="text" className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase shadow-sm" value={formData.executionDuration} onChange={(e) => setFormData({...formData, executionDuration: e.target.value})} placeholder="CTH: 3 HARI" />
                                 </div>
                             </div>
@@ -397,7 +397,7 @@ const NewRequest: React.FC = () => {
                     <div className="space-y-8">
                         <div className="flex justify-between items-center px-4">
                             <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                                <Coins className="text-amber-500" /> Daftar Rincian Biaya
+                                <Coins className="text-amber-500" /> Daftar Rincian Biaya (Lihat RKAKL)
                             </h3>
                             <button 
                                 type="button" 
@@ -421,7 +421,7 @@ const NewRequest: React.FC = () => {
                                     <div className={`p-6 flex flex-wrap items-center gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
                                         <div className={`w-8 h-8 ${isOver ? 'bg-red-600' : 'bg-slate-900'} text-white rounded-lg flex items-center justify-center font-black text-[10px]`}>{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
-                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pagu Anggaran (Shared/Pusat)</p>
+                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pembebanan Anggaran</p>
                                             <select 
                                                 className={`w-full bg-white border rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
@@ -462,20 +462,20 @@ const NewRequest: React.FC = () => {
                                             <div className="space-y-6">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Utama</label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="CTH: BIAYA PERJALANAN" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Jika Ada  </label>
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="CTH: KONSULTASI INSTANSI TERKAIT DI PUSAT & DAERAH" />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub-Header</label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="CTH: AKOMODASI & HOTEL" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub Header Jika Ada </label>
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="CTH: KOORDINASI PUSAT & DAERAH" />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Biaya/Barang</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: KONSUMSI NASI KOTAK PESERTA" />
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detil</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: TIKET PESAWAT" />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Spesifikasi Teknis</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Rincian</label>
                                                     <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
                                                 </div>
                                             </div>
@@ -594,7 +594,7 @@ const NewRequest: React.FC = () => {
                     <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-4">
                             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><FileText size={16} /> Justifikasi Kebutuhan</h3>
-                            <textarea rows={6} className="w-full p-8 bg-slate-50 border border-slate-100 rounded-3xl font-bold text-xs uppercase focus:bg-white focus:border-blue-600 transition-all outline-none shadow-inner" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Sebutkan urgensi pengajuan ini secara detail..." />
+                            <textarea rows={6} className="w-full p-8 bg-slate-50 border border-slate-100 rounded-3xl font-bold text-xs uppercase focus:bg-white focus:border-blue-600 transition-all outline-none shadow-inner" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Jelaskan pengajuan ini secara detail..." />
                         </div>
                         <div className="space-y-4">
                             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><UploadCloud size={16} /> Dokumen Pendukung</h3>
