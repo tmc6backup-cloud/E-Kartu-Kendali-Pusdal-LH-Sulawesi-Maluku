@@ -42,6 +42,8 @@ export interface CalculationItem {
   id: string;
   header?: string;
   sub_header?: string;
+  // Menambahkan group_header untuk mendukung rincian berjenjang pada form pengajuan (Bagian, Kelompok, Rincian)
+  group_header?: string;
   title: string;
   detail_barang?: string;
   kro_code: string;

@@ -36,7 +36,8 @@ import {
     RefreshCw,
     Heading,
     ShieldAlert,
-    Layers
+    Layers,
+    ListTree
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
@@ -72,7 +73,7 @@ const NewRequest: React.FC = () => {
 
     const [items, setItems] = useState<CalculationItem[]>([
         { 
-            id: '1', header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
+            id: '1', header: '', sub_header: '', group_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
             kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR',
             f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, 
             satkeg: 'OK', hargaSatuan: 0, jumlah: 0 
@@ -347,6 +348,7 @@ const NewRequest: React.FC = () => {
                                             <option>Konsumsi & Rapat</option>
                                             <option>Perjalanan Dinas</option>
                                             <option>Honorarium</option>
+                                            <option>Diklat</option>
                                             <option>Peralatan Kantor</option>
                                             <option>Pemeliharaan</option>
                                             <option>Sewa</option>
@@ -386,7 +388,7 @@ const NewRequest: React.FC = () => {
                                 type="button" 
                                 onClick={() => {
                                     const newId = Date.now().toString();
-                                    setItems([...items, { id: newId, header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
+                                    setItems([...items, { id: newId, header: '', sub_header: '', group_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
                                 }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
@@ -404,7 +406,7 @@ const NewRequest: React.FC = () => {
                                     <div className={`p-6 flex flex-wrap items-center gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
                                         <div className={`w-8 h-8 ${isOver ? 'bg-red-600' : 'bg-slate-900'} text-white rounded-lg flex items-center justify-center font-black text-[10px]`}>{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
-                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Sumber Pembebanan Anggaran</p>
+                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pagu Anggaran (Shared/Pusat)</p>
                                             <select 
                                                 className={`w-full bg-white border rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
@@ -443,22 +445,26 @@ const NewRequest: React.FC = () => {
                                     <div className="p-8 md:p-10 space-y-10">
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
                                             <div className="space-y-6">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} />Header</label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="HEADER JIKA ADA" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Utama</label>
+                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="BAGIAN" />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} />Sub-Header</label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="SUB HEADER JIKA ADA" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub-Header</label>
+                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="KELOMPOK" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><ListTree size={14} /> Group Header</label>
+                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.group_header || ''} onChange={(e) => handleItemChange(item.id, 'group_header', e.target.value)} placeholder="RINCIAN" />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detil</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: BIAYA PENGINAPAN" />
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Biaya/Barang</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: KONSUMSI NASI KOTAK PESERTA" />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Rincian </label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Spesifikasi Teknis</label>
                                                     <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
                                                 </div>
                                             </div>
