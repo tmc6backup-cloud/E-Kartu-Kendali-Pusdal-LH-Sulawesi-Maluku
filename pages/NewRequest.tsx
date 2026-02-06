@@ -35,7 +35,8 @@ import {
     MessageSquareText,
     RefreshCw,
     Heading,
-    ShieldAlert
+    ShieldAlert,
+    Layers
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
@@ -71,7 +72,7 @@ const NewRequest: React.FC = () => {
 
     const [items, setItems] = useState<CalculationItem[]>([
         { 
-            id: '1', header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
+            id: '1', header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
             kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR',
             f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, 
             satkeg: 'OK', hargaSatuan: 0, jumlah: 0 
@@ -83,7 +84,6 @@ const NewRequest: React.FC = () => {
         executionDate: '', executionEndDate: '', executionDuration: '', description: '', totalAmount: 0
     });
 
-    // LOGIKA AKSES PAGU BERSAMA (SHARED BUDGET)
     const userDeptCeilings = useMemo(() => {
         if (!user?.department) return [];
         const userDepts = user.department.split(', ').map(d => d.trim().toLowerCase());
@@ -104,7 +104,6 @@ const NewRequest: React.FC = () => {
                     dbService.getAllRequests()
                 ]);
                 setCeilings(cData);
-                // Filter requests untuk menghitung sisa pagu
                 setAllRequests(rData.filter(r => r.id !== id && r.status !== 'rejected' && r.status !== 'draft'));
             } catch (err) { console.error(err); } finally { setPageLoading(false); }
         };
@@ -182,7 +181,6 @@ const NewRequest: React.FC = () => {
         return { paguAwal: initialAmount, terpakai: spent, sisa: initialAmount - spent };
     };
 
-    // Deteksi apakah ada item yang over budget
     const hasOverBudgetItems = useMemo(() => {
         return items.some(item => {
             if (!item.ro_code) return false;
@@ -194,7 +192,6 @@ const NewRequest: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent, status: BudgetStatus = 'pending') => {
         e.preventDefault();
         
-        // Proteksi Tambahan pada Submit
         if (status === 'pending' && hasOverBudgetItems) {
             alert("MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Silakan sesuaikan kembali rincian biaya Anda.");
             return;
@@ -287,7 +284,6 @@ const NewRequest: React.FC = () => {
                 </div>
             </div>
 
-            {/* Banner Peringatan Over Budget Global */}
             {hasOverBudgetItems && (
                 <div className="bg-red-600 p-6 rounded-[32px] flex items-center gap-6 shadow-2xl shadow-red-200 animate-pulse">
                     <div className="w-12 h-12 bg-white/20 text-white rounded-2xl flex items-center justify-center shrink-0">
@@ -300,7 +296,6 @@ const NewRequest: React.FC = () => {
                 </div>
             )}
 
-            {/* Banner Informasi Rejection */}
             {existingRequest?.status === 'rejected' && (
                 <div className="bg-red-50 border-2 border-red-200 p-8 rounded-[40px] flex items-start gap-6 shadow-xl shadow-red-100/20 animate-in slide-in-from-top-4">
                     <div className="w-14 h-14 bg-red-600 text-white rounded-2xl flex items-center justify-center shadow-lg shrink-0">
@@ -391,7 +386,7 @@ const NewRequest: React.FC = () => {
                                 type="button" 
                                 onClick={() => {
                                     const newId = Date.now().toString();
-                                    setItems([...items, { id: newId, header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
+                                    setItems([...items, { id: newId, header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
                                 }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
@@ -409,7 +404,7 @@ const NewRequest: React.FC = () => {
                                     <div className={`p-6 flex flex-wrap items-center gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
                                         <div className={`w-8 h-8 ${isOver ? 'bg-red-600' : 'bg-slate-900'} text-white rounded-lg flex items-center justify-center font-black text-[10px]`}>{idx + 1}</div>
                                         <div className="flex-1 min-w-[300px]">
-                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pagu Anggaran (Shared/Pusat)</p>
+                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Sumber Pembebanan Anggaran</p>
                                             <select 
                                                 className={`w-full bg-white border rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
@@ -448,16 +443,22 @@ const NewRequest: React.FC = () => {
                                     <div className="p-8 md:p-10 space-y-10">
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
                                             <div className="space-y-6">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header jika ada</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="CTH: BIAYA PERJALANAN DINAS TIM A" />
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} />Header</label>
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="HEADER JIKA ADA" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} />Sub-Header</label>
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="SUB HEADER JIKA ADA" />
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Biaya/Barang</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: KONSUMSI NASI KOTAK PESERTA" />
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detil</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: BIAYA PENGINAPAN" />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Spesifikasi Teknis</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Rincian </label>
                                                     <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
                                                 </div>
                                             </div>
