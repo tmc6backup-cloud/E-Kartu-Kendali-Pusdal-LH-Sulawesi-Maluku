@@ -18,11 +18,9 @@
         };
         window.APP_BASE = getBase();
         
-        // Memastikan window.process ada tanpa menimpa variabel yang diinjeksi secara eksternal
         if (!window.process) window.process = { env: {} };
         if (!window.process.env) window.process.env = {};
         
-        // Nilai fallback jika env vars tidak diinjeksi
         window.process.env.SUPABASE_URL = window.process.env.SUPABASE_URL || "https://syptvhtbxflhjgdepbqs.supabase.co";
         window.process.env.SUPABASE_ANON_KEY = window.process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR";
     </script>
@@ -194,7 +192,7 @@
         <div class="loader-bar">
             <div class="loader-progress"></div>
         </div>
-        <p id="status-text" class="status-text">Memuat Otoritas...</p>
+        <p id="status-text" class="status-text">Memeriksa Versi Terbaru...</p>
         <button id="force-btn" class="force-btn" onclick="hideSplash()">Masuk Paksa</button>
     </div>
 
@@ -217,10 +215,29 @@
                 const swPath = window.APP_BASE + 'sw.js';
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
                 
+                // Cek update setiap kali aplikasi dibuka
+                reg.update();
+
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                // Versi baru tersedia, muat ulang otomatis
+                                console.log('Versi baru ditemukan, memperbarui aplikasi...');
+                                location.reload();
+                            }
+                        }
+                    };
+                };
+
                 if (navigator.serviceWorker.controller) {
                     launch();
                 } else {
-                    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log('Mesin aplikasi diperbarui.');
+                        location.reload();
+                    });
                 }
             } catch (err) { 
                 console.error(err);
@@ -232,6 +249,7 @@
         function launch() {
             const script = document.createElement('script');
             script.type = 'module';
+            // Gunakan cache-buster timestamp untuk script utama agar tidak nyangkut di cache browser biasa
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
 
