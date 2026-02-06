@@ -616,15 +616,13 @@ const RequestDetail: React.FC = () => {
                                     <tr key={idx} className="print:border-b-[0.5pt] print:border-black break-inside-avoid">
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-2"><p className="text-[8px] font-black print:text-[7pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt]">{item.kode_akun}</p></td>
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
-                                            {item.header && <p className="text-[8px] font-black text-blue-800 uppercase print:text-[7pt] print:text-black underline mb-1">{item.header}</p>}
-                                            {item.sub_header && <p className="text-[7px] font-black text-slate-500 uppercase print:text-[6.5pt] print:text-black mb-0.5 ml-2">• {item.sub_header}</p>}
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
                                             {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
-                                            <p className="text-[9px] md:text-[8px] text-slate-400 font-medium italic mt-1 leading-none print:text-[6.5pt] print:text-black">
-                                                ({item.f1_val} {item.f1_unit} 
-                                                {item.f2_val > 1 ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
-                                                {item.f3_val > 1 ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
-                                                {item.f4_val > 1 ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
+                                            <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-none print:text-[7pt] print:text-black uppercase">
+                                                Rumus: ({item.f1_val} {item.f1_unit} 
+                                                {item.f2_unit ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
+                                                {item.f3_unit ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
+                                                {item.f4_unit ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
                                             </p>
                                         </td>
                                         <td className="px-6 py-4 text-center border-r print:border-black print:py-1.5 print:px-2">
