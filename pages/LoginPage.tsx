@@ -82,8 +82,8 @@ const LoginPage: React.FC = () => {
             <div className="flex-1 flex items-center justify-center p-6 md:p-12">
                 <div className="w-full max-w-md space-y-10">
                     <div className="text-center md:text-left space-y-2">
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Masuk Sistem</h2>
-                        <p className="text-slate-400 text-sm font-medium">Masukkan kredensial Anda untuk melanjutkan</p>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Silahkan Login</h2>
+                        <p className="text-slate-400 text-sm font-medium">Masukkan Username dan Password anda</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
