@@ -593,7 +593,7 @@ const RequestDetail: React.FC = () => {
 
                     <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none break-inside-avoid print:overflow-visible">
                         <div className="space-y-6 print:space-y-2">
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[11pt] print:font-black leading-snug">{request.title}</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[11pt] print:font-black leading-snug break-words">{request.title}</h2>
                             <div className="w-full h-px bg-slate-100 print:bg-black print:h-[1.2pt]"></div>
                             <div className="grid grid-cols-2 gap-x-12 print:gap-x-8">
                                 <div className="space-y-2 print:space-y-1">
@@ -612,45 +612,52 @@ const RequestDetail: React.FC = () => {
                     </div>
 
                     <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse print:table-fixed">
                             <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black">
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[8pt] print:py-2 print:px-3">Struktur / Akun</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[8pt] print:py-2 print:px-3 w-[45%]">Uraian & Perincian</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[8pt] print:py-2 print:px-3 text-center">Vol</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:text-[8pt] print:py-2 print:px-3 text-right">Harga</th>
-                                    <th className="px-6 py-4 print:text-[8pt] print:py-2 print:px-3 text-right">Jumlah (IDR)</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[15%] print:align-top">Struktur / Akun</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[42%] print:align-top">Uraian & Perincian</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-center print:w-[10%] print:align-top">Vol</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[15%] print:align-top">Harga</th>
+                                    <th className="px-6 py-4 print:text-[8pt] print:border-black print:border-[0.5pt] print:py-2 print:px-3 text-right print:w-[18%] print:align-top">Jumlah (IDR)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 print:divide-y-0">
                                 {request.calculation_items?.map((item, idx) => (
-                                    <tr key={idx} className="print:border-b-[0.5pt] print:border-black break-inside-avoid">
-                                        <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-2"><p className="text-[8px] font-black print:text-[7pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt]">{item.kode_akun}</p></td>
-                                        <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
-                                            <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
-                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
-                                            <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-none print:text-[7pt] print:text-black uppercase">
-                                                Rumus: ({item.f1_val} {item.f1_unit} 
+                                    <tr key={idx} className="print:border-black break-inside-avoid">
+                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
+                                            <p className="text-[8px] font-black print:text-[7pt] break-words">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p>
+                                            <p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt] break-words">{item.kode_akun}</p>
+                                        </td>
+                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-3 print:align-top">
+                                            <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight break-words">{item.title}</p>
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt] break-words mt-0.5">Rincian: {item.detail_barang}</p>}
+                                            <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-none print:text-[6.5pt] print:text-black uppercase break-words">
+                                                ({item.f1_val} {item.f1_unit} 
                                                 {item.f2_unit ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
                                                 {item.f3_unit ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
                                                 {item.f4_unit ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
                                             </p>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-r print:border-black print:py-1.5 print:px-2">
-                                            <span className="text-xs font-black print:text-[8pt]">{item.volkeg} {item.satkeg}</span>
+                                        <td className="px-6 py-4 text-center border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
+                                            <span className="text-xs font-black print:text-[7.5pt] whitespace-nowrap">{item.volkeg} {item.satkeg}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right border-r print:border-black print:py-1.5 print:px-2 text-xs print:text-[8pt]">{item.hargaSatuan.toLocaleString('id-ID')}</td>
-                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8pt] print:py-1.5 print:px-2">{item.jumlah.toLocaleString('id-ID')}</td>
+                                        <td className="px-6 py-4 text-right border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-xs print:text-[7.5pt] print:align-top">
+                                            <span className="whitespace-nowrap">{item.hargaSatuan.toLocaleString('id-ID')}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8pt] print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
+                                            <span className="whitespace-nowrap">{item.jumlah.toLocaleString('id-ID')}</span>
+                                        </td>
                                     </tr>
                                 ))}
-                                <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.5pt] print:border-black break-inside-avoid">
-                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[9pt] print:py-3 print:px-4">TOTAL KESELURUHAN</td>
-                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:py-3 print:px-4">Rp {request.amount.toLocaleString('id-ID')}</td>
+                                <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.2pt] print:border-black break-inside-avoid">
+                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4">TOTAL KESELURUHAN</td>
+                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4">Rp {request.amount.toLocaleString('id-ID')}</td>
                                 </tr>
                                 {request.status === 'realized' && (
                                     <tr className="bg-emerald-600 text-white print:bg-gray-50 print:text-black print:border-t-[1pt] print:border-black break-inside-avoid">
-                                        <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:text-[9pt] print:py-3 print:px-4 flex items-center justify-end gap-2"><Banknote size={16} /> TOTAL REALISASI DIBAYARKAN</td>
-                                        <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:py-3 print:px-4">Rp {request.realization_amount?.toLocaleString('id-ID')}</td>
+                                        <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 flex items-center justify-end gap-2"><Banknote size={16} /> TOTAL REALISASI DIBAYARKAN</td>
+                                        <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4">Rp {request.realization_amount?.toLocaleString('id-ID')}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -659,11 +666,11 @@ const RequestDetail: React.FC = () => {
 
                     <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-4 print:border-black print:border-[1pt] print:shadow-none print:mt-4 break-inside-avoid print:overflow-visible">
                         <p className="text-xs font-black uppercase tracking-widest print:text-[8.5pt] underline mb-1">Justifikasi Kebutuhan:</p>
-                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify">{request.description || "TIDAK ADA DESKRIPSI."}</p>
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify break-words">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
                     <div className="print-only mt-6 break-inside-avoid">
-                        <table className="w-full border-collapse border-[1pt] border-black text-center">
+                        <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
                             <tbody><tr className="h-20"><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[7.5pt] font-bold uppercase"><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td></tr></tbody>
                         </table>
