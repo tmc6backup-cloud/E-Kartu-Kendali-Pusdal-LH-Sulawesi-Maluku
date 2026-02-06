@@ -89,7 +89,6 @@ const RequestList: React.FC = () => {
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
-            {/* Kop Laporan */}
             <div className="print-only mb-8 break-inside-avoid">
                 <div className="flex items-center gap-10 border-b-[5px] border-black pb-4 pl-8 pr-8">
                     <Logo className="w-32 h-32 object-contain" />
@@ -192,6 +191,16 @@ const RequestList: React.FC = () => {
                                             <td className="px-8 py-7 text-right no-print flex items-center justify-end gap-2">
                                                 {(isAdmin || (canEdit)) && (
                                                     <button onClick={() => handleDelete(req.id, req.title)} className="p-3 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                                )}
+
+                                                {isAdmin && (
+                                                    <Link 
+                                                        to={`/requests/edit/${req.id}`} 
+                                                        className="p-3 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                        title="Admin Edit Berkas"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </Link>
                                                 )}
                                                 
                                                 {canEdit ? (

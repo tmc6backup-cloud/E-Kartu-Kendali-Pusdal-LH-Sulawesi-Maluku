@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
                             Akses Portal <span className="text-emerald-400">Anggaran</span> Terpadu
                         </h1>
                         <p className="text-slate-400 font-medium leading-relaxed">
-                            Sistem kendali anggaran Pusdal LH Suma yang akuntabel dan transparan.
+                            Sistem kendali anggaran Pusdal LH Sulawesi Maluku yang akuntabel dan transparan.
                         </p>
                     </div>
                 </div>
@@ -72,7 +72,7 @@ const LoginPage: React.FC = () => {
                    <div className="flex items-center gap-3">
                        <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">
-                           Copyright of PUSDAL LH Sulawesi Maluku
+                           Copyright of PUSDAL LH SULAWESI MALUKU
                        </p>
                    </div>
                 </div>

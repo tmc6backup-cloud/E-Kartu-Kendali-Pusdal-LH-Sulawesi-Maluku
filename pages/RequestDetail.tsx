@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
@@ -19,6 +20,7 @@ import {
     Check,
     MessageCircle,
     Edit3,
+    Edit2,
     RotateCcw,
     ExternalLink,
     SearchCode,
@@ -338,6 +340,15 @@ const RequestDetail: React.FC = () => {
                         {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? 'Tersalin' : 'Salin Link'}
                     </button>
 
+                    {user?.role === 'admin' && (
+                        <Link 
+                            to={`/requests/edit/${request.id}`}
+                            className="flex items-center gap-2 px-5 py-3 rounded-2xl border-2 font-black text-[10px] uppercase tracking-widest transition-all bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 shadow-sm"
+                        >
+                            <Edit2 size={18} /> Edit Berkas
+                        </Link>
+                    )}
+
                     {isValidatorRole(user?.role) && request.profiles && (
                         <button 
                             onClick={() => handleWhatsAppContact(request.profiles!, 'requester')}
@@ -506,7 +517,7 @@ const RequestDetail: React.FC = () => {
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
                             <div className="relative flex items-center gap-4">
                                 <div className="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg"><UploadCloud size={28} /></div>
-                                <div>
+                                    <div>
                                     <h3 className="text-lg font-black uppercase tracking-tight">Penyelesaian Administrasi (SPJ)</h3>
                                     <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
                                         {isReceiptOnly ? 'Silakan unggah kuitansi pembayaran untuk verifikasi' : 'Silakan lengkapi dokumen setelah kegiatan selesai'}

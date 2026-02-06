@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../App.tsx';
@@ -55,6 +56,7 @@ const NewRequest: React.FC = () => {
     const { user } = useContext(AuthContext);
     const isEditMode = !!id;
     const currentYear = new Date().getFullYear();
+    const isAdmin = user?.role === 'admin';
     
     const [ceilings, setCeilings] = useState<BudgetCeiling[]>([]);
     const [allRequests, setAllRequests] = useState<BudgetRequest[]>([]);
@@ -86,15 +88,17 @@ const NewRequest: React.FC = () => {
 
     const userDeptCeilings = useMemo(() => {
         if (!user?.department) return [];
-        const userDepts = user.department.split(', ').map(d => d.trim().toLowerCase());
+        // Jika admin, tampilkan semua pagu yang ada
+        if (isAdmin) return ceilings;
 
+        const userDepts = user.department.split(', ').map(d => d.trim().toLowerCase());
         return ceilings.filter(c => {
             const cDeptLower = c.department.trim().toLowerCase();
             if (userDepts.includes(cDeptLower)) return true;
             if (cDeptLower === 'pusdal lh suma') return true;
             return false;
         });
-    }, [ceilings, user]);
+    }, [ceilings, user, isAdmin]);
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -183,6 +187,7 @@ const NewRequest: React.FC = () => {
     };
 
     const hasOverBudgetItems = useMemo(() => {
+        // Admin bisa mengabaikan pengecekan overbudget jika diperlukan, tapi secara sistem tetap kita tampilkan
         return items.some(item => {
             if (!item.ro_code) return false;
             const status = getPaguStatus(item.ro_code, item.komponen_code, item.subkomponen_code);
@@ -193,14 +198,15 @@ const NewRequest: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent, status: BudgetStatus = 'pending') => {
         e.preventDefault();
         
-        if (status === 'pending' && hasOverBudgetItems) {
+        // Non-admin dilarang mengirim berkas jika overbudget
+        if (!isAdmin && status === 'pending' && hasOverBudgetItems) {
             alert("MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Silakan sesuaikan kembali rincian biaya Anda.");
             return;
         }
 
         setLoading(true);
         try {
-            let attachment_url = '';
+            let attachment_url = existingRequest?.attachment_url || '';
             if (selectedFile) {
                 const url = await dbService.uploadAttachment(selectedFile);
                 if (url) attachment_url = url;
@@ -209,15 +215,24 @@ const NewRequest: React.FC = () => {
             let initialStatus: BudgetStatus = status;
             let targetRole = 'kepala_bidang';
 
-            if (status === 'pending' && SKIP_STRUCTURAL_APPROVAL_DEPTS.includes(user?.department || '')) {
+            // Jika dalam mode edit oleh admin, pertahankan status asli jika status baru adalah 'pending'
+            if (isEditMode && isAdmin && status === 'pending') {
+                initialStatus = existingRequest?.status || 'pending';
+            }
+
+            // Aturan skip struktural jika pengaju dari unit tertentu (dan bukan admin yang sedang bypass)
+            const requesterDept = isEditMode ? (existingRequest?.requester_department || '') : (user?.department || '');
+            if (status === 'pending' && SKIP_STRUCTURAL_APPROVAL_DEPTS.includes(requesterDept)) {
                 initialStatus = 'reviewed_bidang'; 
                 targetRole = 'validator_program';
             }
 
             const payload = {
-                requester_id: user?.id || '',
-                requester_name: user?.full_name || '',
-                requester_department: user?.department || '',
+                // Gunakan data pengaju asli jika dalam mode edit (agar admin tidak mengganti kepemilikan berkas)
+                requester_id: isEditMode ? (existingRequest?.requester_id || user?.id || '') : (user?.id || ''),
+                requester_name: isEditMode ? (existingRequest?.requester_name || user?.full_name || '') : (user?.full_name || ''),
+                requester_department: isEditMode ? (existingRequest?.requester_department || user?.department || '') : (user?.department || ''),
+                
                 title: formData.title,
                 category: formData.category,
                 location: formData.location,
@@ -241,15 +256,17 @@ const NewRequest: React.FC = () => {
                 result = await dbService.createRequest(payload);
             }
             
-            if (status === 'pending') {
+            // Tampilkan modal sukses jika ini adalah pengajuan baru atau perbaikan berkas rejected
+            if (status === 'pending' && (!isEditMode || existingRequest?.status === 'rejected')) {
                 const validators = await dbService.getProfilesByRole(targetRole);
                 const filtered = validators.filter(v => 
-                    !v.department || v.department.toLowerCase().includes(user?.department?.toLowerCase() || '')
+                    !v.department || v.department.toLowerCase().includes(requesterDept.toLowerCase())
                 );
                 setTargetValidators(filtered);
                 setCreatedRequest(result);
                 setShowSuccessModal(true);
             } else {
+                alert(isAdmin ? "Perubahan berkas disimpan." : "Pengajuan berhasil dikirim.");
                 navigate('/requests');
             }
         } catch (err: any) { 
@@ -279,9 +296,11 @@ const NewRequest: React.FC = () => {
                     <button onClick={() => navigate(-1)} className="p-3 bg-white border rounded-2xl shadow-sm hover:bg-slate-50 transition-all"><ArrowLeft size={20} /></button>
                     <div>
                         <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                            {existingRequest?.status === 'rejected' ? 'Perbaikan Berkas' : 'Usulan Anggaran'}
+                            {isAdmin ? 'Admin Edit Berkas' : (existingRequest?.status === 'rejected' ? 'Perbaikan Berkas' : 'Usulan Anggaran')}
                         </h1>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 flex items-center gap-2">TA {currentYear} • {user?.department}</p>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
+                            TA {currentYear} • {isEditMode ? existingRequest?.requester_department : user?.department}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -292,8 +311,10 @@ const NewRequest: React.FC = () => {
                         <ShieldAlert size={28} />
                     </div>
                     <div>
-                        <h3 className="text-white text-sm font-black uppercase tracking-tight">Pengajuan Anda Melebihi Pagu!</h3>
-                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Ada rincian biaya yang melebihi sisa saldo anggaran. Tombol pengajuan akan dinonaktifkan hingga biaya disesuaikan.</p>
+                        <h3 className="text-white text-sm font-black uppercase tracking-tight">Pengajuan Melebihi Pagu!</h3>
+                        <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">
+                            {isAdmin ? 'Peringatan: Berkas ini melebihi sisa saldo anggaran.' : 'Ada rincian biaya yang melebihi sisa saldo anggaran. Tombol pengajuan akan dinonaktifkan hingga biaya disesuaikan.'}
+                        </p>
                     </div>
                 </div>
             )}
@@ -611,11 +632,11 @@ const NewRequest: React.FC = () => {
                         <button 
                             type="button" 
                             onClick={(e) => handleSubmit(e, 'pending')} 
-                            disabled={loading || hasOverBudgetItems} 
-                            className={`px-16 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${hasOverBudgetItems ? 'bg-red-100 text-red-300 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                            disabled={loading || (!isAdmin && hasOverBudgetItems)} 
+                            className={`px-16 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${(!isAdmin && hasOverBudgetItems) ? 'bg-red-100 text-red-300 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : (hasOverBudgetItems ? <ShieldAlert size={20} /> : <Send size={20} />)} 
-                            {hasOverBudgetItems ? 'Pagu Melebihi Batas' : (existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan')}
+                            {isAdmin ? 'Simpan Perubahan' : (hasOverBudgetItems ? 'Pagu Melebihi Batas' : (existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan'))}
                         </button>
                     </div>
                 </div>
@@ -633,7 +654,7 @@ const NewRequest: React.FC = () => {
                             {hasOverBudgetItems && (
                                 <div className="p-4 bg-white/10 rounded-2xl border border-white/10 flex items-start gap-3 animate-pulse">
                                     <ShieldAlert className="text-white shrink-0" size={16} />
-                                    <p className="text-[9px] font-black uppercase leading-relaxed text-white">MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Kurangi nominal biaya atau volkeg.</p>
+                                    <p className="text-[9px] font-black uppercase leading-relaxed text-white">PERINGATAN: BERKAS INI MELEBIHI PAGU.</p>
                                 </div>
                             )}
 
