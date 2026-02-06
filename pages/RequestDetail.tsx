@@ -312,7 +312,7 @@ const RequestDetail: React.FC = () => {
             
             <div className="print-only mb-6 border-b-[3pt] border-black pb-4 break-inside-avoid">
                 <div className="flex items-center pl-12 pr-6">
-                    <Logo className="w-32 h-32 object-contain mr-8" />
+                    <Logo className="w-28 h-28 object-contain mr-8" />
                     <div className="flex-1 text-center pr-12">
                         <h2 className="text-[13.5pt] font-bold uppercase leading-tight">Kementerian Lingkungan Hidup /</h2>
                         <h3 className="text-[13.5pt] font-bold uppercase leading-tight mt-1">Badan Pengendalian Lingkungan Hidup RI</h3>
