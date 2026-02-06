@@ -68,7 +68,6 @@ export const dbService = {
 
         try {
             if (id) {
-                // Jika sedang EDIT (ada ID), lakukan UPDATE berdasarkan ID primer
                 const { error } = await supabase
                     .from('budget_ceilings')
                     .update(payload)
@@ -76,7 +75,6 @@ export const dbService = {
                 if (error) throw error;
                 return true;
             } else {
-                // Jika BARU, gunakan UPSERT berdasarkan Unique Constraint
                 const { error } = await supabase
                     .from('budget_ceilings')
                     .upsert(payload, { 
@@ -129,12 +127,18 @@ export const dbService = {
 
     createRequest: async (request: Omit<BudgetRequest, 'id' | 'created_at' | 'updated_at'>) => {
         const { data, error } = await supabase.from('budget_requests').insert([request]).select().single();
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Create Request Error:", error.message, error.details, error.hint);
+            throw error;
+        }
         return data as BudgetRequest;
     },
 
     updateRequest: async (id: string, request: Partial<BudgetRequest>) => {
         const { error } = await supabase.from('budget_requests').update({ ...request, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) {
+            console.error("Supabase Update Request Error:", error.message);
+        }
         return !error;
     },
 
