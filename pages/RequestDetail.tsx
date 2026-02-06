@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
@@ -590,6 +589,7 @@ const RequestDetail: React.FC = () => {
                                     <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Kategori</span><span className="font-black">: {request.category}</span></div>
                                     <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Unit Kerja</span><span className="font-black">: {request.requester_department}</span></div>
                                     <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Lokasi</span><span className="font-black">: {request.location}</span></div>
+                                    <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Personil</span><span className="font-black">: {request.assigned_personnel || '-'}</span></div>
                                 </div>
                                 <div className="space-y-2 print:space-y-1">
                                     <div className="flex items-baseline gap-2 text-[6.5pt] uppercase print:text-[8pt]"><span className="w-24 font-bold text-slate-400 print:text-black">Tanggal</span><span className="font-black">: {new Date(request.execution_date).toLocaleDateString('id-ID')}</span></div>
@@ -617,7 +617,7 @@ const RequestDetail: React.FC = () => {
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-2"><p className="text-[8px] font-black print:text-[7pt]">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p><p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt]">{item.kode_akun}</p></td>
                                         <td className="px-6 py-4 border-r print:border-black print:py-1.5 print:px-3">
                                             {item.header && <p className="text-[8px] font-black text-blue-800 uppercase print:text-[7pt] print:text-black underline mb-1">{item.header}</p>}
-                                            {item.sub_header && <p className="text-[7px] font-black text-slate-500 uppercase print:text-[6.5pt] print:text-black mb-1 ml-2">• {item.sub_header}</p>}
+                                            {item.sub_header && <p className="text-[7px] font-black text-slate-500 uppercase print:text-[6.5pt] print:text-black mb-0.5 ml-2">• {item.sub_header}</p>}
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight">{item.title}</p>
                                             {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt]">Spesifikasi: {item.detail_barang}</p>}
                                             <p className="text-[9px] md:text-[8px] text-slate-400 font-medium italic mt-1 leading-none print:text-[6.5pt] print:text-black">

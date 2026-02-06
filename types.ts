@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | 'pengaju' 
   | 'admin' 
@@ -42,8 +41,6 @@ export interface CalculationItem {
   id: string;
   header?: string;
   sub_header?: string;
-  // Menambahkan group_header untuk mendukung rincian berjenjang pada form pengajuan (Bagian, Kelompok, Rincian)
-  group_header?: string;
   title: string;
   detail_barang?: string;
   kro_code: string;
@@ -73,6 +70,7 @@ export interface BudgetRequest {
   title: string;
   category: string;
   location: string;
+  assigned_personnel?: string;
   execution_date: string;
   execution_end_date?: string;
   execution_duration?: string;

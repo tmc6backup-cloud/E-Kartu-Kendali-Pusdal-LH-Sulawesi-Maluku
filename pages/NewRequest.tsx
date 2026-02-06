@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../App.tsx';
@@ -37,7 +36,7 @@ import {
     Heading,
     ShieldAlert,
     Layers,
-    ListTree
+    Users
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
 
@@ -73,7 +72,7 @@ const NewRequest: React.FC = () => {
 
     const [items, setItems] = useState<CalculationItem[]>([
         { 
-            id: '1', header: '', sub_header: '', group_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
+            id: '1', header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
             kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR',
             f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, 
             satkeg: 'OK', hargaSatuan: 0, jumlah: 0 
@@ -81,7 +80,7 @@ const NewRequest: React.FC = () => {
     ]);
     
     const [formData, setFormData] = useState({
-        title: '', category: 'Konsumsi & Rapat', location: '',
+        title: '', category: 'Konsumsi & Rapat', location: '', assignedPersonnel: '',
         executionDate: '', executionEndDate: '', executionDuration: '', description: '', totalAmount: 0
     });
 
@@ -117,6 +116,7 @@ const NewRequest: React.FC = () => {
                     setExistingRequest(data);
                     setFormData({
                         title: data.title, category: data.category, location: data.location,
+                        assignedPersonnel: data.assigned_personnel || '',
                         executionDate: data.execution_date || '',
                         executionEndDate: data.execution_end_date || '',
                         executionDuration: data.execution_duration || '',
@@ -221,6 +221,7 @@ const NewRequest: React.FC = () => {
                 title: formData.title,
                 category: formData.category,
                 location: formData.location,
+                assigned_personnel: formData.assignedPersonnel,
                 execution_date: formData.executionDate,
                 execution_end_date: formData.executionEndDate || null,
                 execution_duration: formData.executionDuration,
@@ -366,6 +367,20 @@ const NewRequest: React.FC = () => {
                                 </div>
                             </div>
 
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Personil yang Ditugaskan</label>
+                                <div className="relative">
+                                    <Users className="absolute left-5 top-5 text-slate-300" size={18} />
+                                    <input 
+                                        type="text" 
+                                        className="w-full pl-14 pr-6 py-5 bg-white border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-sm" 
+                                        value={formData.assignedPersonnel} 
+                                        onChange={(e) => setFormData({...formData, assignedPersonnel: e.target.value})} 
+                                        placeholder="INPUT NAMA-NAMA PERSONIL (PISAHKAN DENGAN KOMA)..." 
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanggal Mulai</label>
@@ -388,7 +403,7 @@ const NewRequest: React.FC = () => {
                                 type="button" 
                                 onClick={() => {
                                     const newId = Date.now().toString();
-                                    setItems([...items, { id: newId, header: '', sub_header: '', group_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
+                                    setItems([...items, { id: newId, header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
                                 }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
@@ -445,18 +460,14 @@ const NewRequest: React.FC = () => {
                                     <div className="p-8 md:p-10 space-y-10">
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
                                             <div className="space-y-6">
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Utama</label>
-                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="BAGIAN" />
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="CTH: BIAYA PERJALANAN" />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub-Header</label>
-                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="KELOMPOK" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><ListTree size={14} /> Group Header</label>
-                                                        <input type="text" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.group_header || ''} onChange={(e) => handleItemChange(item.id, 'group_header', e.target.value)} placeholder="RINCIAN" />
+                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="CTH: AKOMODASI & HOTEL" />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
