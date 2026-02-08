@@ -40,6 +40,7 @@ import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
 import { BudgetRequest, BudgetStatus, Profile } from '../types.ts';
 import Logo from '../components/Logo.tsx';
+import { supabase } from '../lib/supabase.ts';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
@@ -70,6 +71,7 @@ const RequestDetail: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [validators, setValidators] = useState<Profile[]>([]);
     const [copied, setCopied] = useState(false);
+    const [sequenceNumber, setSequenceNumber] = useState<number>(1);
 
     // States for SPJ Documents
     const [spjLoading, setSpjLoading] = useState(false);
@@ -79,6 +81,28 @@ const RequestDetail: React.FC = () => {
         if (!request) return false;
         return RECEIPT_ONLY_CATEGORIES.includes(request.category);
     }, [request]);
+
+    // Helper untuk Romawi Bulan
+    const getRomanMonth = (month: number) => {
+        const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+        return roman[month] || "I";
+    };
+
+    // Helper Singkatan Departemen
+    const getDeptCode = (dept: string) => {
+        const map: Record<string, string> = {
+            "PUSDAL LH SUMA": "PUSDAL",
+            "Bagian Tata Usaha": "TU",
+            "Bidang Wilayah I": "WIL-I",
+            "Bidang Wilayah II": "WIL-II",
+            "Bidang Wilayah III": "WIL-III",
+            "Sub Bagian Program & Anggaran": "PROG-ANG",
+            "Sub Bagian Kehumasan": "HUMAS",
+            "Sub Bagian Kepegawaian": "KEPEG",
+            "Sub Bagian Keuangan": "KEU"
+        };
+        return map[dept] || "BPLH";
+    };
 
     const fetchRequest = async () => {
         if (!id) return;
@@ -96,6 +120,19 @@ const RequestDetail: React.FC = () => {
                 }
                 setRequest(data);
                 setRealizationAmount(data.realization_amount || data.amount || 0);
+
+                // Hitung nomor urut berdasarkan posisi berkas dalam database untuk bulan & departemen yang sama
+                const date = new Date(data.created_at);
+                const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
+                
+                const { count } = await supabase
+                    .from('budget_requests')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('requester_department', data.requester_department)
+                    .gte('created_at', startOfMonth)
+                    .lte('created_at', data.created_at);
+                
+                setSequenceNumber(count || 1);
                 
                 let targetRole = '';
                 if (data.status === 'pending') targetRole = 'kepala_bidang';
@@ -141,17 +178,11 @@ const RequestDetail: React.FC = () => {
             let noteField: keyof BudgetRequest = 'pic_note';
             const role = user.role;
 
-            if (role === 'validator_program') {
-                noteField = 'program_note';
-            } else if (role === 'kepala_bidang') {
-                noteField = 'structural_note';
-            } else if (role === 'validator_tu') {
-                noteField = 'tu_note';
-            } else if (role === 'validator_ppk') {
-                noteField = 'ppk_note';
-            } else {
-                noteField = 'pic_note';
-            }
+            if (role === 'validator_program') noteField = 'program_note';
+            else if (role === 'kepala_bidang') noteField = 'structural_note';
+            else if (role === 'validator_tu') noteField = 'tu_note';
+            else if (role === 'validator_ppk') noteField = 'ppk_note';
+            else noteField = 'pic_note';
 
             const extraData: Partial<BudgetRequest> = {};
             if (status === 'realized') {
@@ -261,7 +292,18 @@ const RequestDetail: React.FC = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (loading && !request) return <div className="flex items-center justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={64} /></div>;
+    // Formating Kendali Number: [Urut]/[Dept]/[Bulan-Romawi]/[Tahun]
+    const kendaliNo = useMemo(() => {
+        if (!request) return "..."; // PENTING: Null guard untuk mencegah crash render awal
+        const date = new Date(request.created_at);
+        const urut = sequenceNumber.toString().padStart(3, '0');
+        const dept = getDeptCode(request.requester_department || '');
+        const romawi = getRomanMonth(date.getMonth());
+        const tahun = date.getFullYear();
+        return `${urut}/${dept}/${romawi}/${tahun}`;
+    }, [request, sequenceNumber]);
+
+    if (loading && !request) return <div className="flex items-center justify-center py-40 flex-col gap-4"><Loader2 className="animate-spin text-blue-600" size={64} /><p className="text-[10px] font-black uppercase text-slate-400">Menyinkronkan Berkas...</p></div>;
     
     if (accessDenied) {
         return (
@@ -324,7 +366,7 @@ const RequestDetail: React.FC = () => {
 
             <div className="print-only text-center mb-6 break-inside-avoid">
                 <h2 className="text-[12pt] font-black underline uppercase tracking-tight">KARTU KENDALI PENGAJUAN ANGGARAN</h2>
-                <p className="text-[8.5pt] font-bold mt-1 uppercase">NO. KENDALI: {request.id.substring(0, 8).toUpperCase()} / PUSDAL-SUMA / {new Date().getFullYear()}</p>
+                <p className="text-[9pt] font-black mt-1 uppercase">NOMOR KENDALI: {kendaliNo}</p>
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
@@ -593,7 +635,7 @@ const RequestDetail: React.FC = () => {
 
                     <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none break-inside-avoid print:overflow-visible">
                         <div className="space-y-6 print:space-y-2">
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[11pt] print:font-black leading-snug break-words">{request.title}</h2>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight print:text-[11pt] print:font-black leading-snug print:whitespace-normal print:overflow-visible break-words">{request.title}</h2>
                             <div className="w-full h-px bg-slate-100 print:bg-black print:h-[1.2pt]"></div>
                             <div className="grid grid-cols-2 gap-x-12 print:gap-x-8">
                                 <div className="space-y-2 print:space-y-1">
@@ -612,52 +654,63 @@ const RequestDetail: React.FC = () => {
                     </div>
 
                     <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
-                        <table className="w-full text-left border-collapse print:table-fixed">
-                            <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black">
-                                <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black">
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[15%] print:align-top">Struktur / Akun</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[42%] print:align-top">Uraian & Perincian</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-center print:w-[10%] print:align-top">Vol</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[15%] print:align-top">Harga</th>
-                                    <th className="px-6 py-4 print:text-[8pt] print:border-black print:border-[0.5pt] print:py-2 print:px-3 text-right print:w-[18%] print:align-top">Jumlah (IDR)</th>
+                        <table className="w-full text-left border-collapse print:table-fixed print:overflow-visible">
+                            <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black print:overflow-visible">
+                                <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black print:overflow-visible">
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[15%] print:align-top print:whitespace-normal">Struktur / Akun</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[42%] print:align-top print:whitespace-normal">Uraian & Perincian</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-center print:w-[10%] print:align-top print:whitespace-normal">Vol</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[15%] print:align-top print:whitespace-normal">Harga</th>
+                                    <th className="px-6 py-4 print:text-[8pt] print:border-black print:border-[0.5pt] print:py-2 print:px-3 text-right print:w-[18%] print:align-top print:whitespace-normal">Jumlah (IDR)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 print:divide-y-0">
+                            <tbody className="divide-y divide-slate-100 print:divide-y-0 print:overflow-visible">
                                 {request.calculation_items?.map((item, idx) => (
-                                    <tr key={idx} className="print:border-black break-inside-avoid">
-                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
-                                            <p className="text-[8px] font-black print:text-[7pt] break-words">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p>
-                                            <p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt] break-words">{item.kode_akun}</p>
+                                    <tr key={`item-${idx}`} className="print:border-black break-inside-avoid print:overflow-visible">
+                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top print:whitespace-normal print:overflow-visible">
+                                            <p className="text-[8px] font-black print:text-[7pt] break-words leading-tight print:overflow-visible print:whitespace-normal">{item.ro_code}.{item.komponen_code}.{item.subkomponen_code}</p>
+                                            <p className="text-[7px] font-bold text-blue-600 print:text-black print:text-[6.5pt] break-words leading-tight print:overflow-visible print:whitespace-normal">{item.kode_akun}</p>
                                         </td>
-                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-3 print:align-top">
-                                            <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight break-words">{item.title}</p>
-                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt] break-words mt-0.5">Rincian: {item.detail_barang}</p>}
-                                            <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-none print:text-[6.5pt] print:text-black uppercase break-words">
+                                        <td className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-3 print:align-top print:whitespace-normal print:overflow-visible">
+                                            {item.header && (
+                                                <p className="text-[9px] font-black uppercase text-slate-900 print:text-[8pt] border-b border-slate-100 print:border-black/10 pb-1 mb-1 break-words leading-tight print:overflow-visible print:whitespace-normal">
+                                                    {item.header}
+                                                </p>
+                                            )}
+                                            {item.sub_header && (
+                                                <p className="text-[8px] font-bold uppercase text-slate-500 print:text-[7pt] italic mb-1 break-words leading-tight print:overflow-visible print:whitespace-normal">
+                                                    {item.sub_header}
+                                                </p>
+                                            )}
+                                            
+                                            <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight break-words print:overflow-visible print:whitespace-normal">{item.title}</p>
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt] break-words mt-0.5 leading-tight print:overflow-visible print:whitespace-normal">Rincian: {item.detail_barang}</p>}
+                                            <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-tight print:text-[6.5pt] print:text-black uppercase break-words print:overflow-visible print:whitespace-normal">
                                                 ({item.f1_val} {item.f1_unit} 
                                                 {item.f2_unit ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
                                                 {item.f3_unit ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
                                                 {item.f4_unit ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
                                             </p>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
-                                            <span className="text-xs font-black print:text-[7.5pt] whitespace-nowrap">{item.volkeg} {item.satkeg}</span>
+                                        <td className="px-6 py-4 text-center border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top print:whitespace-normal print:overflow-visible">
+                                            <span className="text-xs font-black print:text-[7.5pt] leading-tight print:overflow-visible print:whitespace-normal">{item.volkeg} {item.satkeg}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-xs print:text-[7.5pt] print:align-top">
-                                            <span className="whitespace-nowrap">{item.hargaSatuan.toLocaleString('id-ID')}</span>
+                                        <td className="px-6 py-4 text-right border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-xs print:text-[7.5pt] print:align-top print:whitespace-normal print:overflow-visible">
+                                            <span className="leading-tight print:overflow-visible print:whitespace-normal">{item.hargaSatuan.toLocaleString('id-ID')}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8pt] print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top">
-                                            <span className="whitespace-nowrap">{item.jumlah.toLocaleString('id-ID')}</span>
+                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8pt] print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top print:whitespace-normal print:overflow-visible">
+                                            <span className="leading-tight print:overflow-visible print:whitespace-normal">{item.jumlah.toLocaleString('id-ID')}</span>
                                         </td>
                                     </tr>
                                 ))}
-                                <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.2pt] print:border-black break-inside-avoid">
-                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4">TOTAL KESELURUHAN</td>
-                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4">Rp {request.amount.toLocaleString('id-ID')}</td>
+                                <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.2pt] print:border-black break-inside-avoid print:overflow-visible">
+                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 print:overflow-visible">TOTAL KESELURUHAN</td>
+                                    <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4 print:overflow-visible">Rp {request.amount.toLocaleString('id-ID')}</td>
                                 </tr>
                                 {request.status === 'realized' && (
-                                    <tr className="bg-emerald-600 text-white print:bg-gray-50 print:text-black print:border-t-[1pt] print:border-black break-inside-avoid">
-                                        <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 flex items-center justify-end gap-2"><Banknote size={16} /> TOTAL REALISASI DIBAYARKAN</td>
-                                        <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4">Rp {request.realization_amount?.toLocaleString('id-ID')}</td>
+                                    <tr className="bg-emerald-600 text-white print:bg-gray-50 print:text-black print:border-t-[1pt] print:border-black break-inside-avoid print:overflow-visible">
+                                        <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 flex items-center justify-end gap-2 print:overflow-visible"><Banknote size={16} /> TOTAL REALISASI DIBAYARKAN</td>
+                                        <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4 print:overflow-visible">Rp {request.realization_amount?.toLocaleString('id-ID')}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -666,17 +719,17 @@ const RequestDetail: React.FC = () => {
 
                     <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-sm print:p-4 print:border-black print:border-[1pt] print:shadow-none print:mt-4 break-inside-avoid print:overflow-visible">
                         <p className="text-xs font-black uppercase tracking-widest print:text-[8.5pt] underline mb-1">Justifikasi Kebutuhan:</p>
-                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify break-words">{request.description || "TIDAK ADA DESKRIPSI."}</p>
+                        <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify break-words print:whitespace-normal print:overflow-visible">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
-                    <div className="print-only mt-6 break-inside-avoid">
-                        <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed">
+                    <div className="print-only mt-6 break-inside-avoid print:overflow-visible">
+                        <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed print:overflow-visible">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
                             <tbody><tr className="h-20"><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[7.5pt] font-bold uppercase"><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td></tr></tbody>
                         </table>
                     </div>
 
-                    <div className="print-only mt-10 break-inside-avoid">
+                    <div className="print-only mt-10 break-inside-avoid print:overflow-visible">
                         <div className="grid grid-cols-2 gap-12 text-center text-[9pt]"><div className="space-y-16"><div><p className="font-bold">Mengetahui,</p><p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p></div><div><p className="font-black underline uppercase">( ..................................................... )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div><div className="space-y-16"><div><p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p><p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div><div><p className="font-black underline uppercase">( {request.requester_name} )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div></div>
                     </div>
                 </div>
@@ -732,8 +785,8 @@ const RequestDetail: React.FC = () => {
                         <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest text-center mb-10">Status Terkini</h4>
                         <div className="space-y-0 relative ml-4">
                             <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-slate-100"></div>
-                            {detailedSteps.map((step, idx) => (
-                                <div key={idx} className="relative flex items-start gap-5 pb-8 last:pb-0">
+                            {detailedSteps.map((step) => (
+                                <div key={step.s} className="relative flex items-start gap-5 pb-8 last:pb-0">
                                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isStepCompleted(step.s) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>{step.icon}</div>
                                     <div className="flex-1 -mt-1"><p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p><p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p></div>
                                 </div>

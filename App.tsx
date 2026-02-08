@@ -12,6 +12,7 @@ import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
 import { UserRole, Profile } from './types.ts';
 import { dbService } from './services/dbService.ts';
+import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
     user: Profile | null;
@@ -89,7 +90,14 @@ const App: React.FC = () => {
         localStorage.removeItem('e_anggaran_user');
     };
 
-    if (isAuthResolving) return null;
+    if (isAuthResolving) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-slate-900 flex-col gap-4">
+                <Loader2 className="animate-spin text-emerald-400" size={48} />
+                <p className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Memuat Sesi...</p>
+            </div>
+        );
+    }
 
     return (
         <AuthContext.Provider value={{ user, isLoggedIn, login, logout }}>
