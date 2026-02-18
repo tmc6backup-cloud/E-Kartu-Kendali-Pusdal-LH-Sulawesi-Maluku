@@ -39,6 +39,25 @@ export const dbService = {
         return { success: !error, error: error?.message };
     },
 
+    // --- Web Push VAPID ---
+    savePushSubscription: async (userId: string, subscription: PushSubscription) => {
+        const subJson = subscription.toJSON();
+        if (!subJson.endpoint || !subJson.keys) return false;
+
+        const payload = {
+            user_id: userId,
+            endpoint: subJson.endpoint,
+            p256dh: subJson.keys.p256dh,
+            auth: subJson.keys.auth
+        };
+
+        const { error } = await supabase
+            .from('push_subscriptions')
+            .upsert(payload, { onConflict: 'endpoint' });
+        
+        return !error;
+    },
+
     // --- Pagu Anggaran (Ceilings) ---
     getCeilings: async (year: number = new Date().getFullYear()): Promise<BudgetCeiling[]> => {
         try {

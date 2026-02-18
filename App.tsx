@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.tsx';
@@ -32,9 +31,9 @@ export const AuthContext = React.createContext<AuthContextType>({
     installApp: () => {}
 });
 
-export const isValidatorRole = (role?: UserRole) => {
+export const isValidatorRole = (role?: UserRole | string) => {
     if (!role) return false;
-    const validatorRoles: UserRole[] = [
+    const validatorRoles: string[] = [
         'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin', 
         'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu', 
         'pic_wilayah_1', 'pic_wilayah_2', 'pic_wilayah_3'
@@ -65,7 +64,6 @@ const App: React.FC = () => {
         };
         checkSession();
 
-        // PWA Install Prompt Listener
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             setDeferredPrompt(e);
@@ -81,9 +79,6 @@ const App: React.FC = () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((choiceResult: any) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                }
                 setDeferredPrompt(null);
             });
         }
@@ -98,7 +93,7 @@ const App: React.FC = () => {
         try {
             const profile = await dbService.getProfile(userId);
             if (!profile || profile.password !== p) {
-                throw new Error("Kredensial tidak valid.");
+                throw new Error("Username atau Password salah.");
             }
 
             const profileToLogin = { ...profile };
@@ -120,9 +115,9 @@ const App: React.FC = () => {
 
     if (isAuthResolving) {
         return (
-            <div className="flex h-screen w-screen items-center justify-center bg-slate-900 flex-col gap-4">
+            <div className="flex h-screen w-screen items-center justify-center bg-slate-900 flex-col gap-4 text-white">
                 <Loader2 className="animate-spin text-emerald-400" size={48} />
-                <p className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Memuat Sesi...</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]">Memuat Sesi Aman...</p>
             </div>
         );
     }
