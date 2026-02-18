@@ -1,10 +1,28 @@
 
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
-import { Bell, Search, LogOut, X, Clock, CheckCircle2, AlertCircle, MessageSquare, ArrowRight, Loader2, Sparkles, Megaphone } from 'lucide-react';
+import { 
+    Bell, 
+    Search, 
+    LogOut, 
+    X, 
+    Clock, 
+    CheckCircle2, 
+    AlertCircle, 
+    MessageSquare, 
+    ArrowRight, 
+    Loader2, 
+    Sparkles, 
+    Megaphone,
+    Menu
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dbService } from '../services/dbService.ts';
 import Logo from './Logo.tsx';
+
+interface HeaderProps {
+    onMenuClick: () => void;
+}
 
 interface RealNotification {
     id: string;
@@ -16,7 +34,7 @@ interface RealNotification {
     requestId?: string;
 }
 
-const Header: React.FC = () => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -42,7 +60,6 @@ const Header: React.FC = () => {
                 let targetStatus = '';
                 let queueName = '';
                 
-                // Pemetaan Status Validator
                 if (user.role === 'kepala_bidang') { targetStatus = 'pending'; queueName = 'Struktural'; }
                 else if (user.role === 'validator_program') { targetStatus = 'reviewed_bidang'; queueName = 'Program & Anggaran'; }
                 else if (user.role === 'validator_tu') { targetStatus = 'reviewed_program'; queueName = 'TU'; }
@@ -53,7 +70,6 @@ const Header: React.FC = () => {
 
                 let myQueue = allRequests.filter(r => r.status === targetStatus);
                 
-                // Filter tambahan untuk Kabid & PIC Wilayah agar hanya melihat bidangnya
                 if (user.role === 'kepala_bidang' || user.role?.startsWith('pic_wilayah_')) {
                     const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
                     myQueue = myQueue.filter(r => myDepts.includes(r.requester_department?.toLowerCase() || ''));
@@ -61,7 +77,6 @@ const Header: React.FC = () => {
 
                 const currentCount = myQueue.length;
 
-                // Tampilkan Toast jika ada penambahan berkas baru
                 if (!isInitial && currentCount > lastQueueCount) {
                     setToastData({ title: queueName, count: currentCount });
                     setShowToast(true);
@@ -82,14 +97,13 @@ const Header: React.FC = () => {
                     });
                 }
             } else {
-                // Notifikasi untuk Personil Biasa
                 const myRequests = allRequests.filter(r => r.requester_id === user.id);
                 
                 myRequests.forEach(r => {
                     const updatedAt = new Date(r.updated_at);
                     const diffHours = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
 
-                    if (diffHours < 24) { // Notifikasi 24 jam terakhir
+                    if (diffHours < 24) {
                         if (r.status === 'approved') {
                             newNotifications.push({
                                 id: `app_${r.id}`,
@@ -150,7 +164,7 @@ const Header: React.FC = () => {
 
     useEffect(() => {
         fetchRealNotifications(true);
-        const interval = setInterval(() => fetchRealNotifications(false), 30000); // Poll setiap 30 detik
+        const interval = setInterval(() => fetchRealNotifications(false), 30000);
         
         const handleClickOutside = (event: MouseEvent) => {
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
@@ -183,7 +197,6 @@ const Header: React.FC = () => {
 
     return (
         <>
-            {/* Toast Notification Card */}
             {showToast && toastData && (
                 <div className="fixed top-20 right-8 z-[100] animate-in slide-in-from-right-8 duration-500">
                     <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 rounded-[32px] shadow-2xl shadow-blue-500/20 flex items-center gap-6 min-w-[320px]">
@@ -203,7 +216,16 @@ const Header: React.FC = () => {
             )}
 
             <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 no-print">
-                <div className="flex items-center gap-6 flex-1">
+                <div className="flex items-center gap-4 flex-1">
+                    {/* Hamburger Menu Mobile */}
+                    <button 
+                        onClick={onMenuClick}
+                        className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+                        aria-label="Open menu"
+                    >
+                        <Menu size={24} />
+                    </button>
+
                     <div className="lg:hidden flex items-center gap-2">
                         <Logo className="w-8 h-8 object-contain" />
                         <span className="font-bold text-[10px] tracking-tighter text-slate-800 uppercase">E-Kendali</span>

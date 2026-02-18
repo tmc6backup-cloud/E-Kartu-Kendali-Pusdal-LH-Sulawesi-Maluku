@@ -42,6 +42,7 @@ const App: React.FC = () => {
     const [user, setUser] = useState<Profile | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAuthResolving, setIsAuthResolving] = useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         const checkSession = () => {
@@ -107,9 +108,9 @@ const App: React.FC = () => {
                     <Route path="/*" element={
                         isLoggedIn ? (
                             <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
-                                <Sidebar />
+                                <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
                                 <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                                    <Header />
+                                    <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
                                     <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
                                         <Routes>
                                             <Route path="/" element={<Dashboard />} />

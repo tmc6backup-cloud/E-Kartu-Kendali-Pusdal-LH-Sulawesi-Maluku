@@ -16,12 +16,18 @@ import {
     FileText,
     Wallet,
     Briefcase,
-    ShieldCheck
+    ShieldCheck,
+    X
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import Logo from './Logo.tsx';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const location = useLocation();
     const { user, logout } = useContext(AuthContext);
     const isValidator = isValidatorRole(user?.role);
@@ -117,7 +123,7 @@ const Sidebar: React.FC = () => {
             return `PIC BIDANG WILAYAH ${num}`;
         }
         if (user?.role === 'kepala_bidang') return 'KEPALA BIDANG';
-        if (user?.role === 'validator_program') return 'VALIDATOR BAGIAN PROGRAM & ANGGARAN';
+        if (user?.role === 'validator_program') return 'VALIDATOR PROGRAM & ANGGARAN';
         if (user?.role === 'validator_tu') return 'KASUBAG TATA USAHA';
         if (user?.role === 'validator_ppk') return 'PEJABAT PPK';
         if (user?.role === 'bendahara') return 'BENDAHARA';
@@ -136,11 +142,38 @@ const Sidebar: React.FC = () => {
         return 'bg-blue-50 text-blue-700 border-blue-200 shadow-blue-50';
     };
 
+    const handleLinkClick = () => {
+        if (window.innerWidth < 1024) {
+            onClose();
+        }
+    };
+
     return (
         <>
-            <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 no-print">
-                <div className="p-8 border-b border-slate-100">
-                    <Link to="/" className="flex flex-col items-center gap-4 text-slate-800 group">
+            {/* Backdrop Mobile */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-[2px] lg:hidden transition-opacity"
+                    onClick={onClose}
+                />
+            )}
+
+            {/* Main Sidebar */}
+            <aside className={`
+                fixed inset-y-0 left-0 z-[70] flex flex-col w-64 bg-white border-r border-slate-200 no-print transition-transform duration-300 transform
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                lg:relative lg:translate-x-0
+            `}>
+                <div className="p-8 border-b border-slate-100 relative">
+                    {/* Tombol Close Mobile */}
+                    <button 
+                        onClick={onClose}
+                        className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg"
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <Link to="/" onClick={handleLinkClick} className="flex flex-col items-center gap-4 text-slate-800 group">
                         <Logo className="w-14 h-14" />
                         <div className="text-center">
                             <span className="tracking-tighter font-black text-xs block leading-none">E-KARTU KENDALI</span>
@@ -164,11 +197,12 @@ const Sidebar: React.FC = () => {
                     </div>
                 </div>
                 
-                <nav className="flex-1 p-5 space-y-1.5 overflow-y-auto">
+                <nav className="flex-1 p-5 space-y-1.5 overflow-y-auto custom-scrollbar">
                     {menuItems.map((item, idx) => (
                         <Link
                             key={`${item.path}-${idx}`}
                             to={item.path}
+                            onClick={handleLinkClick}
                             className={`flex items-center gap-3.5 px-4 py-3.5 rounded-[20px] transition-all duration-300 border-2 ${
                                 isActive(item.path) 
                                 ? 'bg-slate-900 text-white border-slate-900 font-bold shadow-xl shadow-slate-200' 
