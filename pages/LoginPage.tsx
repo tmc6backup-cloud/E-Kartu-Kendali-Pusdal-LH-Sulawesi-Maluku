@@ -61,7 +61,7 @@ const LoginPage: React.FC = () => {
                     </div>
                     <div className="space-y-6 max-w-lg">
                         <h1 className="text-5xl lg:text-7xl font-black text-white leading-tight">
-                            Akses Portal <span className="text-emerald-400">Anggaran</span> Terpadu
+                            Ajukan <span className="text-emerald-400">Penggunaan Anggaran</span> Disini
                         </h1>
                         <p className="text-slate-400 font-medium leading-relaxed">
                             Sistem kendali anggaran Pusdal LH Sulawesi Maluku yang akuntabel dan transparan.
@@ -145,7 +145,7 @@ const LoginPage: React.FC = () => {
                             ) : (
                                 <>
                                     <ArrowRight size={20} />
-                                    Masuk Sekarang
+                                    Login
                                 </>
                             )}
                         </button>
