@@ -206,15 +206,15 @@ const Dashboard: React.FC = () => {
                 />
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Grid - Slidable on Mobile */}
+            <div className="flex md:grid overflow-x-auto md:overflow-visible pb-6 md:pb-0 md:grid-cols-2 lg:grid-cols-4 gap-6 no-scrollbar snap-x">
                 {[
                     { label: 'Total Usulan', val: `Rp ${(stats.totalAmount/1000000).toFixed(1)}jt`, icon: <FileText size={20} />, color: 'blue' },
                     { label: 'Menunggu', val: stats.pendingCount, icon: <Clock size={20} />, color: 'amber' },
                     { label: 'Realisasi Bayar', val: `Rp ${(stats.totalRealized/1000000).toFixed(1)}jt`, icon: <Banknote size={20} />, color: 'emerald' },
                     { label: 'Sisa Pagu', val: `Rp ${((stats.totalOfficeCeiling - stats.totalRealized)/1000000).toFixed(1)}jt`, icon: <Wallet size={20} />, color: 'indigo' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-7 rounded-[40px] border border-slate-200 shadow-sm relative overflow-hidden group hover:translate-y-[-4px] transition-all">
+                    <div key={i} className="min-w-[280px] md:min-w-0 flex-shrink-0 bg-white p-7 rounded-[40px] border border-slate-200 shadow-sm relative overflow-hidden group hover:translate-y-[-4px] transition-all snap-center">
                          <div className={`absolute -right-4 -top-4 w-20 h-20 bg-${stat.color}-50 rounded-full opacity-40 group-hover:scale-150 transition-transform duration-700`}></div>
                          <div className="relative z-10">
                             <div className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm`}>{stat.icon}</div>

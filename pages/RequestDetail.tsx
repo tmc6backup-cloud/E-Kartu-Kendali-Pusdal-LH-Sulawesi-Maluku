@@ -45,6 +45,9 @@ import { supabase } from '../lib/supabase.ts';
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
     "Bagian Tata Usaha",
+    "Bidang Wilayah I",
+    "Bidang Wilayah II",
+    "Bidang Wilayah III",
     "Sub Bagian Program & Anggaran",
     "Sub Bagian Kehumasan",
     "Sub Bagian Kepegawaian",
@@ -294,7 +297,7 @@ const RequestDetail: React.FC = () => {
 
     // Formating Kendali Number: [Urut]/[Dept]/[Bulan-Romawi]/[Tahun]
     const kendaliNo = useMemo(() => {
-        if (!request) return "..."; // PENTING: Null guard untuk mencegah crash render awal
+        if (!request) return "...";
         const date = new Date(request.created_at);
         const urut = sequenceNumber.toString().padStart(3, '0');
         const dept = getDeptCode(request.requester_department || '');
@@ -653,8 +656,8 @@ const RequestDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
-                        <table className="w-full text-left border-collapse print:table-fixed print:overflow-visible">
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-x-auto no-print print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
+                        <table className="w-full min-w-[900px] text-left border-collapse print:table-fixed print:min-w-0 print:overflow-visible">
                             <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black print:overflow-visible">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black print:overflow-visible">
                                     <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[15%] print:align-top print:whitespace-normal">Struktur / Akun</th>
