@@ -19,13 +19,17 @@ interface AuthContextType {
     isLoggedIn: boolean;
     login: (username: string, password: string) => Promise<void>;
     logout: () => void;
+    deferredPrompt: any;
+    installApp: () => void;
 }
 
 export const AuthContext = React.createContext<AuthContextType>({ 
     user: null, 
     isLoggedIn: false,
     login: async () => {}, 
-    logout: () => {} 
+    logout: () => {},
+    deferredPrompt: null,
+    installApp: () => {}
 });
 
 export const isValidatorRole = (role?: UserRole) => {
@@ -43,6 +47,7 @@ const App: React.FC = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAuthResolving, setIsAuthResolving] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     useEffect(() => {
         const checkSession = () => {
@@ -59,12 +64,34 @@ const App: React.FC = () => {
             setIsAuthResolving(false);
         };
         checkSession();
+
+        // PWA Install Prompt Listener
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        });
+
+        window.addEventListener('appinstalled', () => {
+            setDeferredPrompt(null);
+            console.log('E-Kendali berhasil diinstal!');
+        });
     }, []);
+
+    const installApp = () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult: any) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                setDeferredPrompt(null);
+            });
+        }
+    };
 
     const login = async (username: string, password: string) => {
         const u = username.trim();
         const p = password.trim();
-        
         const cleanName = u.toLowerCase().replace(/\s+/g, '_');
         const userId = u.toLowerCase() === 'admin' ? 'user_admin' : `user_${cleanName}`;
         
@@ -101,7 +128,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn, login, logout, deferredPrompt, installApp }}>
             <HashRouter>
                 <Routes>
                     <Route path="/login" element={!isLoggedIn ? <LoginPage /> : <Navigate to="/" replace />} />

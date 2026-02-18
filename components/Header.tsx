@@ -14,7 +14,8 @@ import {
     Loader2, 
     Sparkles, 
     Megaphone,
-    Menu
+    Menu,
+    DownloadCloud
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dbService } from '../services/dbService.ts';
@@ -35,7 +36,7 @@ interface RealNotification {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout, deferredPrompt, installApp } = useContext(AuthContext);
     const navigate = useNavigate();
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [notifications, setNotifications] = useState<RealNotification[]>([]);
@@ -217,7 +218,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
             <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 no-print">
                 <div className="flex items-center gap-4 flex-1">
-                    {/* Hamburger Menu Mobile */}
                     <button 
                         onClick={onMenuClick}
                         className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
@@ -244,6 +244,18 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </div>
 
                 <div className="flex items-center gap-3 md:gap-6">
+                    {/* PWA Install Button */}
+                    {deferredPrompt && (
+                        <button 
+                            onClick={installApp}
+                            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-95 transition-all animate-pulse"
+                            title="Instal Aplikasi ke HP"
+                        >
+                            <DownloadCloud size={16} />
+                            <span className="hidden sm:inline">Instal App</span>
+                        </button>
+                    )}
+
                     <div className="relative" ref={notificationRef}>
                         <button 
                             onClick={toggleNotifications}

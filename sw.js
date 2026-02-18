@@ -1,11 +1,15 @@
 
 /**
  * Professional Engine Transpiler - PUSDAL LH SUMA
- * Version: 3.1.0 (Live-Update Optimized)
+ * Version: 3.2.0 (PWA Optimized)
  */
 
-const CACHE_NAME = 'pusdal-engine-v3.1';
+const CACHE_NAME = 'pusdal-engine-v3.2';
 const BABEL_SRC = 'https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js';
+const STATIC_ASSETS = [
+  'https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png',
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
+];
 
 let babelLoaded = false;
 
@@ -20,8 +24,12 @@ function loadBabel() {
 loadBabel();
 
 self.addEventListener('install', (e) => {
-  // Langsung aktifkan SW baru tanpa menunggu tab ditutup
   self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(STATIC_ASSETS);
+    })
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -42,14 +50,20 @@ self.addEventListener('fetch', (event) => {
   const hasExt = path.split('/').pop().includes('.');
   const isTranspilable = isLocal && (path.endsWith('.ts') || path.endsWith('.tsx') || (!hasExt && !path.endsWith('/')));
 
+  // Standar PWA Caching untuk aset statis (Logo/Font)
+  if (STATIC_ASSETS.includes(event.request.url)) {
+    event.respondWith(
+      caches.match(event.request).then(cached => cached || fetch(event.request))
+    );
+    return;
+  }
+
   if (isTranspilable) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_NAME);
         
         try {
-          // STRATEGI: Network-First
-          // Coba ambil versi terbaru dari server dulu
           if (!babelLoaded) loadBabel();
           
           let response = await fetch(event.request, { cache: 'no-store' });
@@ -79,7 +93,6 @@ self.addEventListener('fetch', (event) => {
               headers: { 'Content-Type': 'application/javascript' }
             });
 
-            // Simpan hasil kompilasi terbaru ke cache
             cache.put(event.request, newResponse.clone());
             return newResponse;
           }
@@ -87,7 +100,6 @@ self.addEventListener('fetch', (event) => {
           throw new Error("Network response not ok");
 
         } catch (err) {
-          // FALLBACK: Ambil dari Cache jika offline atau server gagal
           const cached = await cache.match(event.request);
           if (cached) return cached;
 

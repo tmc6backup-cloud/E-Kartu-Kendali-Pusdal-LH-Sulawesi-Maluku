@@ -3,7 +3,13 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png">
+    <link rel="manifest" href="manifest.json">
+    
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -25,7 +31,7 @@
         window.process.env.SUPABASE_ANON_KEY = window.process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR";
     </script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; -webkit-tap-highlight-color: transparent; }
         
         * {
             -ms-overflow-style: none;
@@ -215,7 +221,6 @@
                 const swPath = window.APP_BASE + 'sw.js';
                 const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
                 
-                // Cek update setiap kali aplikasi dibuka
                 reg.update();
 
                 reg.onupdatefound = () => {
@@ -223,7 +228,6 @@
                     installingWorker.onstatechange = () => {
                         if (installingWorker.state === 'installed') {
                             if (navigator.serviceWorker.controller) {
-                                // Versi baru tersedia, muat ulang otomatis
                                 console.log('Versi baru ditemukan, memperbarui aplikasi...');
                                 location.reload();
                             }
@@ -249,7 +253,6 @@
         function launch() {
             const script = document.createElement('script');
             script.type = 'module';
-            // Gunakan cache-buster timestamp untuk script utama agar tidak nyangkut di cache browser biasa
             script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
 
