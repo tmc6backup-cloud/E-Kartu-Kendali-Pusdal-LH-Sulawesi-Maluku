@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
                             Ajukan <span className="text-emerald-400">Penggunaan Anggaran</span> Disini
                         </h1>
                         <p className="text-slate-400 font-medium leading-relaxed">
-                            Sistem kendali anggaran Pusdal LH Sulawesi Maluku yang akuntabel dan transparan.
+                            Akses E-Kartu Kendali anda dimana saja dan kapan saja.
                         </p>
                     </div>
                 </div>
