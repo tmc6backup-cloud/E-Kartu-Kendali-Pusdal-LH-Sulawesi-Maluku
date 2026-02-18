@@ -61,6 +61,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         if (!user) return [];
         const newNotifs: RealNotification[] = [];
         const now = new Date();
+        const userDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
 
         if (isValidatorRole(user.role)) {
             let targetStatus = '';
@@ -71,13 +72,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             else if (user.role === 'bendahara') targetStatus = 'reviewed_pic';
             else if (user.role.startsWith('pic_')) targetStatus = 'approved';
 
-            const myQueue = allRequests.filter(r => r.status === targetStatus);
+            const myQueue = allRequests.filter(r => {
+                if (r.status !== targetStatus) return false;
+                // Filter departemen untuk PIC dan Kabid
+                if (user.role.startsWith('pic_') || user.role === 'kepala_bidang') {
+                    return userDepts.includes(r.requester_department?.toLowerCase() || '');
+                }
+                return true;
+            });
+
             if (myQueue.length > 0) {
                 newNotifs.push({
                     id: 'queue_alert',
                     type: 'pending',
                     title: 'Antrian Perlu Validasi',
-                    desc: `Ada ${myQueue.length} berkas baru menunggu Anda.`,
+                    desc: `Ada ${myQueue.length} berkas ${user.role.startsWith('pic_') ? 'siap verifikasi SPJ' : 'baru'} menunggu Anda.`,
                     time: 'Baru Saja',
                     icon: <Clock className="text-amber-500" />
                 });
@@ -138,17 +147,57 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             .channel('realtime-header')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'budget_requests' }, (payload) => {
                 const updated = payload.new;
-                const isRelevant = updated.requester_id === user?.id || isValidatorRole(user?.role);
+                const userDepts = user?.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
+                const isDeptMatch = userDepts.includes(updated.requester_department?.toLowerCase() || '');
                 
-                if (isRelevant) {
+                let showNotification = false;
+                let customTitle = 'Update Status Berkas';
+                let customDesc = `Berkas "${updated.title.substring(0, 20)}..." telah berubah.`;
+
+                // 1. Cek jika user adalah pengaju berkas tersebut
+                if (updated.requester_id === user?.id) {
+                    showNotification = true;
+                } 
+                // 2. Cek jika user adalah PIC Verifikator (harus sesuai departemen & status 'approved')
+                else if (user?.role.startsWith('pic_')) {
+                    if (isDeptMatch && updated.status === 'approved') {
+                        showNotification = true;
+                        customTitle = 'Berkas Siap Verifikasi';
+                        customDesc = `Berkas baru "${updated.title.substring(0, 20)}..." siap Anda verifikasi SPJ-nya.`;
+                    }
+                }
+                // 3. Cek jika user adalah Kepala Bidang (harus sesuai departemen & status 'pending')
+                else if (user?.role === 'kepala_bidang') {
+                    if (isDeptMatch && updated.status === 'pending') {
+                        showNotification = true;
+                        customTitle = 'Antrian Baru';
+                        customDesc = `Ada usulan baru "${updated.title.substring(0, 20)}..." menunggu persetujuan Anda.`;
+                    }
+                }
+                // 4. Cek validator kantor lainnya (Program, TU, PPK, Bendahara)
+                else if (isValidatorRole(user?.role)) {
+                    const rolesToStatus: any = {
+                        'validator_program': 'reviewed_bidang',
+                        'validator_tu': 'reviewed_program',
+                        'validator_ppk': 'reviewed_tu',
+                        'bendahara': 'reviewed_pic'
+                    };
+                    if (updated.status === rolesToStatus[user?.role || '']) {
+                        showNotification = true;
+                        customTitle = 'Tugas Validasi Baru';
+                        customDesc = `Berkas "${updated.title.substring(0, 20)}..." masuk ke antrian Anda.`;
+                    }
+                }
+                
+                if (showNotification) {
                     setToastData({
-                        title: 'Update Status Berkas',
-                        desc: `Berkas "${updated.title.substring(0, 20)}..." telah berubah.`,
+                        title: customTitle,
+                        desc: customDesc,
                         type: updated.status === 'rejected' ? 'danger' : 'success'
                     });
                     setShowToast(true);
                     setHasUnread(true);
-                    setTimeout(() => setShowToast(false), 6000);
+                    setTimeout(() => setShowToast(false), 7000);
                     fetchInitialData();
                 }
             })
@@ -163,7 +212,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.id, user?.role]);
+    }, [user?.id, user?.role, user?.department]);
 
     const handleNotifClick = (requestId?: string) => {
         setIsNotificationsOpen(false);
@@ -183,7 +232,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         </div>
                         <div className="flex-1">
                             <h4 className="text-white text-[11px] font-black uppercase tracking-tight">{toastData.title}</h4>
-                            <p className="text-slate-300 text-[9px] font-bold uppercase">{toastData.desc}</p>
+                            <p className="text-slate-300 text-[9px] font-bold uppercase leading-tight">{toastData.desc}</p>
                         </div>
                         <button onClick={() => setShowToast(false)} className="text-white/40 p-2"><X size={16} /></button>
                     </div>
