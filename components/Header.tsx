@@ -256,7 +256,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         </button>
 
                         {isNotificationsOpen && (
-                            <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white border border-slate-200 rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
+                            <div className="fixed inset-x-4 top-16 md:absolute md:inset-auto md:right-0 md:mt-3 w-auto md:w-96 bg-white border border-slate-200 rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-top-2 md:zoom-in-95 duration-200 origin-top-right z-50">
                                 <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                     <div>
                                         <h4 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Pusat Informasi</h4>
@@ -270,7 +270,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                     </button>
                                 </div>
 
-                                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                                <div className="max-h-[400px] md:max-h-[450px] overflow-y-auto custom-scrollbar">
                                     {loading && notifications.length === 0 ? (
                                         <div className="py-12 text-center">
                                             <Loader2 size={24} className="animate-spin text-blue-500 mx-auto mb-3" />
@@ -282,18 +282,18 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                                 <div 
                                                     key={notif.id} 
                                                     onClick={() => handleNotifClick(notif.requestId)}
-                                                    className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
+                                                    className="p-5 md:p-6 hover:bg-slate-50 transition-colors cursor-pointer group active:bg-slate-100"
                                                 >
                                                     <div className="flex gap-4">
-                                                        <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300">
                                                             {notif.icon}
                                                         </div>
                                                         <div className="flex-1">
                                                             <div className="flex justify-between items-start mb-1">
-                                                                <p className="text-xs font-bold text-slate-800">{notif.title}</p>
-                                                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-tighter">{notif.time}</span>
+                                                                <p className="text-xs md:text-sm font-black text-slate-800 uppercase tracking-tight">{notif.title}</p>
+                                                                <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{notif.time}</span>
                                                             </div>
-                                                            <p className="text-[11px] text-slate-500 leading-relaxed font-medium">{notif.desc}</p>
+                                                            <p className="text-[10px] md:text-[11px] text-slate-500 leading-relaxed font-bold uppercase">{notif.desc}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -313,9 +313,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                     <Link 
                                         to="/requests" 
                                         onClick={() => setIsNotificationsOpen(false)}
-                                        className="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-all"
+                                        className="w-full flex items-center justify-center gap-2 py-4 text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-[0.2em] transition-all bg-white border border-blue-100 rounded-2xl shadow-sm"
                                     >
-                                        Buka Monitoring Berkas <ArrowRight size={14} />
+                                        Monitoring Berkas <ArrowRight size={14} />
                                     </Link>
                                 </div>
                             </div>

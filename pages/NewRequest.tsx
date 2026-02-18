@@ -88,7 +88,6 @@ const NewRequest: React.FC = () => {
 
     const userDeptCeilings = useMemo(() => {
         if (!user?.department) return [];
-        // Jika admin, tampilkan semua pagu yang ada
         if (isAdmin) return ceilings;
 
         const userDepts = user.department.split(', ').map(d => d.trim().toLowerCase());
@@ -187,7 +186,6 @@ const NewRequest: React.FC = () => {
     };
 
     const hasOverBudgetItems = useMemo(() => {
-        // Admin bisa mengabaikan pengecekan overbudget jika diperlukan, tapi secara sistem tetap kita tampilkan
         return items.some(item => {
             if (!item.ro_code) return false;
             const status = getPaguStatus(item.ro_code, item.komponen_code, item.subkomponen_code);
@@ -196,9 +194,8 @@ const NewRequest: React.FC = () => {
     }, [items, allRequests, userDeptCeilings]);
 
     const handleSubmit = async (e: React.FormEvent, status: BudgetStatus = 'pending') => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         
-        // Non-admin dilarang mengirim berkas jika overbudget
         if (!isAdmin && status === 'pending' && hasOverBudgetItems) {
             alert("MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Silakan sesuaikan kembali rincian biaya Anda.");
             return;
@@ -215,12 +212,10 @@ const NewRequest: React.FC = () => {
             let initialStatus: BudgetStatus = status;
             let targetRole = 'kepala_bidang';
 
-            // Jika dalam mode edit oleh admin, pertahankan status asli jika status baru adalah 'pending'
             if (isEditMode && isAdmin && status === 'pending') {
                 initialStatus = existingRequest?.status || 'pending';
             }
 
-            // Aturan skip struktural jika pengaju dari unit tertentu (dan bukan admin yang sedang bypass)
             const requesterDept = isEditMode ? (existingRequest?.requester_department || '') : (user?.department || '');
             if (status === 'pending' && SKIP_STRUCTURAL_APPROVAL_DEPTS.includes(requesterDept)) {
                 initialStatus = 'reviewed_bidang'; 
@@ -228,11 +223,9 @@ const NewRequest: React.FC = () => {
             }
 
             const payload = {
-                // Gunakan data pengaju asli jika dalam mode edit (agar admin tidak mengganti kepemilikan berkas)
                 requester_id: isEditMode ? (existingRequest?.requester_id || user?.id || '') : (user?.id || ''),
                 requester_name: isEditMode ? (existingRequest?.requester_name || user?.full_name || '') : (user?.full_name || ''),
                 requester_department: isEditMode ? (existingRequest?.requester_department || user?.department || '') : (user?.department || ''),
-                
                 title: formData.title,
                 category: formData.category,
                 location: formData.location,
@@ -256,7 +249,6 @@ const NewRequest: React.FC = () => {
                 result = await dbService.createRequest(payload);
             }
             
-            // Tampilkan modal sukses jika ini adalah pengajuan baru atau perbaikan berkas rejected
             if (status === 'pending' && (!isEditMode || existingRequest?.status === 'rejected')) {
                 const validators = await dbService.getProfilesByRole(targetRole);
                 const filtered = validators.filter(v => 
@@ -290,7 +282,30 @@ const NewRequest: React.FC = () => {
     const lastNote = existingRequest?.pic_note || existingRequest?.ppk_note || existingRequest?.tu_note || existingRequest?.program_note || existingRequest?.structural_note;
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-10 pb-20 page-transition">
+        <div className="max-w-[1400px] mx-auto space-y-10 pb-20 md:pb-32 page-transition relative">
+            
+            {/* Mobile Fixed Action Bar */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white border-t border-slate-200 p-4 md:px-8 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] animate-in slide-in-from-bottom-full duration-500">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Estimasi Anggaran</p>
+                        <p className={`text-base font-black font-mono tracking-tight leading-none ${hasOverBudgetItems ? 'text-red-600' : 'text-slate-900'}`}>
+                            Rp {formData.totalAmount.toLocaleString('id-ID')}
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={(e) => handleSubmit(e, 'pending')}
+                            disabled={loading || (!isAdmin && hasOverBudgetItems)}
+                            className={`px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg active:scale-95 ${(!isAdmin && hasOverBudgetItems) ? 'bg-red-100 text-red-300' : 'bg-slate-900 text-white'}`}
+                        >
+                            {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} 
+                            Kirim
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)} className="p-3 bg-white border rounded-2xl shadow-sm hover:bg-slate-50 transition-all"><ArrowLeft size={20} /></button>
@@ -343,7 +358,7 @@ const NewRequest: React.FC = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-10">
                 <div className="xl:col-span-3 space-y-10">
-                    <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm space-y-10">
+                    <div className="bg-white p-6 md:p-10 rounded-[48px] border border-slate-200 shadow-sm space-y-10">
                         <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
                             <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg"><FileText size={20} /></div>
                             <h3 className="text-sm font-black uppercase tracking-widest">Detail Utama Kegiatan</h3>
@@ -354,7 +369,7 @@ const NewRequest: React.FC = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nama Kegiatan</label>
                                 <input 
                                     type="text" 
-                                    className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-3xl text-lg font-black outline-none focus:bg-white focus:border-blue-600 transition-all uppercase placeholder:text-slate-200 shadow-inner" 
+                                    className="w-full px-6 md:px-8 py-5 md:py-6 bg-slate-50 border border-slate-100 rounded-3xl text-sm md:text-lg font-black outline-none focus:bg-white focus:border-blue-600 transition-all uppercase placeholder:text-slate-200 shadow-inner" 
                                     value={formData.title} 
                                     onChange={(e) => setFormData({...formData, title: e.target.value})} 
                                     placeholder="INPUT NAMA KEGIATAN LENGKAP..." 
@@ -397,7 +412,7 @@ const NewRequest: React.FC = () => {
                                         className="w-full pl-14 pr-6 py-5 bg-white border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-sm" 
                                         value={formData.assignedPersonnel} 
                                         onChange={(e) => setFormData({...formData, assignedPersonnel: e.target.value})} 
-                                        placeholder="INPUT NAMA-NAMA PERSONIL (PISAHKAN DENGAN KOMA)..." 
+                                        placeholder="INPUT NAMA-NAMA PERSONIL..." 
                                     />
                                 </div>
                             </div>
@@ -418,7 +433,7 @@ const NewRequest: React.FC = () => {
                     <div className="space-y-8">
                         <div className="flex justify-between items-center px-4">
                             <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                                <Coins className="text-amber-500" /> Daftar Rincian Biaya (Lihat RKAKL)
+                                <Coins className="text-amber-500" /> Daftar Rincian Biaya
                             </h3>
                             <button 
                                 type="button" 
@@ -428,7 +443,7 @@ const NewRequest: React.FC = () => {
                                 }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
-                                <PlusCircle size={18} className="text-emerald-400" /> Tambah Item
+                                <PlusCircle size={18} className="text-emerald-400" /> Tambah
                             </button>
                         </div>
 
@@ -439,12 +454,12 @@ const NewRequest: React.FC = () => {
                             
                             return (
                                 <div key={item.id} className={`bg-white rounded-[40px] border-2 transition-all shadow-sm overflow-hidden ${isOver ? 'border-red-500 ring-4 ring-red-50' : 'border-slate-100'}`}>
-                                    <div className={`p-6 flex flex-wrap items-center gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
+                                    <div className={`p-6 flex flex-wrap items-center gap-4 md:gap-6 border-b border-slate-100 ${isOver ? 'bg-red-50' : 'bg-slate-50'}`}>
                                         <div className={`w-8 h-8 ${isOver ? 'bg-red-600' : 'bg-slate-900'} text-white rounded-lg flex items-center justify-center font-black text-[10px]`}>{idx + 1}</div>
-                                        <div className="flex-1 min-w-[300px]">
-                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Alokasi Pembebanan Anggaran</p>
+                                        <div className="flex-1 min-w-[200px]">
+                                            <p className={`text-[9px] font-black uppercase mb-1.5 ml-1 ${isOver ? 'text-red-600' : 'text-slate-400'}`}>Pilih Alokasi Pagu</p>
                                             <select 
-                                                className={`w-full bg-white border rounded-xl px-4 py-3 text-[11px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
+                                                className={`w-full bg-white border rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none transition-all ${isOver ? 'border-red-300 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'}`}
                                                 value={userDeptCeilings.find(c => c.ro_code === item.ro_code && c.komponen_code === item.komponen_code && c.subkomponen_code === item.subkomponen_code)?.id || ''}
                                                 onChange={(e) => {
                                                     const sel = userDeptCeilings.find(c => c.id === e.target.value);
@@ -464,44 +479,39 @@ const NewRequest: React.FC = () => {
                                             </select>
                                             {item.ro_code && (
                                                 <div className="flex items-center justify-between mt-2">
-                                                    <p className={`text-[9px] font-black flex items-center gap-2 ${paguInfo.sisa < 0 || isOver ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                        <Info size={12} /> {isOver ? 'SALDO TIDAK MENCUKUPI' : 'Sisa Pagu Gabungan'}: Rp {paguInfo.sisa.toLocaleString('id-ID')}
+                                                    <p className={`text-[8px] md:text-[9px] font-black flex items-center gap-2 ${paguInfo.sisa < 0 || isOver ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        <Info size={12} /> Sisa Pagu: Rp {paguInfo.sisa.toLocaleString('id-ID')}
                                                     </p>
-                                                    {isOver && <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase animate-pulse">OVER BUDGET</span>}
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="w-32">
+                                        <div className="w-full md:w-32">
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Kode Akun</p>
                                             <input type="text" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-black text-center" value={item.kode_akun} onChange={(e) => handleItemChange(item.id, 'kode_akun', e.target.value)} />
                                         </div>
                                         <button type="button" onClick={() => setItems(items.filter(i => i.id !== item.id))} className="p-3 text-slate-300 hover:text-red-600 transition-all"><Trash2 size={24} /></button>
                                     </div>
 
-                                    <div className="p-8 md:p-10 space-y-10">
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 border-b border-slate-50 pb-10">
+                                    <div className="p-6 md:p-10 space-y-8 md:space-y-10">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 border-b border-slate-50 pb-8 md:pb-10">
                                             <div className="space-y-6">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Jika Ada  </label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} placeholder="CTH: KONSULTASI INSTANSI TERKAIT DI PUSAT & DAERAH" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Jika Ada</label>
+                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub Header Jika Ada </label>
-                                                        <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} placeholder="CTH: KOORDINASI PUSAT & DAERAH" />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub Header Jika Ada</label>
+                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detil</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} placeholder="CTH: TIKET PESAWAT" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><PackageSearch size={14} /> Rincian</label>
-                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase placeholder:text-slate-300 outline-none shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: 3 JENIS KUE, AIR MINERAL 330ML" />
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Utama</label>
+                                                    <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} />
                                                 </div>
                                             </div>
 
-                                            <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 relative">
+                                            <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 relative overflow-hidden">
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div className="flex items-center gap-3">
                                                         <Calculator size={16} className="text-blue-600" />
@@ -513,16 +523,16 @@ const NewRequest: React.FC = () => {
                                                         className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
                                                     >
                                                         {isManual ? <Keyboard size={12} /> : <Zap size={12} />}
-                                                        {isManual ? 'Input Manual Aktif' : 'Gunakan Rumus'}
+                                                        {isManual ? 'Manual' : 'Rumus'}
                                                     </button>
                                                 </div>
                                                 
-                                                <div className="flex flex-wrap items-center gap-3">
+                                                <div className="flex overflow-x-auto no-scrollbar pb-2 items-center gap-3">
                                                     {[1,2,3,4].map(n => (
                                                         <React.Fragment key={n}>
-                                                            <div className={`flex-1 min-w-[120px] bg-white p-3 rounded-2xl shadow-sm border border-slate-100 space-y-2 transition-all ${isManual ? 'opacity-30' : ''}`}>
-                                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">Faktor {n}</p>
-                                                                <div className="flex items-center">
+                                                            <div className={`flex-1 min-w-[100px] bg-white p-3 rounded-2xl shadow-sm border border-slate-100 space-y-2 transition-all ${isManual ? 'opacity-30' : ''}`}>
+                                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">F{n}</p>
+                                                                <div className="flex items-center flex-col gap-1">
                                                                     <input 
                                                                         type="number" 
                                                                         disabled={isManual}
@@ -533,7 +543,7 @@ const NewRequest: React.FC = () => {
                                                                     <input 
                                                                         type="text" 
                                                                         disabled={isManual}
-                                                                        className="w-10 text-[7px] font-black text-blue-500 text-center outline-none uppercase bg-blue-50 rounded px-1 py-0.5" 
+                                                                        className="w-full text-[7px] font-black text-blue-500 text-center outline-none uppercase bg-blue-50 rounded px-1 py-0.5" 
                                                                         value={item[`f${n}_unit` as keyof CalculationItem] as string} 
                                                                         onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} 
                                                                     />
@@ -543,37 +553,25 @@ const NewRequest: React.FC = () => {
                                                         </React.Fragment>
                                                     ))}
                                                 </div>
-
-                                                {!isManual && (
-                                                    <div className="mt-4 p-3 bg-blue-600/10 border border-blue-100 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
-                                                        <ListChecks size={16} className="text-blue-600" />
-                                                        <p className="text-[9px] font-black text-blue-900 uppercase tracking-wider">
-                                                            Review Perhitungan: {item.f1_val} {item.f1_unit} 
-                                                            {item.f2_val > 1 && ` x ${item.f2_val} ${item.f2_unit}`}
-                                                            {item.f3_val > 1 && ` x ${item.f3_val} ${item.f3_unit}`}
-                                                            {item.f4_val > 1 && ` x ${item.f4_val} ${item.f4_unit}`}
-                                                        </p>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end px-2">
                                             <div className="md:col-span-3 space-y-3">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                                    <Target size={14} className="text-emerald-500" /> Total Volkeg
+                                                    <Target size={14} className="text-emerald-500" /> Volkeg
                                                 </label>
                                                 <div className={`flex rounded-3xl overflow-hidden shadow-xl ring-4 ${isOver ? 'bg-red-950 ring-red-100' : 'bg-slate-900 ring-slate-100'}`}>
                                                     <input 
                                                         type="number" 
                                                         readOnly={!isManual}
-                                                        className={`w-full py-6 text-center text-lg font-black outline-none bg-transparent text-white ${isManual ? 'cursor-text text-amber-400' : 'cursor-default opacity-90'}`}
+                                                        className="w-full py-4 md:py-6 text-center text-sm md:text-lg font-black outline-none bg-transparent text-white"
                                                         value={item.volkeg} 
                                                         onChange={(e) => handleItemChange(item.id, 'volkeg', e.target.value)} 
                                                     />
                                                     <input 
                                                         type="text" 
-                                                        className={`w-20 py-6 text-[11px] font-black text-center uppercase outline-none border-l border-white/5 ${isOver ? 'bg-red-900 text-white' : 'bg-slate-800 text-emerald-400'}`} 
+                                                        className={`w-16 md:w-20 py-4 md:py-6 text-[10px] font-black text-center uppercase outline-none border-l border-white/5 ${isOver ? 'bg-red-900 text-white' : 'bg-slate-800 text-emerald-400'}`} 
                                                         value={item.satkeg} 
                                                         onChange={(e) => handleItemChange(item.id, 'satkeg', e.target.value)} 
                                                         placeholder="SAT"
@@ -583,26 +581,23 @@ const NewRequest: React.FC = () => {
 
                                             <div className="md:col-span-4 space-y-3">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                                    <Coins size={14} className="text-amber-500" /> Harga Satuan (Rp)
+                                                    <Coins size={14} className="text-amber-500" /> Harga Satuan
                                                 </label>
                                                 <div className="relative group">
-                                                    <span className={`absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black transition-colors ${isOver ? 'text-red-300' : 'text-slate-300 group-focus-within:text-blue-500'}`}>Rp</span>
+                                                    <span className={`absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black transition-colors ${isOver ? 'text-red-300' : 'text-slate-300'}`}>Rp</span>
                                                     <input 
                                                         type="number" 
-                                                        className={`w-full pl-16 pr-6 py-6 border-2 rounded-3xl text-xl font-black outline-none transition-all shadow-lg ${isOver ? 'bg-red-50 border-red-500 text-red-900' : 'bg-white border-slate-100 focus:border-blue-600 shadow-slate-100/50'}`} 
+                                                        className={`w-full pl-12 pr-6 py-4 md:py-6 border-2 rounded-3xl text-sm md:text-xl font-black outline-none transition-all shadow-lg ${isOver ? 'bg-red-50 border-red-500 text-red-900' : 'bg-white border-slate-100 focus:border-blue-600'}`} 
                                                         value={item.hargaSatuan} 
                                                         onChange={(e) => handleItemChange(item.id, 'hargaSatuan', e.target.value)} 
-                                                        placeholder="0"
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className={`md:col-span-5 p-8 rounded-[40px] text-right border border-white/5 shadow-2xl relative overflow-hidden ${isOver ? 'bg-red-600' : 'bg-gradient-to-br from-slate-900 to-slate-800'}`}>
-                                                <div className={`absolute top-0 right-0 w-24 h-24 blur-2xl rounded-full -mr-12 -mt-12 ${isOver ? 'bg-white/20' : 'bg-emerald-500/10'}`}></div>
-                                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-1.5 relative z-10">Subtotal Item Terkalkulasi</p>
-                                                <p className="text-3xl font-black font-mono text-white tracking-tighter relative z-10">
-                                                    <span className="text-xs mr-2">{isOver ? 'OVER' : 'IDR'}</span>
-                                                    {item.jumlah.toLocaleString('id-ID')}
+                                            <div className={`md:col-span-5 p-6 md:p-8 rounded-[40px] text-right border border-white/5 shadow-2xl relative overflow-hidden ${isOver ? 'bg-red-600' : 'bg-gradient-to-br from-slate-900 to-slate-800'}`}>
+                                                <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1.5 relative z-10">Subtotal Terkalkulasi</p>
+                                                <p className="text-xl md:text-3xl font-black font-mono text-white tracking-tighter relative z-10">
+                                                    Rp {item.jumlah.toLocaleString('id-ID')}
                                                 </p>
                                             </div>
                                         </div>
@@ -612,59 +607,50 @@ const NewRequest: React.FC = () => {
                         })}
                     </div>
 
-                    <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="bg-white p-6 md:p-10 rounded-[48px] border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
                         <div className="space-y-4">
-                            <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><FileText size={16} /> Justifikasi Kebutuhan</h3>
-                            <textarea rows={6} className="w-full p-8 bg-slate-50 border border-slate-100 rounded-3xl font-bold text-xs uppercase focus:bg-white focus:border-blue-600 transition-all outline-none shadow-inner" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Jelaskan pengajuan ini secara detail..." />
+                            <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><FileText size={16} /> Justifikasi Kebutuhan</h3>
+                            <textarea rows={5} className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl font-bold text-xs uppercase focus:bg-white focus:border-blue-600 transition-all outline-none shadow-inner" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
                         </div>
                         <div className="space-y-4">
-                            <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><UploadCloud size={16} /> Dokumen Pendukung</h3>
-                            <div className="relative h-full min-h-[160px] border-4 border-dashed border-slate-100 rounded-3xl bg-slate-50 flex flex-col items-center justify-center p-8 text-center hover:bg-white hover:border-blue-300 transition-all cursor-pointer group">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><UploadCloud size={16} /> Dokumen KAK / RAB</h3>
+                            <div className="relative h-full min-h-[140px] border-4 border-dashed border-slate-100 rounded-3xl bg-slate-50 flex flex-col items-center justify-center p-6 text-center hover:bg-white hover:border-blue-300 transition-all cursor-pointer group">
                                 <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" id="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-                                <UploadCloud size={40} className="text-slate-200 group-hover:text-blue-600 transition-colors mb-4" />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedFile ? selectedFile.name : 'Pilih File KAK / RAB (PDF/JPG)'}</p>
+                                <UploadCloud size={32} className="text-slate-200 group-hover:text-blue-600 mb-3" />
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{selectedFile ? selectedFile.name : 'Pilih Berkas Lampiran'}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row justify-end gap-6 pt-6">
+                    <div className="hidden lg:flex justify-end gap-6 pt-6">
                         <button type="button" onClick={(e) => handleSubmit(e, 'draft')} disabled={loading} className="px-10 py-5 bg-white border-2 border-slate-200 text-slate-500 hover:bg-slate-50 rounded-3xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 transition-all"><Save size={18} /> Simpan Draf</button>
                         <button 
                             type="button" 
                             onClick={(e) => handleSubmit(e, 'pending')} 
                             disabled={loading || (!isAdmin && hasOverBudgetItems)} 
-                            className={`px-16 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${(!isAdmin && hasOverBudgetItems) ? 'bg-red-100 text-red-300 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                            className={`px-16 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${(!isAdmin && hasOverBudgetItems) ? 'bg-red-100 text-red-300' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : (hasOverBudgetItems ? <ShieldAlert size={20} /> : <Send size={20} />)} 
-                            {isAdmin ? 'Simpan Perubahan' : (hasOverBudgetItems ? 'Pagu Melebihi Batas' : (existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan'))}
+                            {isAdmin ? 'Simpan Perubahan' : (hasOverBudgetItems ? 'Melebihi Pagu' : (existingRequest?.status === 'rejected' ? 'Ajukan Ulang' : 'Kirim Pengajuan'))}
                         </button>
                     </div>
                 </div>
 
-                <div className="xl:col-span-1">
+                <div className="xl:col-span-1 hidden xl:block">
                     <div className={`p-10 rounded-[48px] shadow-2xl text-white sticky top-24 space-y-10 border border-white/5 overflow-hidden transition-all ${hasOverBudgetItems ? 'bg-red-700' : 'bg-slate-900'}`}>
                         <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${hasOverBudgetItems ? 'from-white/20 to-white/40' : 'from-blue-600 to-emerald-500'}`}></div>
                         <div className="space-y-6">
                             <div>
-                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-3">Total Kumulatif</p>
+                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-3">Estimasi Total</p>
                                 <p className={`text-3xl font-black font-mono tracking-tighter ${hasOverBudgetItems ? 'text-red-100' : 'text-white'}`}>Rp {formData.totalAmount.toLocaleString('id-ID')}</p>
                             </div>
                             <div className="h-px bg-white/10"></div>
-                            
-                            {hasOverBudgetItems && (
-                                <div className="p-4 bg-white/10 rounded-2xl border border-white/10 flex items-start gap-3 animate-pulse">
-                                    <ShieldAlert className="text-white shrink-0" size={16} />
-                                    <p className="text-[9px] font-black uppercase leading-relaxed text-white">PERINGATAN: BERKAS INI MELEBIHI PAGU.</p>
-                                </div>
-                            )}
-
                             <div className="space-y-4">
                                 <div className="flex justify-between text-[9px] font-black uppercase text-white/50"><span>Jumlah Item</span><span className="text-white">{items.length} Baris</span></div>
                                 <div className="flex justify-between text-[9px] font-black uppercase text-white/50"><span>Status Pagu</span><span className={hasOverBudgetItems ? 'text-red-300' : 'text-emerald-400'}>{hasOverBudgetItems ? 'MELEBIHI' : 'TERSEDIA'}</span></div>
                             </div>
                         </div>
                         <button type="button" onClick={() => aiAnalyzing ? null : analyzeBudgetRequest(formData.title, formData.totalAmount, formData.description).then(setAiResult)} className="w-full py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"><Sparkles size={16} className="text-emerald-400" /> Analisis Validitas AI</button>
-                        {aiResult && <div className="p-5 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl"><p className="text-[9px] font-bold text-emerald-400 leading-relaxed italic">"{aiResult}"</p></div>}
                     </div>
                 </div>
             </div>
@@ -672,36 +658,36 @@ const NewRequest: React.FC = () => {
             {/* Modal Sukses */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-lg rounded-[48px] p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 text-center space-y-8">
-                        <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <div className="bg-white w-full max-w-lg rounded-[48px] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 text-center space-y-8">
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
                             <CheckCircle size={48} />
                         </div>
                         <div className="space-y-3">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Berhasil Terkirim!</h2>
-                            <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Berkas Anda telah masuk antrian verifikasi.</p>
+                            <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight">Berhasil Terkirim!</h2>
+                            <p className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-wide">Berkas Anda telah masuk antrian verifikasi.</p>
                         </div>
                         
                         <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Beritahu Verifikator Sekarang:</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Beritahu Verifikator:</p>
                             <div className="flex flex-col gap-3">
                                 {targetValidators.length > 0 ? targetValidators.map(v => (
                                     <button 
                                         key={v.id}
                                         onClick={() => notifyValidator(v)}
-                                        className="w-full p-5 bg-emerald-600 text-white rounded-3xl flex items-center justify-between hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 group"
+                                        className="w-full p-4 md:p-5 bg-emerald-600 text-white rounded-3xl flex items-center justify-between hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 group"
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><MessageCircle size={20} /></div>
                                             <div className="text-left">
-                                                <p className="text-[10px] font-black uppercase">{v.full_name}</p>
-                                                <p className="text-[8px] font-bold opacity-70 uppercase">{v.role.replace(/_/g,' ')}</p>
+                                                <p className="text-[9px] font-black uppercase">{v.full_name}</p>
+                                                <p className="text-[7px] font-bold opacity-70 uppercase">{v.role.replace(/_/g,' ')}</p>
                                             </div>
                                         </div>
                                         <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 )) : (
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-                                        Petugas belum mendaftarkan nomor WhatsApp.
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest italic text-center">
+                                        Petugas belum mendaftarkan kontak.
                                     </div>
                                 )}
                             </div>
