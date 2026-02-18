@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase.ts';
 import { BudgetRequest, BudgetStatus, Profile, BudgetCeiling } from '../types.ts';
 
@@ -187,10 +186,15 @@ export const dbService = {
         }
     },
 
-    getStats: async (role: string, userName: string, department?: string, selectedYear: number = new Date().getFullYear()) => {
+    getStats: async (role: string, userName: string, department?: string, startDate?: string, endDate?: string) => {
         const isGlobal = ['admin', 'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'bendahara'].includes(role);
         const userDepts = department ? department.split(', ').map(d => d.trim().toLowerCase()) : [];
         
+        // Default range if not provided: Current Year
+        const sDate = startDate || `${new Date().getFullYear()}-01-01`;
+        const eDate = endDate || `${new Date().getFullYear()}-12-31`;
+        const selectedYear = new Date(sDate).getFullYear();
+
         try {
             const [requestsRes, ceilingsRes] = await Promise.all([
                 supabase.from('budget_requests').select('amount, status, category, created_at, realization_amount, realization_date, requester_department'),
@@ -233,9 +237,15 @@ export const dbService = {
                 const currDeptLower = currDept.toLowerCase();
 
                 const date = curr.created_at ? new Date(curr.created_at) : null;
-                const isCorrectYear = date && date.getFullYear() === selectedYear;
+                if (!date) return acc;
 
-                if ((isGlobal || userDepts.includes(currDeptLower)) && isCorrectYear) {
+                const checkStart = new Date(sDate);
+                const checkEnd = new Date(eDate);
+                checkEnd.setHours(23, 59, 59, 999);
+                
+                const isInRange = date >= checkStart && date <= checkEnd;
+
+                if ((isGlobal || userDepts.includes(currDeptLower)) && isInRange) {
                     acc.totalAmount += amt;
                     acc.totalCount += 1;
                     

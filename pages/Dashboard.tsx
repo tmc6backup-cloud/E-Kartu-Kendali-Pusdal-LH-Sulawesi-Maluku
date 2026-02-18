@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import { 
     XAxis, 
@@ -12,7 +11,7 @@ import {
     AreaChart,
     Area
 } from 'recharts';
-import { Clock, BrainCircuit, Database, PieChart as PieIcon, Building2, FileText, TrendingUp, ShieldCheck, Loader2, Wallet, Coins, Banknote, CalendarDays, ArrowUpRight, Target, AlertTriangle, RefreshCw, ChevronRight } from 'lucide-react';
+import { Clock, BrainCircuit, Database, PieChart as PieIcon, Building2, FileText, TrendingUp, ShieldCheck, Loader2, Wallet, Coins, Banknote, CalendarDays, ArrowUpRight, Target, AlertTriangle, RefreshCw, ChevronRight, Filter } from 'lucide-react';
 import { getBudgetInsights } from '../services/geminiService.ts';
 import { dbService } from '../services/dbService.ts';
 import { AuthContext } from '../App.tsx';
@@ -76,7 +75,12 @@ const HeroPenyerapan = ({ value, label, sublabel }: { value: number, label: stri
 
 const Dashboard: React.FC = () => {
     const { user } = useContext(AuthContext);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    
+    // Default range: Jan 1st to Dec 31st of current year
+    const currentYear = new Date().getFullYear();
+    const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
+    const [endDate, setEndDate] = useState(`${currentYear}-12-31`);
+    
     const [insight, setInsight] = useState("");
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +126,7 @@ const Dashboard: React.FC = () => {
         setIsLoading(true);
         try {
             const [dbStats, allReqs] = await Promise.all([
-                dbService.getStats(user.role, user.full_name, user.department, selectedYear),
+                dbService.getStats(user.role, user.full_name, user.department, startDate, endDate),
                 dbService.getAllRequests()
             ]);
 
@@ -146,7 +150,7 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-    }, [user, selectedYear]);
+    }, [user, startDate, endDate]);
 
     const fetchAiInsight = async (total: number, realized: number) => {
         setIsInsightLoading(true);
@@ -179,20 +183,33 @@ const Dashboard: React.FC = () => {
                         {isGlobalViewer ? 'KONTROL ANGGARAN' : 'DASHBOARD SAYA'}
                         {isGlobalViewer && <ShieldCheck className="text-blue-600" size={32} />}
                     </h1>
-                    <div className="flex items-center gap-4 mt-3">
+                    <div className="flex flex-wrap items-center gap-4 mt-3">
                         <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Sistem Aktif</span>
                         </div>
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                            <CalendarDays size={14} className="text-slate-400" />
-                            <select 
-                                className="bg-transparent text-[10px] font-black uppercase outline-none border-none text-slate-700 cursor-pointer"
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                            >
-                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>TA {y}</option>)}
-                            </select>
+                        
+                        {/* Date Range Filter UI */}
+                        <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <Filter size={14} className="text-blue-600" />
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Periode:</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="date" 
+                                    className="bg-slate-50 px-2 py-1 rounded-lg text-[10px] font-black uppercase outline-none border-none text-slate-700 cursor-pointer"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                                <span className="text-[9px] font-black text-slate-300">s/d</span>
+                                <input 
+                                    type="date" 
+                                    className="bg-slate-50 px-2 py-1 rounded-lg text-[10px] font-black uppercase outline-none border-none text-slate-700 cursor-pointer"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -338,7 +355,7 @@ const Dashboard: React.FC = () => {
                                 <div className="flex items-start justify-between mb-8">
                                     <div className="max-w-[70%]">
                                         <h4 className="text-base font-black text-slate-900 uppercase tracking-tight mb-1 leading-tight">{dept.name}</h4>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">TA {selectedYear}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Alokasi TA</p>
                                     </div>
                                     <div className="p-3 bg-slate-50 rounded-xl text-slate-400 group-hover:text-blue-600 transition-all"><Coins size={20} /></div>
                                 </div>
