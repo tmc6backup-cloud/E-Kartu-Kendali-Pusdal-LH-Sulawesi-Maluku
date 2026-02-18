@@ -15,7 +15,8 @@ import {
     Sparkles, 
     Megaphone,
     Menu,
-    DownloadCloud
+    DownloadCloud,
+    BellRing
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { dbService } from '../services/dbService.ts';
@@ -44,8 +45,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     const [hasUnread, setHasUnread] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showToast, setShowToast] = useState(false);
-    const [toastData, setToastData] = useState<{title: string, count: number} | null>(null);
+    const [toastData, setToastData] = useState<{title: string, desc: string, type: 'success' | 'danger' | 'info'} | null>(null);
     const [lastQueueCount, setLastQueueCount] = useState<number>(0);
+    const [lastRejectedCount, setLastRejectedCount] = useState<number>(0);
     const notificationRef = useRef<HTMLDivElement>(null);
 
     const fetchRealNotifications = async (isInitial = false) => {
@@ -58,6 +60,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             const newNotifications: RealNotification[] = [];
 
             if (isValidatorRole(user.role)) {
+                // LOGIKA UNTUK VALIDATOR
                 let targetStatus = '';
                 let queueName = '';
                 
@@ -79,7 +82,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 const currentCount = myQueue.length;
 
                 if (!isInitial && currentCount > lastQueueCount) {
-                    setToastData({ title: queueName, count: currentCount });
+                    setToastData({ 
+                        title: 'Antrian Baru!', 
+                        desc: `Ada berkas baru di antrian ${queueName}.`,
+                        type: 'info'
+                    });
                     setShowToast(true);
                     setTimeout(() => setShowToast(false), 8000);
                 }
@@ -98,7 +105,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     });
                 }
             } else {
+                // LOGIKA KHUSUS PENGAJU (NOTIFIKASI REJECTED/APPROVED)
                 const myRequests = allRequests.filter(r => r.requester_id === user.id);
+                const currentRejected = myRequests.filter(r => r.status === 'rejected').length;
+
+                // Toast jika ada penolakan baru
+                if (!isInitial && currentRejected > lastRejectedCount) {
+                    setToastData({ 
+                        title: 'Berkas Ditolak!', 
+                        desc: 'Ada berkas yang memerlukan revisi segera. Silakan cek dashboard.',
+                        type: 'danger'
+                    });
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 10000);
+                }
+                setLastRejectedCount(currentRejected);
                 
                 myRequests.forEach(r => {
                     const updatedAt = new Date(r.updated_at);
@@ -110,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                 id: `app_${r.id}`,
                                 type: 'approved',
                                 title: 'Usulan Disetujui',
-                                desc: `Persetujuan PPK selesai. Silakan lengkapi SPJ untuk: ${r.title.substring(0, 20)}...`,
+                                desc: `Persetujuan selesai. Silakan lengkapi SPJ untuk: ${r.title.substring(0, 20)}...`,
                                 icon: <CheckCircle2 className="text-emerald-500" />,
                                 requestId: r.id,
                                 time: 'Baru saja'
@@ -119,7 +140,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                             newNotifications.push({
                                 id: `rej_${r.id}`,
                                 type: 'rejected',
-                                title: 'Perlu Revisi',
+                                title: 'Perlu Revisi Segera',
                                 desc: `Berkas dikembalikan: ${r.title.substring(0, 20)}...`,
                                 icon: <AlertCircle className="text-red-500" />,
                                 requestId: r.id,
@@ -177,7 +198,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             document.removeEventListener('mousedown', handleClickOutside);
             clearInterval(interval);
         };
-    }, [user, lastQueueCount]);
+    }, [user, lastQueueCount, lastRejectedCount]);
 
     const toggleNotifications = () => {
         setIsNotificationsOpen(!isNotificationsOpen);
@@ -199,17 +220,27 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return (
         <>
             {showToast && toastData && (
-                <div className="fixed top-20 right-8 z-[100] animate-in slide-in-from-right-8 duration-500">
-                    <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 rounded-[32px] shadow-2xl shadow-blue-500/20 flex items-center gap-6 min-w-[320px]">
-                        <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
-                            <Megaphone size={28} />
+                <div className="fixed top-20 right-4 left-4 md:left-auto md:right-8 z-[100] animate-in slide-in-from-right-8 duration-500">
+                    <div className={`backdrop-blur-xl border p-5 rounded-[28px] shadow-2xl flex items-center gap-5 min-w-[320px] ${
+                        toastData.type === 'danger' ? 'bg-red-900/90 border-red-500/30 shadow-red-500/20' : 
+                        toastData.type === 'success' ? 'bg-emerald-900/90 border-emerald-500/30 shadow-emerald-500/20' :
+                        'bg-slate-900/90 border-white/20 shadow-blue-500/20'
+                    }`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg animate-pulse ${
+                            toastData.type === 'danger' ? 'bg-red-600 text-white' : 
+                            toastData.type === 'success' ? 'bg-emerald-600 text-white' :
+                            'bg-blue-600 text-white'
+                        }`}>
+                            {toastData.type === 'danger' ? <AlertCircle size={24} /> : <Megaphone size={24} />}
                         </div>
                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Update Antrian</p>
-                            <h4 className="text-white text-sm font-black uppercase tracking-tight">Berkas Baru Masuk!</h4>
-                            <p className="text-slate-400 text-[11px] font-bold">Ada pengajuan baru di antrian {toastData.title}.</p>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-0.5 ${
+                                toastData.type === 'danger' ? 'text-red-300' : 'text-emerald-400'
+                            }`}>Informasi Sistem</p>
+                            <h4 className="text-white text-sm font-black uppercase tracking-tight">{toastData.title}</h4>
+                            <p className="text-slate-300 text-[10px] font-bold uppercase">{toastData.desc}</p>
                         </div>
-                        <button onClick={() => setShowToast(false)} className="text-white/40 hover:text-white transition-colors">
+                        <button onClick={() => setShowToast(false)} className="text-white/40 hover:text-white transition-colors p-2">
                             <X size={18} />
                         </button>
                     </div>
@@ -297,12 +328,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                                     className="p-5 md:p-6 hover:bg-slate-50 transition-colors cursor-pointer group active:bg-slate-100"
                                                 >
                                                     <div className="flex gap-4">
-                                                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl border flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300 ${
+                                                            notif.type === 'rejected' ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
+                                                        }`}>
                                                             {notif.icon}
                                                         </div>
                                                         <div className="flex-1">
                                                             <div className="flex justify-between items-start mb-1">
-                                                                <p className="text-xs md:text-sm font-black text-slate-800 uppercase tracking-tight">{notif.title}</p>
+                                                                <p className={`text-xs md:text-sm font-black uppercase tracking-tight ${
+                                                                    notif.type === 'rejected' ? 'text-red-600' : 'text-slate-800'
+                                                                }`}>{notif.title}</p>
                                                                 <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{notif.time}</span>
                                                             </div>
                                                             <p className="text-[10px] md:text-[11px] text-slate-500 leading-relaxed font-bold uppercase">{notif.desc}</p>

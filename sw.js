@@ -1,10 +1,10 @@
 
 /**
  * Professional Engine Transpiler - PUSDAL LH SUMA
- * Version: 3.2.0 (PWA Optimized)
+ * Version: 3.3.0 (PWA Optimized & Push Ready)
  */
 
-const CACHE_NAME = 'pusdal-engine-v3.2';
+const CACHE_NAME = 'pusdal-engine-v3.3';
 const BABEL_SRC = 'https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js';
 const STATIC_ASSETS = [
   'https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png',
@@ -42,6 +42,45 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Listener untuk Push Notification (Web Push API)
+self.addEventListener('push', (event) => {
+  let data = { title: 'E-Kendali Suma', body: 'Ada pembaruan status pada pengajuan Anda.' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png',
+    badge: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png',
+    vibrate: [200, 100, 200],
+    data: { url: self.location.origin },
+    actions: [
+      { action: 'open', title: 'Buka Aplikasi' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === '/' && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('/');
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isLocal = url.origin === self.location.origin;
@@ -50,7 +89,6 @@ self.addEventListener('fetch', (event) => {
   const hasExt = path.split('/').pop().includes('.');
   const isTranspilable = isLocal && (path.endsWith('.ts') || path.endsWith('.tsx') || (!hasExt && !path.endsWith('/')));
 
-  // Standar PWA Caching untuk aset statis (Logo/Font)
   if (STATIC_ASSETS.includes(event.request.url)) {
     event.respondWith(
       caches.match(event.request).then(cached => cached || fetch(event.request))

@@ -12,14 +12,15 @@ import {
     AreaChart,
     Area
 } from 'recharts';
-import { Clock, BrainCircuit, Database, PieChart as PieIcon, Building2, FileText, TrendingUp, ShieldCheck, Loader2, Wallet, Coins, Banknote, CalendarDays, ArrowUpRight, Target } from 'lucide-react';
+import { Clock, BrainCircuit, Database, PieChart as PieIcon, Building2, FileText, TrendingUp, ShieldCheck, Loader2, Wallet, Coins, Banknote, CalendarDays, ArrowUpRight, Target, AlertTriangle, RefreshCw, ChevronRight } from 'lucide-react';
 import { getBudgetInsights } from '../services/geminiService.ts';
 import { dbService } from '../services/dbService.ts';
 import { AuthContext } from '../App.tsx';
+import { Link } from 'react-router-dom';
+import { BudgetRequest } from '../types.ts';
 
 /**
  * Komponen Indikator Penyerapan Dana (Hero Gauge)
- * Dibuat lebih besar dan elegan untuk menonjolkan angka utama kantor.
  */
 const HeroPenyerapan = ({ value, label, sublabel }: { value: number, label: string, sublabel: string }) => {
     const radius = 85;
@@ -79,6 +80,7 @@ const Dashboard: React.FC = () => {
     const [insight, setInsight] = useState("");
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [rejectedRequests, setRejectedRequests] = useState<BudgetRequest[]>([]);
     
     const areaContainerRef = useRef<HTMLDivElement>(null);
     const pieContainerRef = useRef<HTMLDivElement>(null);
@@ -119,7 +121,17 @@ const Dashboard: React.FC = () => {
         if (!user) return;
         setIsLoading(true);
         try {
-            const dbStats = await dbService.getStats(user.role, user.full_name, user.department, selectedYear);
+            const [dbStats, allReqs] = await Promise.all([
+                dbService.getStats(user.role, user.full_name, user.department, selectedYear),
+                dbService.getAllRequests()
+            ]);
+
+            // Cek jika ada pengajuan user yang ditolak
+            if (user.role === 'pengaju') {
+                const rejected = allReqs.filter(r => r.requester_id === user.id && r.status === 'rejected');
+                setRejectedRequests(rejected);
+            }
+
             const safeTrend = (dbStats.monthlyTrend || []).map((m: any) => ({
                 name: m.name, amount: Number(m.amount) || 0, realized: Number(m.realized) || 0
             }));
@@ -196,6 +208,27 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* REJECTION ALERT BANNER - KHUSUS PENGAJU */}
+            {user?.role === 'pengaju' && rejectedRequests.length > 0 && (
+                <div className="bg-red-600 p-6 md:p-8 rounded-[48px] shadow-2xl shadow-red-200 animate-in slide-in-from-top-10 duration-700 flex flex-col md:flex-row items-center gap-8 border border-white/10">
+                    <div className="w-16 h-16 bg-white/20 text-white rounded-[24px] flex items-center justify-center shrink-0 shadow-lg animate-bounce">
+                        <AlertTriangle size={32} />
+                    </div>
+                    <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-white text-xl font-black uppercase tracking-tight mb-1">Perhatian: {rejectedRequests.length} Berkas Ditolak!</h3>
+                        <p className="text-white/80 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                            Ada berkas pengajuan Anda yang memerlukan revisi segera. Mohon tinjau catatan validator dan lakukan perbaikan agar anggaran dapat segera dicairkan.
+                        </p>
+                    </div>
+                    <Link 
+                        to={`/requests/edit/${rejectedRequests[0].id}`}
+                        className="px-10 py-5 bg-white text-red-600 rounded-3xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                    >
+                        <RefreshCw size={18} /> Perbaiki Sekarang
+                    </Link>
+                </div>
+            )}
 
             {/* HERO SECTION: Hanya Indikator Penyerapan Dana */}
             <div className="grid grid-cols-1 gap-10">
