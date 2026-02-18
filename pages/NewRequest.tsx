@@ -433,7 +433,7 @@ const NewRequest: React.FC = () => {
                     <div className="space-y-8">
                         <div className="flex justify-between items-center px-4">
                             <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                                <Coins className="text-amber-500" /> Daftar Rincian Biaya
+                                <Coins className="text-amber-500" /> Daftar Rincian Biaya (Lihat RKAKL)
                             </h3>
                             <button 
                                 type="button" 
