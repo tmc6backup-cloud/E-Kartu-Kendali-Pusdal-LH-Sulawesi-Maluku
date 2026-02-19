@@ -656,7 +656,7 @@ const RequestDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-x-auto no-print print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-x-auto print:rounded-none print:border-black print:border-[1pt] print:shadow-none break-inside-avoid print:overflow-visible">
                         <table className="w-full min-w-[900px] text-left border-collapse print:table-fixed print:min-w-0 print:overflow-visible">
                             <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black print:overflow-visible">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black print:overflow-visible">

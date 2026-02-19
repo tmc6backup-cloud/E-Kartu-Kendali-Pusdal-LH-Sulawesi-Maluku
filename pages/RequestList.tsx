@@ -129,7 +129,7 @@ const RequestList: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto no-print">
+                <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px] text-left border-collapse print:min-w-0">
                         <thead>
                             <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 print:bg-gray-100 print:text-black print:border-b-[1pt] print:border-black">
@@ -234,32 +234,6 @@ const RequestList: React.FC = () => {
                     </table>
                 </div>
 
-                {/* Print Only View (Unchanged from Original) */}
-                <div className="hidden print:block">
-                    <table className="w-full text-left border-collapse border border-black">
-                        <thead>
-                            <tr className="bg-gray-100 text-[10px] font-black border-b border-black">
-                                <th className="px-4 py-3 border-r border-black">Kegiatan & Bidang</th>
-                                {user?.role !== 'pengaju' && <th className="px-4 py-3 border-r border-black">Pengusul</th>}
-                                <th className="px-4 py-3 text-right border-r border-black">Volume</th>
-                                <th className="px-4 py-3 text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRequests.map(req => (
-                                <tr key={req.id} className="border-b border-black text-[9pt]">
-                                    <td className="px-4 py-2 border-r border-black">
-                                        {req.title} <br/> 
-                                        <span className="text-[7pt]">{req.requester_department}</span>
-                                    </td>
-                                    {user?.role !== 'pengaju' && <td className="px-4 py-2 border-r border-black">{req.requester_name}</td>}
-                                    <td className="px-4 py-2 text-right border-r border-black">Rp {req.amount.toLocaleString('id-ID')}</td>
-                                    <td className="px-4 py-2 text-center">{req.status.toUpperCase()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     );

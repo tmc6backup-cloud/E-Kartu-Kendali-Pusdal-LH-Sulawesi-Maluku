@@ -231,7 +231,7 @@ const NewRequest: React.FC = () => {
                 location: formData.location,
                 assigned_personnel: formData.assignedPersonnel,
                 execution_date: formData.executionDate,
-                execution_end_date: formData.executionEndDate || null,
+                execution_end_date: formData.executionEndDate || undefined,
                 execution_duration: formData.executionDuration,
                 amount: formData.totalAmount,
                 description: formData.description,
@@ -650,7 +650,7 @@ const NewRequest: React.FC = () => {
                                 <div className="flex justify-between text-[9px] font-black uppercase text-white/50"><span>Status Pagu</span><span className={hasOverBudgetItems ? 'text-red-300' : 'text-emerald-400'}>{hasOverBudgetItems ? 'MELEBIHI' : 'TERSEDIA'}</span></div>
                             </div>
                         </div>
-                        <button type="button" onClick={() => aiAnalyzing ? null : analyzeBudgetRequest(formData.title, formData.totalAmount, formData.description).then(setAiResult)} className="w-full py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"><Sparkles size={16} className="text-emerald-400" /> Analisis Validitas AI</button>
+                        <button type="button" onClick={() => aiAnalyzing ? null : analyzeBudgetRequest(formData.title, formData.totalAmount, formData.description).then(res => setAiResult(res || ""))} className="w-full py-5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"><Sparkles size={16} className="text-emerald-400" /> Analisis Validitas AI</button>
                     </div>
                 </div>
             </div>

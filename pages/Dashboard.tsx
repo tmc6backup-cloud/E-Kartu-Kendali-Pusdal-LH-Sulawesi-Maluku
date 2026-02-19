@@ -58,9 +58,9 @@ const HeroPenyerapan = ({ value, label, sublabel }: { value: number, label: stri
                 <div className="flex items-center justify-center md:justify-start gap-6 pt-4">
                     <div className="text-center md:text-left">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                        <p className="text-xs font-black text-emerald-600 uppercase flex items-center gap-1.5">
+                        <div className="text-xs font-black text-emerald-600 uppercase flex items-center gap-1.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Optimal
-                        </p>
+                        </div>
                     </div>
                     <div className="w-px h-8 bg-slate-100"></div>
                     <div className="text-center md:text-left">
