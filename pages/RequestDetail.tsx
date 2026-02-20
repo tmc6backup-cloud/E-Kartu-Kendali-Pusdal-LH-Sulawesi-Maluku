@@ -41,7 +41,6 @@ import { dbService } from '../services/dbService.ts';
 import { BudgetRequest, BudgetStatus, Profile } from '../types.ts';
 import Logo from '../components/Logo.tsx';
 import { supabase } from '../lib/supabase.ts';
-import SignaturePad from '../components/SignaturePad.tsx';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
@@ -76,11 +75,6 @@ const RequestDetail: React.FC = () => {
     const [validators, setValidators] = useState<Profile[]>([]);
     const [copied, setCopied] = useState(false);
     const [sequenceNumber, setSequenceNumber] = useState<number>(1);
-    const [tempSignatureUrl, setTempSignatureUrl] = useState<string | null>(null);
-
-    // Signature upload states
-    const [sigLoading, setSigLoading] = useState<{type: 'pengusul' | 'mengetahui', loading: boolean}>({type: 'pengusul', loading: false});
-    const [showSigPad, setShowSigPad] = useState<{show: boolean, type: 'pengusul' | 'mengetahui'}>({show: false, type: 'pengusul'});
 
     // States for SPJ Documents
     const [spjLoading, setSpjLoading] = useState(false);
@@ -144,21 +138,12 @@ const RequestDetail: React.FC = () => {
                 setSequenceNumber(count || 1);
                 
                 let targetRole = '';
-                const isTU = data.requester_department === 'Bagian Tata Usaha';
-                
-                if (data.status === 'pending') {
-                    targetRole = isTU ? 'validator_tu' : 'kepala_bidang';
-                } else if (data.status === 'reviewed_bidang') {
-                    targetRole = 'validator_program';
-                } else if (data.status === 'reviewed_program') {
-                    targetRole = 'validator_tu';
-                } else if (data.status === 'reviewed_tu') {
-                    targetRole = 'validator_ppk';
-                } else if (data.status === 'approved') {
-                    targetRole = 'pic_verifikator';
-                } else if (data.status === 'reviewed_pic') {
-                    targetRole = 'bendahara';
-                }
+                if (data.status === 'pending') targetRole = 'kepala_bidang';
+                else if (data.status === 'reviewed_bidang') targetRole = 'validator_program';
+                else if (data.status === 'reviewed_program') targetRole = 'validator_tu';
+                else if (data.status === 'reviewed_tu') targetRole = 'validator_ppk';
+                else if (data.status === 'approved') targetRole = 'pic_verifikator';
+                else if (data.status === 'reviewed_pic') targetRole = 'bendahara';
 
                 if (targetRole) {
                     const profiles = await dbService.getProfilesByRole(targetRole);
@@ -206,19 +191,6 @@ const RequestDetail: React.FC = () => {
             if (status === 'realized') {
                 extraData.realization_amount = realizationAmount;
                 extraData.realization_date = new Date().toISOString();
-                extraData.validator_bendahara_name = user.full_name;
-            } else if (!isReject) {
-                if (role === 'validator_program') extraData.validator_program_name = user.full_name;
-                else if (role === 'kepala_bidang') extraData.validator_kabid_name = user.full_name;
-                else if (role === 'validator_tu') {
-                    extraData.validator_tu_name = user.full_name;
-                    // Auto-save signature if available in state
-                    if (tempSignatureUrl) {
-                        extraData.mengetahui_signature_url = tempSignatureUrl;
-                    }
-                }
-                else if (role === 'validator_ppk') extraData.validator_ppk_name = user.full_name;
-                else if (role === 'pic_verifikator' || role === 'pic_tu') extraData.validator_pic_name = user.full_name;
             }
 
             const success = await dbService.updateStatus(
@@ -279,15 +251,8 @@ const RequestDetail: React.FC = () => {
         const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
         const isMyDept = myDepts.includes(request.requester_department?.toLowerCase() || '');
 
-        const isTU = request.requester_department === 'Bagian Tata Usaha';
-        
-        if (status === 'pending') {
-            if (isTU && role === 'validator_tu') {
-                return { title: 'Persetujuan Atasan', subtitle: 'Kasubag Tata Usaha', targetStatus: 'reviewed_bidang' as BudgetStatus, icon: <UserCheck size={24} />, color: 'emerald', buttonLabel: 'Setujui sebagai Atasan' };
-            }
-            if (!isTU && role === 'kepala_bidang' && isMyDept) {
-                return { title: 'Verifikasi Struktural', subtitle: 'Kepala Bidang / Unit Kerja', targetStatus: 'reviewed_bidang' as BudgetStatus, icon: <UserCheck size={24} />, color: 'emerald' };
-            }
+        if (role === 'kepala_bidang' && status === 'pending' && isMyDept) {
+            return { title: 'Verifikasi Struktural', subtitle: 'Kepala Bidang / Unit Kerja', targetStatus: 'reviewed_bidang' as BudgetStatus, icon: <UserCheck size={24} />, color: 'emerald' };
         }
         if (role === 'validator_program' && status === 'reviewed_bidang') {
             return { title: 'Validasi Anggaran', subtitle: 'Bagian Program & Anggaran', targetStatus: 'reviewed_program' as BudgetStatus, icon: <GanttChart size={24} />, color: 'blue' };
@@ -328,49 +293,6 @@ const RequestDetail: React.FC = () => {
         navigator.clipboard.writeText(url);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-    };
-
-    const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'pengusul' | 'mengetahui') => {
-        const file = e.target.files?.[0];
-        if (!file || !id) return;
-        await processSignature(file, type);
-    };
-
-    const processSignature = async (file: File, type: 'pengusul' | 'mengetahui') => {
-        if (!id) return;
-        setSigLoading({ type, loading: true });
-        try {
-            const url = await dbService.uploadAttachment(file);
-            if (url) {
-                // If it's a structural leader signing during verification
-                if (type === 'mengetahui' && (user?.role === 'validator_tu' || user?.role === 'kepala_bidang')) {
-                    setTempSignatureUrl(url);
-                } else {
-                    const updateData = type === 'pengusul' 
-                        ? { requester_signature_url: url } 
-                        : { mengetahui_signature_url: url };
-                    
-                    const success = await dbService.updateRequest(id, updateData);
-                    if (success) {
-                        setRequest(prev => prev ? { ...prev, ...updateData } : null);
-                    }
-                }
-            }
-        } catch (err) {
-            console.error("Signature processing error:", err);
-        } finally {
-            setSigLoading({ type, loading: false });
-            setShowSigPad({ show: false, type: 'pengusul' });
-        }
-    };
-
-    const handleSignatureSave = async (dataUrl: string) => {
-        const type = showSigPad.type;
-        // Convert dataUrl to File
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const file = new File([blob], `signature_${type}.png`, { type: 'image/png' });
-        await processSignature(file, type);
     };
 
     // Formating Kendali Number: [Urut]/[Dept]/[Bulan-Romawi]/[Tahun]
@@ -415,13 +337,13 @@ const RequestDetail: React.FC = () => {
 
     const detailedSteps = [
         { s: 'pending', l: 'Diajukan', role: 'Pengaju', icon: <User size={14} /> },
-        { s: 'reviewed_bidang', l: 'Persetujuan Atasan', role: request.requester_department === 'Bagian Tata Usaha' ? 'Kasubag TU' : 'Kepala Bidang', icon: <UserCheck size={14} /> },
+        { s: 'reviewed_bidang', l: 'Persetujuan Kabid', role: 'Kepala Bidang', icon: <UserCheck size={14} />, hidden: isStructuralSkipped },
         { s: 'reviewed_program', l: 'Validasi Program', role: 'Validator Program', icon: <GanttChart size={14} /> },
         { s: 'reviewed_tu', l: 'Validasi TU', role: 'Kasubag TU', icon: <FileSearch size={14} /> },
         { s: 'approved', l: 'Pengesahan PPK', role: 'Pejabat PPK', icon: <Stamp size={14} /> },
         { s: 'reviewed_pic', l: 'Verifikasi SPJ', role: 'PIC Verifikator', icon: <ShieldIcon size={14} /> },
         { s: 'realized', l: 'Pembayaran', role: 'Bendahara', icon: <Coins size={14} /> }
-    ];
+    ].filter(step => !step.hidden);
 
     const isStepCompleted = (stepStatus: string) => {
         const statusOrder = ['pending', 'reviewed_bidang', 'reviewed_program', 'reviewed_tu', 'approved', 'reviewed_pic', 'realized'];
@@ -625,54 +547,6 @@ const RequestDetail: React.FC = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><MessageSquareQuote size={14} className="text-blue-500" /> Masukkan Catatan / Disposisi</label>
                                 <textarea className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl text-xs font-bold uppercase focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner" rows={3} placeholder="Sebutkan arahan atau alasan revisi..." value={validatorNote} onChange={(e) => setValidatorNote(e.target.value)} />
                             </div>
-
-                            {(user?.role === 'validator_tu' || user?.role === 'kepala_bidang') && (
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Edit3 size={14} className="text-indigo-500" /> Tanda Tangan {user?.role === 'validator_tu' ? 'Kasubbag TU' : 'Kepala Bidang'}</label>
-                                    <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl group hover:border-indigo-400 transition-all">
-                                        {tempSignatureUrl || request.mengetahui_signature_url ? (
-                                            <div className="relative flex flex-col items-center gap-3">
-                                                <img src={tempSignatureUrl || request.mengetahui_signature_url} alt="Signature" className="h-24 object-contain" />
-                                                <div className="flex flex-wrap justify-center gap-2">
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => setShowSigPad({ show: true, type: 'mengetahui' })}
-                                                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-100 transition-all flex items-center gap-2"
-                                                    >
-                                                        <Edit3 size={12} /> Gambar Ulang
-                                                    </button>
-                                                    <label className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2">
-                                                        <UploadCloud size={12} /> Upload Ulang
-                                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'mengetahui')} />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center gap-4">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setShowSigPad({ show: true, type: 'mengetahui' })}
-                                                    className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-indigo-500 transition-all"
-                                                >
-                                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100"><Edit3 size={24} /></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">Klik untuk Tanda Tangan</span>
-                                                </button>
-                                                <div className="flex items-center gap-3 w-full">
-                                                    <div className="h-px bg-slate-200 flex-1"></div>
-                                                    <span className="text-[8px] font-black text-slate-300 uppercase">Atau</span>
-                                                    <div className="h-px bg-slate-200 flex-1"></div>
-                                                </div>
-                                                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all cursor-pointer shadow-sm">
-                                                    {sigLoading.type === 'mengetahui' && sigLoading.loading ? <Loader2 size={12} className="animate-spin text-indigo-600" /> : <UploadCloud size={14} />}
-                                                    Upload Gambar TTD
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'mengetahui')} />
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <button onClick={() => handleAction('rejected', true)} disabled={actionLoading} className="flex-1 py-5 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all"><XCircle size={18} /> Kembalikan / Revisi</button>
                                 <button onClick={() => handleAction(actionConfig.targetStatus)} disabled={actionLoading} className={`flex-[2] py-5 bg-${actionConfig.color}-600 text-white hover:bg-${actionConfig.color}-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl transition-all`}>
@@ -786,12 +660,11 @@ const RequestDetail: React.FC = () => {
                         <table className="w-full min-w-[900px] text-left border-collapse print:table-fixed print:min-w-0 print:overflow-visible">
                             <thead className="bg-slate-50 print:bg-gray-200 border-b border-slate-100 print:border-black print:overflow-visible">
                                 <tr className="text-[9px] font-black text-slate-400 uppercase print:text-black print:overflow-visible">
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[12%] print:align-top print:whitespace-normal">Struktur / Akun</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[35%] print:align-top print:whitespace-normal">Uraian & Perincian</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-center print:w-[8%] print:align-top print:whitespace-normal">Vol</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[13%] print:align-top print:whitespace-normal">Harga</th>
-                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[15%] print:align-top print:whitespace-normal">Jumlah (IDR)</th>
-                                    <th className="px-6 py-4 print:text-[8pt] print:border-black print:border-[0.5pt] print:py-2 print:px-3 text-center print:w-[17%] print:align-top print:whitespace-normal">Keterangan</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[15%] print:align-top print:whitespace-normal">Struktur / Akun</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 print:w-[42%] print:align-top print:whitespace-normal">Uraian & Perincian</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-center print:w-[10%] print:align-top print:whitespace-normal">Vol</th>
+                                    <th className="px-6 py-4 border-r print:border-black print:border-[0.5pt] print:text-[8pt] print:py-2 print:px-3 text-right print:w-[15%] print:align-top print:whitespace-normal">Harga</th>
+                                    <th className="px-6 py-4 print:text-[8pt] print:border-black print:border-[0.5pt] print:py-2 print:px-3 text-right print:w-[18%] print:align-top print:whitespace-normal">Jumlah (IDR)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 print:divide-y-0 print:overflow-visible">
@@ -814,18 +687,12 @@ const RequestDetail: React.FC = () => {
                                             )}
                                             
                                             <p className="text-xs font-bold uppercase print:text-[8pt] leading-tight break-words print:overflow-visible print:whitespace-normal">{item.title}</p>
+                                            {item.detail_barang && <p className="text-[8px] text-slate-400 italic print:text-black print:text-[6.5pt] break-words mt-0.5 leading-tight print:overflow-visible print:whitespace-normal">Rincian: {item.detail_barang}</p>}
                                             <p className="text-[9px] md:text-[8px] text-slate-500 font-bold italic mt-2 leading-tight print:text-[6.5pt] print:text-black uppercase break-words print:overflow-visible print:whitespace-normal">
-                                                ({[
-                                                    { v: item.f1_val, u: item.f1_unit },
-                                                    { v: item.f2_val, u: item.f2_unit },
-                                                    { v: item.f3_val, u: item.f3_unit },
-                                                    { v: item.f4_val, u: item.f4_unit }
-                                                ].filter((f, i) => i === 0 || (f.u && f.u.trim() !== '')).map((f, i) => (
-                                                    <React.Fragment key={i}>
-                                                        {i > 0 ? ' x ' : ''}
-                                                        {f.v} {f.u}
-                                                    </React.Fragment>
-                                                ))})
+                                                ({item.f1_val} {item.f1_unit} 
+                                                {item.f2_unit ? ` x ${item.f2_val} ${item.f2_unit}` : ''} 
+                                                {item.f3_unit ? ` x ${item.f3_val} ${item.f3_unit}` : ''} 
+                                                {item.f4_unit ? ` x ${item.f4_val} ${item.f4_unit}` : ''})
                                             </p>
                                         </td>
                                         <td className="px-6 py-4 text-center border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top print:whitespace-normal print:overflow-visible">
@@ -834,16 +701,13 @@ const RequestDetail: React.FC = () => {
                                         <td className="px-6 py-4 text-right border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-xs print:text-[7.5pt] print:align-top print:whitespace-normal print:overflow-visible">
                                             <span className="leading-tight print:overflow-visible print:whitespace-normal">{item.hargaSatuan.toLocaleString('id-ID')}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right border-r print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-sm font-black font-mono print:text-[8pt] print:align-top print:whitespace-normal print:overflow-visible">
+                                        <td className="px-6 py-4 text-right text-sm font-black font-mono print:text-[8pt] print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 print:align-top print:whitespace-normal print:overflow-visible">
                                             <span className="leading-tight print:overflow-visible print:whitespace-normal">{item.jumlah.toLocaleString('id-ID')}</span>
-                                        </td>
-                                        <td className="px-6 py-4 print:border-black print:border-[0.5pt] print:py-1.5 print:px-2 text-center print:align-top print:overflow-visible">
-                                            <p className="text-[8px] font-bold text-slate-500 print:text-black print:text-[7pt] break-words uppercase leading-tight print:overflow-visible print:whitespace-normal">{item.detail_barang || '-'}</p>
                                         </td>
                                     </tr>
                                 ))}
                                 <tr className="bg-slate-950 text-white print:bg-gray-100 print:text-black print:border-t-[1.2pt] print:border-black break-inside-avoid print:overflow-visible">
-                                    <td colSpan={5} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 print:overflow-visible">TOTAL KESELURUHAN</td>
+                                    <td colSpan={4} className="px-6 py-4 text-right text-[10px] font-black uppercase border-r print:border-black print:border-[0.5pt] print:text-[9pt] print:py-3 print:px-4 print:overflow-visible">TOTAL KESELURUHAN</td>
                                     <td className="px-6 py-4 text-right text-lg font-black font-mono print:text-[10pt] print:border-black print:border-[0.5pt] print:py-3 print:px-4 print:overflow-visible">Rp {request.amount.toLocaleString('id-ID')}</td>
                                 </tr>
                                 {request.status === 'realized' && (
@@ -864,174 +728,16 @@ const RequestDetail: React.FC = () => {
                     <div className="print-only mt-6 break-inside-avoid print:overflow-visible">
                         <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed print:overflow-visible">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
-                            <tbody>
-                                <tr className="h-20">
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('reviewed_program') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-70">
-                                                <div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('reviewed_tu') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                {request.mengetahui_signature_url ? (
-                                                    <img src={request.mengetahui_signature_url} alt="TTD TU" className="h-16 object-contain opacity-80" />
-                                                ) : (
-                                                    <div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('approved') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                                <tr className="text-[7.5pt] font-bold uppercase">
-                                    <td className="border-black py-2 border-[1pt]">
-                                        {request.validator_program_name && <p className="mb-1 font-black">{request.validator_program_name}</p>}
-                                        Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}
-                                    </td>
-                                    <td className="border-black py-2 border-[1pt]">
-                                        {request.validator_tu_name && <p className="mb-1 font-black">{request.validator_tu_name}</p>}
-                                        Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}
-                                    </td>
-                                    <td className="border-black py-2 border-[1pt]">
-                                        {request.validator_ppk_name && <p className="mb-1 font-black">{request.validator_ppk_name}</p>}
-                                        Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody><tr className="h-20"><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[7.5pt] font-bold uppercase"><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td></tr></tbody>
                         </table>
                     </div>
 
                     <div className="print-only mt-10 break-inside-avoid print:overflow-visible">
-                        <div className="grid grid-cols-2 gap-12 text-center text-[9pt]">
-                            <div className="space-y-16">
-                                <div>
-                                    <p className="font-bold">Mengetahui,</p>
-                                    <p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p>
-                                </div>
-                                <div className="relative flex flex-col items-center justify-center">
-                                    {request.mengetahui_signature_url ? (
-                                        <img src={request.mengetahui_signature_url} alt="TTD Mengetahui" className="h-20 object-contain mb-[-20px]" />
-                                    ) : (
-                                        <div className="h-20"></div>
-                                    )}
-                                    <p className="font-black underline uppercase">( {request.validator_kabid_name || request.validator_tu_name || '.....................................................'} )</p>
-                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
-                                </div>
-                            </div>
-                            <div className="space-y-16">
-                                <div>
-                                    <p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p>
-                                    <p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p>
-                                </div>
-                                <div className="relative flex flex-col items-center justify-center">
-                                    {request.requester_signature_url ? (
-                                        <img src={request.requester_signature_url} alt="TTD Pengusul" className="h-20 object-contain mb-[-20px]" />
-                                    ) : (
-                                        <div className="h-20"></div>
-                                    )}
-                                    <p className="font-black underline uppercase">( {request.requester_name} )</p>
-                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
-                                </div>
-                            </div>
-                        </div>
+                        <div className="grid grid-cols-2 gap-12 text-center text-[9pt]"><div className="space-y-16"><div><p className="font-bold">Mengetahui,</p><p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p></div><div><p className="font-black underline uppercase">( ..................................................... )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div><div className="space-y-16"><div><p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p><p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div><div><p className="font-black underline uppercase">( {request.requester_name} )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div></div>
                     </div>
                 </div>
 
                 <div className="xl:col-span-1 space-y-8 no-print">
-                    {/* Signature Upload Section */}
-                    {(user?.id === request.requester_id || user?.role === 'admin') && (
-                        <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm space-y-6">
-                            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                                <Edit3 size={20} className="text-blue-600" />
-                                <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-900">Tanda Tangan Digital</h4>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tanda Tangan Pengusul</p>
-                                    <div className="flex items-center gap-2">
-                                        {request.requester_signature_url ? (
-                                            <div className="relative group flex-1">
-                                                <img src={request.requester_signature_url} alt="TTD" className="w-full h-20 object-contain border rounded-xl bg-slate-50" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
-                                                    <label className="p-2 bg-white/20 hover:bg-white/40 rounded-lg cursor-pointer transition-all">
-                                                        <UploadCloud size={16} className="text-white" />
-                                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'pengusul')} />
-                                                    </label>
-                                                    <button 
-                                                        onClick={() => setShowSigPad({ show: true, type: 'pengusul' })}
-                                                        className="p-2 bg-white/20 hover:bg-white/40 rounded-lg transition-all"
-                                                    >
-                                                        <Edit3 size={16} className="text-white" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col w-full gap-2">
-                                                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer">
-                                                    {sigLoading.type === 'pengusul' && sigLoading.loading ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <UploadCloud size={20} className="text-slate-400" />}
-                                                    <span className="text-[9px] font-black text-slate-500 uppercase">Upload TTD</span>
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'pengusul')} />
-                                                </label>
-                                                <button 
-                                                    onClick={() => setShowSigPad({ show: true, type: 'pengusul' })}
-                                                    className="w-full py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[9px] font-black text-slate-500 uppercase flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
-                                                >
-                                                    <Edit3 size={14} /> Gambar TTD
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tanda Tangan Mengetahui</p>
-                                    <div className="flex items-center gap-2">
-                                        {request.mengetahui_signature_url ? (
-                                            <div className="relative group flex-1">
-                                                <img src={request.mengetahui_signature_url} alt="TTD" className="w-full h-20 object-contain border rounded-xl bg-slate-50" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
-                                                    <label className="p-2 bg-white/20 hover:bg-white/40 rounded-lg cursor-pointer transition-all">
-                                                        <UploadCloud size={16} className="text-white" />
-                                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'mengetahui')} />
-                                                    </label>
-                                                    <button 
-                                                        onClick={() => setShowSigPad({ show: true, type: 'mengetahui' })}
-                                                        className="p-2 bg-white/20 hover:bg-white/40 rounded-lg transition-all"
-                                                    >
-                                                        <Edit3 size={16} className="text-white" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col w-full gap-2">
-                                                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer">
-                                                    {sigLoading.type === 'mengetahui' && sigLoading.loading ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <UploadCloud size={20} className="text-slate-400" />}
-                                                    <span className="text-[9px] font-black text-slate-500 uppercase">Upload TTD</span>
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(e, 'mengetahui')} />
-                                                </label>
-                                                <button 
-                                                    onClick={() => setShowSigPad({ show: true, type: 'mengetahui' })}
-                                                    className="w-full py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[9px] font-black text-slate-500 uppercase flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
-                                                >
-                                                    <Edit3 size={14} /> Gambar TTD
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {request.requester_id === user?.id && request.status !== 'realized' && request.status !== 'rejected' && (
                         <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl text-white space-y-6 animate-in slide-in-from-right-4 duration-500">
                             <div className="flex items-center gap-3 border-b border-white/10 pb-4">
@@ -1085,42 +791,13 @@ const RequestDetail: React.FC = () => {
                             {detailedSteps.map((step) => (
                                 <div key={step.s} className="relative flex items-start gap-5 pb-8 last:pb-0">
                                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isStepCompleted(step.s) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>{step.icon}</div>
-                                    <div className="flex-1 -mt-1">
-                                        <p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p>
-                                        {isStepCompleted(step.s) && (
-                                            <p className="text-[8px] font-black text-blue-600 uppercase mt-1">
-                                                {step.s === 'pending' ? request.requester_name : (
-                                                    step.s === 'reviewed_bidang' ? request.validator_kabid_name : (
-                                                        step.s === 'reviewed_program' ? request.validator_program_name : (
-                                                            step.s === 'reviewed_tu' ? request.validator_tu_name : (
-                                                                step.s === 'approved' ? request.validator_ppk_name : (
-                                                                    step.s === 'reviewed_pic' ? request.validator_pic_name : (
-                                                                        step.s === 'realized' ? request.validator_bendahara_name : null
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )}
-                                            </p>
-                                        )}
-                                    </div>
+                                    <div className="flex-1 -mt-1"><p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p><p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p></div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
             </div>
-
-            {showSigPad.show && (
-                <SignaturePad 
-                    title={`Tanda Tangan ${showSigPad.type === 'pengusul' ? 'Pengusul' : 'Mengetahui'}`}
-                    onClose={() => setShowSigPad({ show: false, type: 'pengusul' })}
-                    onSave={handleSignatureSave}
-                    loading={sigLoading.loading}
-                />
-            )}
         </div>
     );
 };
