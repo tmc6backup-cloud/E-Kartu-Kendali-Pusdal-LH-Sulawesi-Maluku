@@ -37,9 +37,12 @@ import {
     Heading,
     ShieldAlert,
     Layers,
-    Users
+    Users,
+    Edit3
 } from 'lucide-react';
 import { CalculationItem, BudgetStatus, BudgetRequest, BudgetCeiling, Profile } from '../types.ts';
+
+import SignaturePad from '../components/SignaturePad.tsx';
 
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
@@ -70,13 +73,17 @@ const NewRequest: React.FC = () => {
     const [targetValidators, setTargetValidators] = useState<Profile[]>([]);
     const [existingRequest, setExistingRequest] = useState<BudgetRequest | null>(null);
 
+    const [showSigPad, setShowSigPad] = useState(false);
+    const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+    const [sigLoading, setSigLoading] = useState(false);
+
     const [manualVolkeg, setManualVolkeg] = useState<Record<string, boolean>>({});
 
     const [items, setItems] = useState<CalculationItem[]>([
         { 
             id: '1', header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '',
-            kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR',
-            f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, 
+            kode_akun: '521211', f1_val: 1, f1_unit: '', f2_val: 1, f2_unit: '',
+            f3_val: 1, f3_unit: '', f4_val: 1, f4_unit: '', volkeg: 1, 
             satkeg: 'OK', hargaSatuan: 0, jumlah: 0 
         }
     ]);
@@ -196,6 +203,12 @@ const NewRequest: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent, status: BudgetStatus = 'pending') => {
         if (e) e.preventDefault();
         
+        if (status === 'pending' && !signatureUrl && !existingRequest?.requester_signature_url) {
+            alert("Harap bubuhkan tanda tangan Anda terlebih dahulu.");
+            setShowSigPad(true);
+            return;
+        }
+
         if (!isAdmin && status === 'pending' && hasOverBudgetItems) {
             alert("MAAF, PENGAJUAN ANDA MELEBIHI PAGU. Silakan sesuaikan kembali rincian biaya Anda.");
             return;
@@ -238,7 +251,8 @@ const NewRequest: React.FC = () => {
                 calculation_items: items,
                 status: initialStatus,
                 ai_analysis: aiResult,
-                attachment_url: attachment_url || undefined
+                attachment_url: attachment_url || undefined,
+                requester_signature_url: signatureUrl || existingRequest?.requester_signature_url
             };
 
             let result: BudgetRequest;
@@ -265,6 +279,42 @@ const NewRequest: React.FC = () => {
             console.error(err);
             alert("Terjadi kesalahan.");
         } finally { setLoading(false); }
+    };
+
+    const handleSaveSignature = async (dataUrl: string) => {
+        setSigLoading(true);
+        try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], `signature_${Date.now()}.png`, { type: 'image/png' });
+            const url = await dbService.uploadAttachment(file);
+            if (url) {
+                setSignatureUrl(url);
+                setShowSigPad(false);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Gagal menyimpan tanda tangan.");
+        } finally {
+            setSigLoading(false);
+        }
+    };
+
+    const handleFileUploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        setSigLoading(true);
+        try {
+            const url = await dbService.uploadAttachment(file);
+            if (url) {
+                setSignatureUrl(url);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Gagal mengunggah tanda tangan.");
+        } finally {
+            setSigLoading(false);
+        }
     };
 
     const notifyValidator = (v: Profile) => {
@@ -365,6 +415,51 @@ const NewRequest: React.FC = () => {
                         </div>
 
                         <div className="space-y-8">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanda Tangan Pengusul</label>
+                                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[32px] group hover:border-blue-400 transition-all">
+                                    {signatureUrl || existingRequest?.requester_signature_url ? (
+                                        <div className="relative flex flex-col items-center gap-4">
+                                            <img src={signatureUrl || existingRequest?.requester_signature_url} alt="Signature" className="h-32 object-contain" />
+                                            <div className="flex flex-wrap justify-center gap-3">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setShowSigPad(true)}
+                                                    className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-100 transition-all flex items-center gap-2"
+                                                >
+                                                    <Edit3 size={14} /> Gambar Ulang
+                                                </button>
+                                                <label className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2">
+                                                    <UploadCloud size={14} /> Upload Ulang
+                                                    <input type="file" accept="image/*" className="hidden" onChange={handleFileUploadSignature} />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-6">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowSigPad(true)}
+                                                className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-blue-500 transition-all"
+                                            >
+                                                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100"><Edit3 size={32} /></div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Klik untuk Tanda Tangan</span>
+                                            </button>
+                                            <div className="flex items-center gap-4 w-full">
+                                                <div className="h-px bg-slate-200 flex-1"></div>
+                                                <span className="text-[8px] font-black text-slate-300 uppercase">Atau</span>
+                                                <div className="h-px bg-slate-200 flex-1"></div>
+                                            </div>
+                                            <label className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[9px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all cursor-pointer shadow-sm">
+                                                {sigLoading ? <Loader2 size={14} className="animate-spin text-blue-600" /> : <UploadCloud size={16} />}
+                                                Upload Gambar TTD
+                                                <input type="file" accept="image/*" className="hidden" onChange={handleFileUploadSignature} />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nama Kegiatan</label>
                                 <input 
@@ -439,7 +534,7 @@ const NewRequest: React.FC = () => {
                                 type="button" 
                                 onClick={() => {
                                     const newId = Date.now().toString();
-                                    setItems([...items, { id: newId, header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: 'OR', f2_val: 1, f2_unit: 'HR', f3_val: 1, f3_unit: 'KL', f4_val: 1, f4_unit: 'PK', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
+                                    setItems([...items, { id: newId, header: '', sub_header: '', title: '', detail_barang: '', kro_code: '', ro_code: '', komponen_code: '', subkomponen_code: '', kode_akun: '521211', f1_val: 1, f1_unit: '', f2_val: 1, f2_unit: '', f3_val: 1, f3_unit: '', f4_val: 1, f4_unit: '', volkeg: 1, satkeg: 'OK', hargaSatuan: 0, jumlah: 0 }]);
                                 }} 
                                 className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-3"
                             >
@@ -495,62 +590,72 @@ const NewRequest: React.FC = () => {
                                     <div className="p-6 md:p-10 space-y-8 md:space-y-10">
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 border-b border-slate-50 pb-8 md:pb-10">
                                             <div className="space-y-6">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Heading size={14} /> Header Jika Ada</label>
-                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} />
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1 flex items-center gap-2"><Heading size={12} /> Header Jika Ada</label>
+                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50/50 border border-slate-100 rounded-[24px] text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" value={item.header || ''} onChange={(e) => handleItemChange(item.id, 'header', e.target.value)} />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Layers size={14} /> Sub Header Jika Ada</label>
-                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} />
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1 flex items-center gap-2"><Layers size={12} /> Sub Header Jika Ada</label>
+                                                        <input type="text" className="w-full px-6 py-4 bg-slate-50/50 border border-slate-100 rounded-[24px] text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" value={item.sub_header || ''} onChange={(e) => handleItemChange(item.id, 'sub_header', e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Utama</label>
-                                                    <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} />
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Uraian Utama</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50/50 border border-slate-100 rounded-[24px] text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Detail Barang / Spesifikasi (Opsional)</label>
+                                                    <input type="text" className="w-full px-6 py-5 bg-slate-50/50 border border-slate-100 rounded-[24px] text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} />
                                                 </div>
                                             </div>
 
-                                            <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 relative overflow-hidden">
-                                                <div className="flex items-center justify-between mb-4">
+                                            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden">
+                                                <div className="flex items-center justify-between mb-8">
                                                     <div className="flex items-center gap-3">
-                                                        <Calculator size={16} className="text-blue-600" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">1. Faktor Volume</span>
+                                                        <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
+                                                            <Calculator size={16} className="text-blue-600" />
+                                                        </div>
+                                                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">1. Faktor Volume</span>
                                                     </div>
                                                     <button 
                                                         type="button" 
                                                         onClick={() => toggleManualMode(item.id)}
-                                                        className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                                                        className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${isManual ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}
                                                     >
                                                         {isManual ? <Keyboard size={12} /> : <Zap size={12} />}
                                                         {isManual ? 'Manual' : 'Rumus'}
                                                     </button>
                                                 </div>
                                                 
-                                                <div className="flex overflow-x-auto no-scrollbar pb-2 items-center gap-3">
+                                                <div className="grid grid-cols-1 gap-2.5">
                                                     {[1,2,3,4].map(n => (
-                                                        <React.Fragment key={n}>
-                                                            <div className={`flex-1 min-w-[100px] bg-white p-3 rounded-2xl shadow-sm border border-slate-100 space-y-2 transition-all ${isManual ? 'opacity-30' : ''}`}>
-                                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">F{n}</p>
-                                                                <div className="flex items-center flex-col gap-1">
+                                                        <div key={n} className={`flex items-center gap-3 bg-slate-50/30 p-2.5 rounded-[20px] border border-slate-100 transition-all ${isManual ? 'opacity-30' : ''}`}>
+                                                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 border border-slate-100 shadow-sm">F{n}</div>
+                                                            <div className="flex-1 grid grid-cols-2 gap-3">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[7px] font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Nilai</p>
                                                                     <input 
                                                                         type="number" 
                                                                         disabled={isManual}
-                                                                        className="w-full text-center text-xs font-black outline-none bg-transparent" 
+                                                                        className="w-full px-3 py-2 bg-white border border-slate-100 rounded-xl text-[10px] font-black outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all text-center" 
                                                                         value={item[`f${n}_val` as keyof CalculationItem] as number} 
                                                                         onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} 
                                                                     />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[7px] font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Satuan</p>
                                                                     <input 
                                                                         type="text" 
                                                                         disabled={isManual}
-                                                                        className="w-full text-[7px] font-black text-blue-500 text-center outline-none uppercase bg-blue-50 rounded px-1 py-0.5" 
+                                                                        className="w-full px-3 py-2 bg-blue-50/50 border border-blue-100 rounded-xl text-[10px] font-black text-blue-600 outline-none focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all uppercase text-center" 
                                                                         value={item[`f${n}_unit` as keyof CalculationItem] as string} 
                                                                         onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} 
+                                                                        placeholder="CTH: OR"
                                                                     />
                                                                 </div>
                                                             </div>
-                                                            {n < 4 && <div className={`text-slate-200 font-black text-xs ${isManual ? 'opacity-0' : ''}`}>×</div>}
-                                                        </React.Fragment>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </div>
@@ -654,6 +759,15 @@ const NewRequest: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {showSigPad && (
+                <SignaturePad 
+                    title="Tanda Tangan Pengusul"
+                    onSave={handleSaveSignature}
+                    onClose={() => setShowSigPad(false)}
+                    loading={sigLoading}
+                />
+            )}
 
             {/* Modal Sukses */}
             {showSuccessModal && (
