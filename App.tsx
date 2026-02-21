@@ -22,10 +22,10 @@ interface AuthContextType {
     installApp: () => void;
 }
 
-export const AuthContext = React.createContext<AuthContextType>({
-    user: null,
+export const AuthContext = React.createContext<AuthContextType>({ 
+    user: null, 
     isLoggedIn: false,
-    login: async () => {},
+    login: async () => {}, 
     logout: () => {},
     deferredPrompt: null,
     installApp: () => {}
@@ -34,8 +34,8 @@ export const AuthContext = React.createContext<AuthContextType>({
 export const isValidatorRole = (role?: UserRole | string) => {
     if (!role) return false;
     const validatorRoles: string[] = [
-        'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin',
-        'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu',
+        'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin', 
+        'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu', 
         'pic_wilayah_1', 'pic_wilayah_2', 'pic_wilayah_3'
     ];
     return validatorRoles.includes(role);

@@ -2,7 +2,6 @@
   "name": "e-kartu-kendali-pusdal-lh-suma",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host 0.0.0.0",
     "build": "vite build",
@@ -16,14 +15,12 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router-dom": "^7.0.0",
-    "recharts": "^2.15.4"
+    "recharts": "^2.13.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.1.4",
-    "autoprefixer": "^10.4.24",
-    "postcss": "^8.5.6",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }

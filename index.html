@@ -5,11 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png">
-    <link rel="manifest" id="manifest-link" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,9 +23,6 @@
             return '/';
         };
         window.APP_BASE = getBase();
-        
-        // Fix manifest path for GitHub Pages
-        document.getElementById('manifest-link').href = window.APP_BASE + 'manifest.json';
         
         if (!window.process) window.process = { env: {} };
         if (!window.process.env) window.process.env = {};
@@ -257,7 +253,7 @@
         function launch() {
             const script = document.createElement('script');
             script.type = 'module';
-            script.src = window.APP_BASE + 'src/index.tsx?v=' + Date.now();
+            script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
             document.body.appendChild(script);
 
             setTimeout(() => { forceBtn.style.display = 'block'; }, 6000);

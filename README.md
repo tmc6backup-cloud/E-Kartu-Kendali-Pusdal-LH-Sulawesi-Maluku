@@ -1,38 +1,20 @@
-# E-Kartu Kendali PUSDAL LH SUMA
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-Aplikasi dashboard kontrol anggaran untuk PUSDAL LH SUMA.
+# Run and deploy your AI Studio app
 
-## Fitur Utama
+This contains everything you need to run your app locally.
 
-- **Dashboard Kontrol Anggaran**: Visualisasi realisasi penyerapan dana dan tren keuangan bulanan.
-- **Analisis AI**: Integrasi dengan Gemini API untuk memberikan insight strategis dan analisis pengajuan anggaran.
-- **Manajemen Pengajuan**: Alur kerja pengajuan anggaran dari pengaju hingga validator.
-- **Manajemen Pagu**: Pengaturan pagu anggaran kantor dan bidang.
+View your app in AI Studio: https://ai.studio/apps/a4f2b337-44f8-4eb6-b8d6-f04336bb2e42
 
-## Teknologi
+## Run Locally
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS.
-- **Charts**: Recharts.
-- **Icons**: Lucide React.
-- **AI**: Google Gemini API (@google/genai).
-- **Build Tool**: Vite.
+**Prerequisites:**  Node.js
 
-## Pengembangan
 
-1. Salin `.env.example` menjadi `.env` dan isi kunci API yang diperlukan.
-2. Instal dependensi:
-   ```bash
-   npm install
-   ```
-3. Jalankan server pengembangan:
-   ```bash
-   npm run dev
-   ```
-4. Bangun untuk produksi:
-   ```bash
-   npm run build
-   ```
-
-## Lisensi
-
-MIT
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
