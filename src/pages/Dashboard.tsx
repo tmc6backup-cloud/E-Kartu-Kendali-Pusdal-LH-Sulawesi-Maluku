@@ -285,22 +285,16 @@ const Dashboard: React.FC = () => {
                     <div className="flex-1 w-full h-full relative" ref={areaContainerRef}>
                         {dimensions.areaW > 0 && dimensions.areaH > 0 ? (
                             <BarChart width={dimensions.areaW} height={dimensions.areaH} data={stats.monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorUsulan" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} axisLine={false} tickLine={false} tickFormatter={(val) => `${(val/1000000).toFixed(0)}jt`} />
-                                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }} />
-                                <Bar name="Usulan" dataKey="amount" fill="#3b82f6" isAnimationActive={false} />
-                                <Bar name="Realisasi" dataKey="realized" fill="#10b981" isAnimationActive={false} />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }} 
+                                    cursor={{ fill: '#f8fafc' }}
+                                />
+                                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', paddingBottom: '20px' }} />
+                                <Bar name="Usulan" dataKey="amount" fill="#3b82f6" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={20} />
+                                <Bar name="Realisasi" dataKey="realized" fill="#10b981" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={20} />
                             </BarChart>
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 rounded-[40px]">
