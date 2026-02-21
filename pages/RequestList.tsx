@@ -177,25 +177,14 @@ const RequestList: React.FC = () => {
                                                 </td>
                                             )}
                                             <td className="px-8 py-7 print:py-3 print:px-4">
-                                                <div className="space-y-2">
-                                                    {([req.structural_note, req.program_note, req.tu_note, req.ppk_note, req.pic_note].some(n => n)) && (
-                                                        <p className="text-[9px] font-bold text-slate-900 uppercase tracking-widest font-sans">RIWAYAT CATATAN:</p>
-                                                    )}
-                                                    {[  {note: req.structural_note, label: 'Kabid'},
-                                                        {note: req.program_note, label: 'Program'},
-                                                        {note: req.tu_note, label: 'TU'},
-                                                        {note: req.ppk_note, label: 'PPK'},
-                                                        {note: req.pic_note, label: 'PIC'}
-                                                    ].filter(n => n.note).map((n, i) => (
-                                                        <div key={i} className={`flex items-start gap-2 max-w-[250px] ${req.status === 'rejected' ? 'text-red-500' : 'text-slate-400'}`}>
-                                                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md font-sans ${req.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>{n.label}</span>
-                                                            <p className="text-[10px] font-semibold font-sans">{n.note}</p>
-                                                        </div>
-                                                    ))}
-                                                    {!req.structural_note && !req.program_note && !req.tu_note && !req.ppk_note && !req.pic_note && (
-                                                        <span className="text-[9px] font-bold text-slate-200 uppercase">-</span>
-                                                    )}
-                                                </div>
+                                                {lastNote ? (
+                                                    <div className={`flex items-start gap-2 max-w-[200px] ${req.status === 'rejected' ? 'text-red-500' : 'text-slate-400'}`}>
+                                                        <MessageSquareQuote size={12} className="shrink-0 mt-0.5" />
+                                                        <p className="text-[9px] font-bold uppercase truncate italic">{lastNote}</p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[9px] font-bold text-slate-200 uppercase">-</span>
+                                                )}
                                             </td>
                                             <td className="px-8 py-7 text-right font-black font-mono text-sm print:text-[9pt] print:py-3 print:px-4">Rp {req.amount.toLocaleString('id-ID')}</td>
                                             <td className="px-8 py-7 text-center print:py-3 print:px-4"><StatusBadge status={req.status} /></td>

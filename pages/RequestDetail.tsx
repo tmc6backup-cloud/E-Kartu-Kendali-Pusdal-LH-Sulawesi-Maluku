@@ -75,7 +75,6 @@ const RequestDetail: React.FC = () => {
     const [validators, setValidators] = useState<Profile[]>([]);
     const [copied, setCopied] = useState(false);
     const [sequenceNumber, setSequenceNumber] = useState<number>(1);
-    const [allPersonnel, setAllPersonnel] = useState<Profile[]>([]);
 
     // States for SPJ Documents
     const [spjLoading, setSpjLoading] = useState(false);
@@ -112,13 +111,7 @@ const RequestDetail: React.FC = () => {
         if (!id) return;
         setLoading(true);
         try {
-            const [data, profiles] = await Promise.all([
-                dbService.getRequestById(id),
-                dbService.getAllProfiles()
-            ]);
-            
-            setAllPersonnel(profiles);
-
+            const data = await dbService.getRequestById(id);
             if (data) {
                 if (user?.role === 'kepala_bidang' || user?.role?.startsWith('pic_wilayah_')) {
                     const myDepts = user.department?.split(', ').map(d => d.trim().toLowerCase()) || [];
@@ -342,37 +335,14 @@ const RequestDetail: React.FC = () => {
         realized: { label: 'REALISASI SELESAI', color: 'bg-emerald-600 text-white' }
     }[request.status] || { label: request.status.toUpperCase(), color: 'bg-slate-50 text-slate-700' };
 
-    const getPersonnelByRole = (role: string, dept?: string) => {
-        return allPersonnel.filter(p => {
-            if (p.role !== role) return false;
-            if (dept && (role === 'kepala_bidang' || role.startsWith('pic_wilayah_'))) {
-                return p.department?.toLowerCase().includes(dept.toLowerCase());
-            }
-            return true;
-        });
-    };
-
-    // Helper untuk Nama Pejabat (Hardcoded sesuai permintaan)
-    const getHeadOfDepartmentInfo = (dept: string) => {
-        const deptLower = dept?.toLowerCase() || '';
-        // Cek Wilayah III dulu karena mengandung string 'wilayah i'
-        if (deptLower.includes('wilayah iii')) return { name: "Suwardi", title: "Kepala Bidang Wilayah III" };
-        if (deptLower.includes('wilayah ii')) return { name: "Arnianah Alwi", title: "Kepala Bidang Wilayah II" };
-        if (deptLower.includes('wilayah i')) return { name: "Andi Samra", title: "Kepala Bidang Wilayah I" };
-        if (deptLower.includes('tata usaha') || deptLower.includes('program') || deptLower.includes('kehumasan') || deptLower.includes('kepegawaian') || deptLower.includes('keuangan')) {
-            return { name: "Rina Triany", title: "Kepala Subbagian TU" };
-        }
-        return { name: "", title: `Kepala ${dept}` };
-    };
-
     const detailedSteps = [
-        { s: 'pending', l: 'Diajukan', role: 'Pengaju', icon: <User size={14} />, names: request.requester_name },
-        { s: 'reviewed_bidang', l: 'Persetujuan Kabid', role: 'Kepala Bidang', icon: <UserCheck size={14} />, hidden: isStructuralSkipped, names: getHeadOfDepartmentInfo(request.requester_department || '').name || getPersonnelByRole('kepala_bidang', request.requester_department).map(p => p.full_name).join(', ') },
-        { s: 'reviewed_program', l: 'Validasi Program', role: 'Validator Program', icon: <GanttChart size={14} />, names: getPersonnelByRole('validator_program').map(p => p.full_name).join(', ') },
-        { s: 'reviewed_tu', l: 'Validasi TU', role: 'Kasubag TU', icon: <FileSearch size={14} />, names: "Rina Triany" },
-        { s: 'approved', l: 'Pengesahan PPK', role: 'Pejabat PPK', icon: <Stamp size={14} />, names: getPersonnelByRole('validator_ppk').map(p => p.full_name).join(', ') },
-        { s: 'reviewed_pic', l: 'Verifikasi SPJ', role: 'PIC Verifikator', icon: <ShieldIcon size={14} />, names: getPersonnelByRole('pic_verifikator').map(p => p.full_name).join(', ') },
-        { s: 'realized', l: 'Pembayaran', role: 'Bendahara', icon: <Coins size={14} />, names: getPersonnelByRole('bendahara').map(p => p.full_name).join(', ') }
+        { s: 'pending', l: 'Diajukan', role: 'Pengaju', icon: <User size={14} /> },
+        { s: 'reviewed_bidang', l: 'Persetujuan Kabid', role: 'Kepala Bidang', icon: <UserCheck size={14} />, hidden: isStructuralSkipped },
+        { s: 'reviewed_program', l: 'Validasi Program', role: 'Validator Program', icon: <GanttChart size={14} /> },
+        { s: 'reviewed_tu', l: 'Validasi TU', role: 'Kasubag TU', icon: <FileSearch size={14} /> },
+        { s: 'approved', l: 'Pengesahan PPK', role: 'Pejabat PPK', icon: <Stamp size={14} /> },
+        { s: 'reviewed_pic', l: 'Verifikasi SPJ', role: 'PIC Verifikator', icon: <ShieldIcon size={14} /> },
+        { s: 'realized', l: 'Pembayaran', role: 'Bendahara', icon: <Coins size={14} /> }
     ].filter(step => !step.hidden);
 
     const isStepCompleted = (stepStatus: string) => {
@@ -758,83 +728,12 @@ const RequestDetail: React.FC = () => {
                     <div className="print-only mt-6 break-inside-avoid print:overflow-visible">
                         <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed print:overflow-visible">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
-                            <tbody>
-                                <tr className="h-20">
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('reviewed_program') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-70">
-                                                <div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase mb-1">TERVERIFIKASI</div>
-                                                <p className="text-[7pt] font-black text-slate-900 uppercase">{getPersonnelByRole('validator_program').map(p => p.full_name).join(', ')}</p>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('reviewed_tu') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-70">
-                                                <div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase mb-1">TERVERIFIKASI</div>
-                                                <p className="text-[7pt] font-black text-slate-900 uppercase">Rina Triany</p>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="border-black relative border-[1pt]">
-                                        {isStepCompleted('approved') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase mb-1">DISETUJUI PPK</div>
-                                                <p className="text-[7pt] font-black text-slate-900 uppercase">{getPersonnelByRole('validator_ppk').map(p => p.full_name).join(', ')}</p>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                                <tr className="text-[7.5pt] font-bold uppercase">
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
-                                </tr>
-                            </tbody>
+                            <tbody><tr className="h-20"><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_program') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('reviewed_tu') && <div className="absolute inset-0 flex items-center justify-center opacity-70"><div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase">TERVERIFIKASI</div></div>}</td><td className="border-black relative border-[1pt]">{isStepCompleted('approved') && <div className="absolute inset-0 flex items-center justify-center"><div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase">DISETUJUI PPK</div></div>}</td></tr><tr className="text-[7.5pt] font-bold uppercase"><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td><td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td></tr></tbody>
                         </table>
                     </div>
 
-                    <div className="print-only mt-4 break-inside-avoid print:overflow-visible">
-                        <div className="border border-black p-3 flex justify-between items-center bg-gray-50">
-                            <div className="flex items-center gap-4">
-                                <p className="text-[8.5pt] font-black uppercase">Verifikasi Kelengkapan SPJ (PIC):</p>
-                                <p className="text-[8.5pt] font-bold uppercase italic">
-                                    {isStepCompleted('reviewed_pic') ? 'TERVERIFIKASI' : 'BELUM TERVERIFIKASI'}
-                                </p>
-                            </div>
-                            <p className="text-[8.5pt] font-black uppercase">
-                                PIC: {getPersonnelByRole('pic_verifikator').map(p => p.full_name).join(', ') || '-'}
-                            </p>
-                        </div>
-                    </div>
-
                     <div className="print-only mt-10 break-inside-avoid print:overflow-visible">
-                        <div className="grid grid-cols-2 gap-12 text-center text-[9pt]">
-                            <div className="space-y-16">
-                                <div>
-                                    <p className="font-bold">Mengetahui,</p>
-                                    <p className="font-black uppercase leading-tight">
-                                        {getHeadOfDepartmentInfo(request.requester_department || '').title}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="font-black underline uppercase">
-                                        ( {getHeadOfDepartmentInfo(request.requester_department || '').name || '.....................................................'} )
-                                    </p>
-                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
-                                </div>
-                            </div>
-                            <div className="space-y-16">
-                                <div>
-                                    <p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p>
-                                    <p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p>
-                                </div>
-                                <div>
-                                    <p className="font-black underline uppercase">( {request.requester_name} )</p>
-                                    <p className="text-[8pt] mt-1">NIP. ..................................................</p>
-                                </div>
-                            </div>
-                        </div>
+                        <div className="grid grid-cols-2 gap-12 text-center text-[9pt]"><div className="space-y-16"><div><p className="font-bold">Mengetahui,</p><p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p></div><div><p className="font-black underline uppercase">( ..................................................... )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div><div className="space-y-16"><div><p className="font-bold">Makassar, {new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p><p className="font-black uppercase leading-tight">Pengusul / Penanggung Jawab,</p></div><div><p className="font-black underline uppercase">( {request.requester_name} )</p><p className="text-[8pt] mt-1">NIP. ..................................................</p></div></div></div>
                     </div>
                 </div>
 
@@ -892,11 +791,7 @@ const RequestDetail: React.FC = () => {
                             {detailedSteps.map((step) => (
                                 <div key={step.s} className="relative flex items-start gap-5 pb-8 last:pb-0">
                                     <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isStepCompleted(step.s) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>{step.icon}</div>
-                                    <div className="flex-1 -mt-1">
-                                        <p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p>
-                                        {step.names && <p className="text-[8px] font-black text-blue-600 uppercase mt-1 italic">{step.names}</p>}
-                                    </div>
+                                    <div className="flex-1 -mt-1"><p className="text-[10px] font-black uppercase text-slate-900">{step.l}</p><p className="text-[9px] font-bold text-slate-400 uppercase">{step.role}</p></div>
                                 </div>
                             ))}
                         </div>

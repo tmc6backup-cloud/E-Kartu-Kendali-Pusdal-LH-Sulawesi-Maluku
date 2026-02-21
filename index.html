@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -6,14 +7,271 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/public/logo.png">
-    <link rel="manifest" href="/public/manifest.json">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png">
+    <link rel="manifest" href="manifest.json">
     
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        const getBase = () => {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(s => s.length > 0);
+            if (window.location.hostname.includes('github.io') && segments.length > 0) {
+                return '/' + segments[0] + '/';
+            }
+            return '/';
+        };
+        window.APP_BASE = getBase();
+        
+        if (!window.process) window.process = { env: {} };
+        if (!window.process.env) window.process.env = {};
+        
+        window.process.env.SUPABASE_URL = window.process.env.SUPABASE_URL || "https://syptvhtbxflhjgdepbqs.supabase.co";
+        window.process.env.SUPABASE_ANON_KEY = window.process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR";
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; -webkit-tap-highlight-color: transparent; }
+        
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        *::-webkit-scrollbar {
+            display: none;
+        }
+
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+        }
+
+        .logo-container {
+            position: relative;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        .loader-bar {
+            width: 200px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loader-progress {
+            position: absolute;
+            height: 100%;
+            width: 40%;
+            background: #10b981;
+            border-radius: 10px;
+            animation: slide 1.5s infinite ease-in-out;
+        }
+
+        @keyframes slide {
+            0% { left: -40%; }
+            100% { left: 100%; }
+        }
+
+        .status-text {
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-top: 1.5rem;
+        }
+
+        #root { opacity: 0; transition: opacity 0.5s ease; height: 100%; width: 100%; overflow-y: auto; }
+        #root.loaded { opacity: 1; }
+        
+        .print-only { display: none !important; }
+
+        .force-btn {
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            display: none;
+        }
+
+        @media print { 
+            @page {
+                size: A4;
+                margin: 0.8cm 1.2cm;
+            }
+            .no-print { display: none !important; } 
+            .print-only { display: block !important; }
+            
+            * { 
+                overflow: visible !important; 
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            *::-webkit-scrollbar { display: none !important; }
+
+            body { 
+                overflow: visible !important; 
+                height: auto !important; 
+                width: 100% !important; 
+                background: white !important; 
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #root { 
+                overflow: visible !important; 
+                height: auto !important; 
+                opacity: 1 !important; 
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+            }
+            main {
+                overflow: visible !important;
+                height: auto !important;
+                padding: 0 !important;
+            }
+            
+            .break-inside-avoid {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            table { 
+                page-break-inside: auto; 
+                width: 100% !important;
+                border-collapse: collapse !important;
+                background-color: white !important;
+            }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
+    "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0"
+  }
+}
+</script>
 </head>
 <body>
+    <div id="splash-screen" class="splash-screen">
+        <div class="logo-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_Kementerian_Lingkungan_Hidup_-_Badan_Pengendalian_Lingkungan_Hidup_%282024%29_%28cropped%29.png" 
+                 alt="Logo KLH" style="width: 80px; height: 80px; object-fit: contain;">
+        </div>
+        <div class="loader-bar">
+            <div class="loader-progress"></div>
+        </div>
+        <p id="status-text" class="status-text">Memeriksa Versi Terbaru...</p>
+        <button id="force-btn" class="force-btn" onclick="hideSplash()">Masuk Paksa</button>
+    </div>
+
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+        const statusText = document.getElementById('status-text');
+        const splash = document.getElementById('splash-screen');
+        const root = document.getElementById('root');
+        const forceBtn = document.getElementById('force-btn');
+
+        function hideSplash() {
+            splash.style.opacity = '0';
+            splash.style.visibility = 'hidden';
+            root.classList.add('loaded');
+        }
+
+        async function start() {
+            try {
+                const swPath = window.APP_BASE + 'sw.js';
+                const reg = await navigator.serviceWorker.register(swPath, { scope: window.APP_BASE });
+                
+                reg.update();
+
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                console.log('Versi baru ditemukan, memperbarui aplikasi...');
+                                location.reload();
+                            }
+                        }
+                    };
+                };
+
+                if (navigator.serviceWorker.controller) {
+                    launch();
+                } else {
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log('Mesin aplikasi diperbarui.');
+                        location.reload();
+                    });
+                }
+            } catch (err) { 
+                console.error(err);
+                statusText.innerText = "Gangguan Jaringan. Mencoba Masuk...";
+                setTimeout(launch, 2000);
+            }
+        }
+
+        function launch() {
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = window.APP_BASE + 'index.tsx?v=' + Date.now();
+            document.body.appendChild(script);
+
+            setTimeout(() => { forceBtn.style.display = 'block'; }, 6000);
+
+            const checkReady = setInterval(() => {
+                if (root.innerHTML.trim().length > 50) {
+                    clearInterval(checkReady);
+                    hideSplash();
+                }
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(checkReady);
+                hideSplash();
+            }, 12000);
+        }
+
+        start();
+    </script>
 </body>
 </html>

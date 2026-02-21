@@ -509,10 +509,6 @@ const NewRequest: React.FC = () => {
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Uraian Utama</label>
                                                     <input type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.title} onChange={(e) => handleItemChange(item.id, 'title', e.target.value)} />
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rincian Detail</label>
-                                                    <textarea rows={2} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:bg-white focus:border-blue-600 transition-all shadow-inner" value={item.detail_barang || ''} onChange={(e) => handleItemChange(item.id, 'detail_barang', e.target.value)} placeholder="CTH: MERK, SPESIFIKASI, ATAU DETAIL LAINNYA..." />
-                                                </div>
                                             </div>
 
                                             <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 relative overflow-hidden">
@@ -531,32 +527,30 @@ const NewRequest: React.FC = () => {
                                                     </button>
                                                 </div>
                                                 
-                                                <div className="grid grid-cols-1 gap-2">
+                                                <div className="flex overflow-x-auto no-scrollbar pb-2 items-center gap-3">
                                                     {[1,2,3,4].map(n => (
-                                                        <div key={n} className={`flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 transition-all ${isManual ? 'opacity-30' : ''}`}>
-                                                            <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-[9px] font-black text-slate-400 shrink-0">F{n}</div>
-                                                            <div className="flex-1 grid grid-cols-2 gap-2">
-                                                                <div className="relative">
+                                                        <React.Fragment key={n}>
+                                                            <div className={`flex-1 min-w-[100px] bg-white p-3 rounded-2xl shadow-sm border border-slate-100 space-y-2 transition-all ${isManual ? 'opacity-30' : ''}`}>
+                                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">F{n}</p>
+                                                                <div className="flex items-center flex-col gap-1">
                                                                     <input 
                                                                         type="number" 
                                                                         disabled={isManual}
-                                                                        className="w-full px-3 py-2.5 bg-slate-50 rounded-xl text-xs font-black outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all text-center" 
+                                                                        className="w-full text-center text-xs font-black outline-none bg-transparent" 
                                                                         value={item[`f${n}_val` as keyof CalculationItem] as number} 
                                                                         onChange={(e) => handleItemChange(item.id, `f${n}_val` as keyof CalculationItem, e.target.value)} 
                                                                     />
-                                                                </div>
-                                                                <div className="relative">
                                                                     <input 
                                                                         type="text" 
                                                                         disabled={isManual}
-                                                                        className="w-full px-3 py-2.5 bg-blue-50/50 text-blue-600 rounded-xl text-[9px] font-black uppercase outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all text-center" 
+                                                                        className="w-full text-[7px] font-black text-blue-500 text-center outline-none uppercase bg-blue-50 rounded px-1 py-0.5" 
                                                                         value={item[`f${n}_unit` as keyof CalculationItem] as string} 
                                                                         onChange={(e) => handleItemChange(item.id, `f${n}_unit` as keyof CalculationItem, e.target.value)} 
-                                                                        placeholder="UNIT"
                                                                     />
                                                                 </div>
                                                             </div>
-                                                        </div>
+                                                            {n < 4 && <div className={`text-slate-200 font-black text-xs ${isManual ? 'opacity-0' : ''}`}>×</div>}
+                                                        </React.Fragment>
                                                     ))}
                                                 </div>
                                             </div>
