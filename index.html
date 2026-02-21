@@ -13,6 +13,13 @@
     <title>E-Kartu Kendali - PUSDAL LH SUMA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        if (!window.process) window.process = { env: {} };
+        if (!window.process.env) window.process.env = {};
+        
+        window.process.env.SUPABASE_URL = window.process.env.SUPABASE_URL || "https://syptvhtbxflhjgdepbqs.supabase.co";
+        window.process.env.SUPABASE_ANON_KEY = window.process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR";
+    </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAFC; margin: 0; overflow-x: hidden; height: 100vh; width: 100vw; -webkit-tap-highlight-color: transparent; }
         
@@ -155,6 +162,22 @@
             tfoot { display: table-footer-group; }
         }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
+    "react-router-dom": "https://esm.sh/react-router-dom@7.0.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0"
+  }
+}
+</script>
 </head>
 <body>
     <div id="splash-screen" class="splash-screen">
@@ -172,5 +195,32 @@
     <div id="root"></div>
 
     <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+        const statusText = document.getElementById('status-text');
+        const splash = document.getElementById('splash-screen');
+        const root = document.getElementById('root');
+        const forceBtn = document.getElementById('force-btn');
+
+        function hideSplash() {
+            splash.style.opacity = '0';
+            splash.style.visibility = 'hidden';
+            root.classList.add('loaded');
+        }
+
+        // Tunggu hingga root terisi (React sudah render)
+        const checkReady = setInterval(() => {
+            if (root.innerHTML.trim().length > 50) {
+                clearInterval(checkReady);
+                hideSplash();
+            }
+        }, 100);
+
+        // Timeout pengaman
+        setTimeout(() => {
+            clearInterval(checkReady);
+            hideSplash();
+        }, 10000);
+    </script>
 </body>
 </html>
