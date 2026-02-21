@@ -22,4 +22,11 @@ CREATE POLICY "Users can manage their own subscriptions"
     WITH CHECK (user_id = auth.uid()::text);
 
 -- Force refresh cache schema
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS structural_validator_name TEXT;
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS program_validator_name TEXT;
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS tu_validator_name TEXT;
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS ppk_validator_name TEXT;
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS pic_validator_name TEXT;
+ALTER TABLE IF EXISTS public.budget_requests ADD COLUMN IF NOT EXISTS realization_validator_name TEXT;
+
 NOTIFY pgrst, 'reload schema';

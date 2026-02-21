@@ -19,5 +19,5 @@
     "noImplicitAny": false,
     "skipLibCheck": true
   },
-  "include": ["src", "App.tsx", "index.tsx", "types.ts", "components", "pages", "services", "lib", "utils"]
+  "include": ["src"]
 }
