@@ -17,6 +17,7 @@ import {
     Wallet,
     Briefcase,
     ShieldCheck,
+    PieChart,
     X
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
@@ -92,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
     if (user?.role !== 'admin' && user?.role !== 'kpa') {
         menuItems.push({ 
-            icon: <LayoutList size={20} />, 
+            icon: <FileText size={20} />, 
             label: isValidator ? 'Seluruh Berkas' : 'Berkas Saya', 
             path: '/requests' 
         });
@@ -105,6 +106,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (user?.role === 'admin') {
         menuItems.push({ icon: <Wallet size={20} />, label: 'Manajemen Pagu', path: '/ceilings' });
         menuItems.push({ icon: <Users size={20} />, label: 'Manajemen User', path: '/users' });
+        menuItems.push({ icon: <Briefcase size={20} />, label: 'Master Data', path: '/master-data' });
+        menuItems.push({ icon: <PieChart size={20} />, label: 'Analisis Anggaran', path: '/budget-analysis' });
     }
 
     const isActive = (path: string) => {

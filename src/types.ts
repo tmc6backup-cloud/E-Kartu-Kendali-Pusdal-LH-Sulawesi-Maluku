@@ -91,6 +91,16 @@ export interface BudgetRequest {
   ppk_note?: string;
   pic_note?: string;
   
+  requester_signature_url?: string;
+  mengetahui_signature_url?: string;
+
+  validator_kabid_name?: string;
+  validator_program_name?: string;
+  validator_tu_name?: string;
+  validator_ppk_name?: string;
+  validator_pic_name?: string;
+  validator_bendahara_name?: string;
+
   realization_amount?: number;
   realization_date?: string;
   realization_duration?: string;

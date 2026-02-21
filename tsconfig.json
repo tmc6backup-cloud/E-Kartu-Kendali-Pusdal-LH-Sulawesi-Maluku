@@ -16,8 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
-    "noImplicitAny": false,
-    "skipLibCheck": true
+    "noImplicitAny": false
   },
   "include": ["src", "App.tsx", "index.tsx", "types.ts", "components", "pages", "services", "lib", "utils"]
 }

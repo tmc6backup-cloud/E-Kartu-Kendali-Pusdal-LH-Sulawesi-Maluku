@@ -8,8 +8,9 @@ import {
     PieChart,
     Pie,
     Legend,
-    AreaChart,
-    Area
+    BarChart,
+    Bar,
+    LabelList
 } from 'recharts';
 import { Clock, BrainCircuit, Database, PieChart as PieIcon, Building2, FileText, TrendingUp, ShieldCheck, Loader2, Wallet, Coins, Banknote, CalendarDays, ArrowUpRight, Target, AlertTriangle, RefreshCw, ChevronRight, Filter } from 'lucide-react';
 import { getBudgetInsights } from '../services/geminiService.ts';
@@ -284,24 +285,19 @@ const Dashboard: React.FC = () => {
                     
                     <div className="flex-1 w-full h-full relative" ref={areaContainerRef}>
                         {dimensions.areaW > 0 && dimensions.areaH > 0 ? (
-                            <AreaChart width={dimensions.areaW} height={dimensions.areaH} data={stats.monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorUsulan" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
+                            <BarChart width={dimensions.areaW} height={dimensions.areaH} data={stats.monthlyTrend} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} axisLine={false} tickLine={false} tickFormatter={(val) => `${(val/1000000).toFixed(0)}jt`} />
                                 <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }} />
-                                <Area name="Usulan" type="monotone" dataKey="amount" stroke="#3b82f6" fill="url(#colorUsulan)" strokeWidth={4} isAnimationActive={false} />
-                                <Area name="Realisasi" type="monotone" dataKey="realized" stroke="#10b981" fill="url(#colorReal)" strokeWidth={4} isAnimationActive={false} />
-                            </AreaChart>
+                                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingBottom: '20px' }} />
+                                <Bar name="Usulan" dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                    <LabelList dataKey="amount" position="top" formatter={(val: any) => val > 0 ? `${(val/1000000).toFixed(1)}` : ''} style={{ fontSize: '8px', fontWeight: 'bold', fill: '#3b82f6' }} />
+                                </Bar>
+                                <Bar name="Realisasi" dataKey="realized" fill="#10b981" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                    <LabelList dataKey="realized" position="top" formatter={(val: any) => val > 0 ? `${(val/1000000).toFixed(1)}` : ''} style={{ fontSize: '8px', fontWeight: 'bold', fill: '#10b981' }} />
+                                </Bar>
+                            </BarChart>
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 rounded-[40px]">
                                 <Loader2 className="animate-spin text-slate-200" size={32} />
@@ -317,17 +313,27 @@ const Dashboard: React.FC = () => {
 
                     <div className="flex-1 w-full h-full relative" ref={pieContainerRef}>
                         {dimensions.pieW > 0 && dimensions.pieH > 0 && stats.categories.length > 0 ? (
-                            <PieChart width={dimensions.pieW} height={dimensions.pieH}>
-                                <Pie 
-                                    data={stats.categories} 
-                                    cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} 
-                                    dataKey="value" stroke="none" isAnimationActive={false}
-                                >
-                                    {stats.categories.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }} />
-                                <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '20px' }} />
-                            </PieChart>
+                            <>
+                                <PieChart width={dimensions.pieW} height={dimensions.pieH}>
+                                    <Pie 
+                                        data={stats.categories} 
+                                        cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={8} 
+                                        dataKey="value" stroke="none" isAnimationActive={false}
+                                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                        labelLine={false}
+                                    >
+                                        {stats.categories.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }} />
+                                    <Legend verticalAlign="bottom" height={40} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '20px' }} />
+                                </PieChart>
+                                <div className="absolute top-0 left-0 w-full flex flex-col items-center justify-center pointer-events-none" style={{ height: dimensions.pieH - 40 }}>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
+                                    <p className="text-lg font-black text-slate-900 tracking-tighter leading-none">
+                                        Rp {(stats.categories.reduce((acc: number, curr: any) => acc + (Number(curr.value) || 0), 0) / 1000000).toFixed(1)}jt
+                                    </p>
+                                </div>
+                            </>
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
                                 <Database size={48} className="text-slate-200 mb-4" />
