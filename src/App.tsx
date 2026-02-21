@@ -6,8 +6,6 @@ import RequestList from './pages/RequestList.tsx';
 import RequestDetail from './pages/RequestDetail.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import AdminPagu from './pages/AdminPagu.tsx';
-import MasterData from './pages/MasterData.tsx';
-import BudgetAnalysis from './pages/BudgetAnalysis.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -24,10 +22,10 @@ interface AuthContextType {
     installApp: () => void;
 }
 
-export const AuthContext = React.createContext<AuthContextType>({ 
-    user: null, 
+export const AuthContext = React.createContext<AuthContextType>({
+    user: null,
     isLoggedIn: false,
-    login: async () => {}, 
+    login: async () => {},
     logout: () => {},
     deferredPrompt: null,
     installApp: () => {}
@@ -36,8 +34,8 @@ export const AuthContext = React.createContext<AuthContextType>({
 export const isValidatorRole = (role?: UserRole | string) => {
     if (!role) return false;
     const validatorRoles: string[] = [
-        'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin', 
-        'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu', 
+        'kpa', 'validator_program', 'validator_tu', 'validator_ppk', 'admin',
+        'kepala_bidang', 'bendahara', 'pic_verifikator', 'pic_tu',
         'pic_wilayah_1', 'pic_wilayah_2', 'pic_wilayah_3'
     ];
     return validatorRoles.includes(role);
@@ -144,8 +142,6 @@ const App: React.FC = () => {
                                             <Route path="/requests/:id" element={<RequestDetail />} />
                                             <Route path="/users" element={user?.role === 'admin' ? <UserManagement /> : <Navigate to="/" replace />} />
                                             <Route path="/ceilings" element={user?.role === 'admin' ? <AdminPagu /> : <Navigate to="/" replace />} />
-                                            <Route path="/master-data" element={user?.role === 'admin' ? <MasterData /> : <Navigate to="/" replace />} />
-                                            <Route path="/budget-analysis" element={user?.role === 'admin' ? <BudgetAnalysis /> : <Navigate to="/" replace />} />
                                             <Route path="*" element={<Navigate to="/" replace />} />
                                         </Routes>
                                     </main>

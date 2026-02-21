@@ -9,6 +9,7 @@ export default defineConfig({
     host: '0.0.0.0',
   },
   define: {
-    'process.env': {},
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL || "https://syptvhtbxflhjgdepbqs.supabase.co"),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY || "sb_publishable_6HOCKQ1SphXZ9a6fgPDLyA_fuqIVaFR"),
   },
 });
