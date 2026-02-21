@@ -280,7 +280,7 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 <div className="bg-white p-10 rounded-[56px] border border-slate-200 shadow-sm flex flex-col h-[520px]">
                     <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase mb-10">
-                        <TrendingUp size={20} className="text-blue-600" /> Tren Keuangan Bulanan
+                        <TrendingUp size={20} className="text-blue-600" /> Usulan & Realisasi
                     </h3>
                     
                     <div className="flex-1 w-full h-full relative" ref={areaContainerRef}>
