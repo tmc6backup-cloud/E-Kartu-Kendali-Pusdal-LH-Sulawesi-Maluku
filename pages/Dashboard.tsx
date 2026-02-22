@@ -181,7 +181,7 @@ const Dashboard: React.FC = () => {
             <div className="flex flex-col xl:flex-row gap-8 items-start xl:items-center justify-between">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4 uppercase leading-none">
-                        {isGlobalViewer ? 'KONTROL ANGGARAN' : 'DASHBOARD SAYA'}
+                        {isGlobalViewer ? 'DASHBOARD' : 'DASHBOARD SAYA'}
                         {isGlobalViewer && <ShieldCheck className="text-blue-600" size={32} />}
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 mt-3">
