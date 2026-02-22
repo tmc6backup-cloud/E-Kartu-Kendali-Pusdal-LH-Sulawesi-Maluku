@@ -183,7 +183,7 @@ const LoginPage: React.FC = () => {
 
                     <div className="text-center pt-4">
                         <p className={`text-[9px] font-bold uppercase tracking-[0.2em] leading-loose transition-colors ${isLightOn ? 'text-slate-400' : 'text-slate-800'}`}>
-                            Lupa password? <br /> Hubungi <span className={`font-black ${isLightOn ? 'text-blue-600' : 'text-slate-700'}`}>Sub Bagian Umum</span>
+                            Lupa password? <br /> Hubungi <span className={`font-black ${isLightOn ? 'text-blue-600' : 'text-slate-700'}`}>Bagian Program & Anggaran</span>
                         </p>
                     </div>
                 </div>
