@@ -348,7 +348,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-8">
                 <div className="flex items-center gap-3 px-2">
                     <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg"><Building2 size={24} /></div>
-                    <h3 className="text-sm font-black uppercase tracking-[0.25em] text-slate-800">Anggaran Bidang Kerja</h3>
+                    <h3 className="text-sm font-black uppercase tracking-[0.25em] text-slate-800">Anggaran Per Bidang/Bagian</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
