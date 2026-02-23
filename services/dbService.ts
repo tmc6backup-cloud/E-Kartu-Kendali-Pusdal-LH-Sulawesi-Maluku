@@ -168,6 +168,26 @@ export const dbService = {
     updateStatus: async (id: string, status: BudgetStatus, note?: { field: string, value: string }, extraData?: Partial<BudgetRequest>) => {
         const updatePayload: any = { status, updated_at: new Date().toISOString(), ...extraData };
         if (note) updatePayload[note.field] = note.value;
+        // Tambahkan logika untuk memperbarui kolom tanggal spesifik
+        switch (status) {
+            case 'reviewed_bidang':
+                updatePayload.structural_reviewed_at = new Date().toISOString();
+                break;
+            case 'reviewed_program':
+                updatePayload.program_reviewed_at = new Date().toISOString();
+                break;
+            case 'reviewed_tu':
+                updatePayload.tu_reviewed_at = new Date().toISOString();
+                break;
+            case 'approved':
+                updatePayload.ppk_approved_at = new Date().toISOString();
+                break;
+            case 'reviewed_pic':
+                updatePayload.pic_reviewed_at = new Date().toISOString();
+                break;
+            // 'realized' status already has realization_date handled elsewhere if needed, or can be added here
+        }
+
         const { error } = await supabase.from('budget_requests').update(updatePayload).eq('id', id);
         return !error;
     },

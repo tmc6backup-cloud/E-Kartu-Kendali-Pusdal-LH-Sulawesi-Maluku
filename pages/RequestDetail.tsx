@@ -45,9 +45,6 @@ import { supabase } from '../lib/supabase.ts';
 const SKIP_STRUCTURAL_APPROVAL_DEPTS = [
     "PUSDAL LH SUMA",
     "Bagian Tata Usaha",
-    "Bidang Wilayah I",
-    "Bidang Wilayah II",
-    "Bidang Wilayah III",
     "Sub Bagian Program & Anggaran",
     "Sub Bagian Kehumasan",
     "Sub Bagian Kepegawaian",
@@ -211,6 +208,8 @@ const RequestDetail: React.FC = () => {
                 alert(isReject ? "Berkas telah dikembalikan untuk revisi." : "Verifikasi berhasil.");
                 setValidatorNote("");
                 fetchRequest();
+            } else {
+                alert("Gagal memperbarui status berkas. Silakan coba lagi.");
             }
         } catch (err) {
             alert("Terjadi kesalahan saat memproses data.");
@@ -346,17 +345,63 @@ const RequestDetail: React.FC = () => {
         return allPersonnel.filter(p => {
             if (p.role !== role) return false;
             if (dept && (role === 'kepala_bidang' || role.startsWith('pic_wilayah_'))) {
-                return p.department?.toLowerCase().includes(dept.toLowerCase());
+                const pDept = (p.department || '').toLowerCase();
+                const rDept = dept.toLowerCase();
+                
+                // Strict Wilayah matching to prevent cross-matching between Wilayah I, II, and III
+                const getWilayahNum = (s: string) => {
+                    if (s.includes('wilayah iii') || s.includes('wilayah 3')) return '3';
+                    if (s.includes('wilayah ii') || s.includes('wilayah 2')) return '2';
+                    if (s.includes('wilayah i') || s.includes('wilayah 1')) return '1';
+                    return null;
+                };
+
+                const pNum = getWilayahNum(pDept);
+                const rNum = getWilayahNum(rDept);
+
+                if (pNum || rNum) {
+                    return pNum === rNum;
+                }
+
+                return pDept.includes(rDept) || rDept.includes(pDept);
             }
             return true;
         });
     };
 
+    const getOfficialNames = (role: string, dept?: string) => {
+        const d = (dept || '').toLowerCase();
+        
+        // Priority 1: Hardcoded official names as requested by user
+        if (role === 'kepala_bidang') {
+            if (d.includes('wilayah iii') || d.includes('wilayah 3')) return 'Suwardi';
+            if (d.includes('wilayah ii') || d.includes('wilayah 2')) return 'Arnianah Alwi';
+            if (d.includes('wilayah i') || d.includes('wilayah 1')) return 'Andi Samra Salam';
+        }
+        if (role === 'validator_tu') {
+            return 'Rina Triany';
+        }
+
+        // Priority 2: Database lookup
+        const personnel = getPersonnelByRole(role, dept);
+        
+        if (personnel.length > 0) {
+            // For specific official roles, avoid joining multiple names if possible
+            if (role === 'kepala_bidang' || role === 'validator_tu' || role === 'validator_ppk') {
+                // If multiple found, try to find the best match or just take the first one to avoid "Name / Name"
+                return personnel[0].full_name;
+            }
+            return personnel.map(p => p.full_name).join(' / ');
+        }
+        
+        return '';
+    };
+
     const detailedSteps = [
         { s: 'pending', l: 'Diajukan', role: 'Pengaju', icon: <User size={14} />, names: request.requester_name },
-        { s: 'reviewed_bidang', l: 'Persetujuan Kabid', role: 'Kepala Bidang', icon: <UserCheck size={14} />, hidden: isStructuralSkipped, names: getPersonnelByRole('kepala_bidang', request.requester_department).map(p => p.full_name).join(', ') },
+        { s: 'reviewed_bidang', l: 'Persetujuan Kabid', role: 'Kepala Bidang', icon: <UserCheck size={14} />, hidden: isStructuralSkipped, names: getOfficialNames('kepala_bidang', request.requester_department) },
         { s: 'reviewed_program', l: 'Validasi Program', role: 'Validator Program', icon: <GanttChart size={14} />, names: getPersonnelByRole('validator_program').map(p => p.full_name).join(', ') },
-        { s: 'reviewed_tu', l: 'Validasi TU', role: 'Kasubag TU', icon: <FileSearch size={14} />, names: getPersonnelByRole('validator_tu').map(p => p.full_name).join(', ') },
+        { s: 'reviewed_tu', l: 'Validasi TU', role: 'Kepala Subbagian Tata Usaha', icon: <FileSearch size={14} />, names: getOfficialNames('validator_tu') },
         { s: 'approved', l: 'Pengesahan PPK', role: 'Pejabat PPK', icon: <Stamp size={14} />, names: getPersonnelByRole('validator_ppk').map(p => p.full_name).join(', ') },
         { s: 'reviewed_pic', l: 'Verifikasi SPJ', role: 'PIC Verifikator', icon: <ShieldIcon size={14} />, names: getPersonnelByRole('pic_verifikator').map(p => p.full_name).join(', ') },
         { s: 'realized', l: 'Pembayaran', role: 'Bendahara', icon: <Coins size={14} />, names: getPersonnelByRole('bendahara').map(p => p.full_name).join(', ') }
@@ -442,43 +487,51 @@ const RequestDetail: React.FC = () => {
                             
                             <div className="grid grid-cols-1 gap-4">
                                 {request.structural_note && (
-                                    <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-[32px] space-y-2">
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-emerald-700 uppercase tracking-widest">
-                                            <UserCheck size={12} /> Verifikasi Struktural (Kabid)
+                                    <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                                            <UserCheck size={14} /> Verifikasi Struktural (Kabid)
                                         </div>
-                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.structural_note}"</p>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.structural_note}"</p>
                                     </div>
                                 )}
                                 {request.program_note && (
-                                    <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-[32px] space-y-2">
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-amber-700 uppercase tracking-widest">
-                                            <GanttChart size={12} /> Validasi Program & Anggaran
+                                    <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                                            <GanttChart size={14} /> Validasi Program & Anggaran
                                         </div>
-                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.program_note}"</p>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.program_note}"</p>
                                     </div>
                                 )}
                                 {request.tu_note && (
-                                    <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-[32px] space-y-2">
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-indigo-700 uppercase tracking-widest">
-                                            <FileSearch size={12} /> Validasi Administrasi (TU)
+                                    <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-indigo-700 uppercase tracking-widest">
+                                            <FileSearch size={14} /> Validasi Administrasi (TU)
                                         </div>
-                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.tu_note}"</p>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.tu_note}"</p>
                                     </div>
                                 )}
                                 {request.ppk_note && (
-                                    <div className="p-6 bg-purple-50/50 border border-purple-100 rounded-[32px] space-y-2">
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-purple-700 uppercase tracking-widest">
-                                            <Stamp size={12} /> Pengesahan Pejabat PPK
+                                    <div className="p-6 bg-purple-50/50 border border-purple-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-purple-700 uppercase tracking-widest">
+                                            <Stamp size={14} /> Pengesahan Pejabat PPK
                                         </div>
-                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.ppk_note}"</p>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.ppk_note}"</p>
                                     </div>
                                 )}
                                 {request.pic_note && (
-                                    <div className="p-6 bg-cyan-50/50 border border-cyan-100 rounded-[32px] space-y-2">
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-cyan-700 uppercase tracking-widest">
-                                            <ShieldIcon size={12} /> Verifikasi Kelengkapan SPJ (PIC)
+                                    <div className="p-6 bg-cyan-50/50 border border-cyan-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-cyan-700 uppercase tracking-widest">
+                                            <ShieldIcon size={14} /> Verifikasi Kelengkapan SPJ (PIC)
                                         </div>
-                                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed italic">"{request.pic_note}"</p>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.pic_note}"</p>
+                                    </div>
+                                )}
+                                {request.realization_note && (
+                                    <div className="p-6 bg-rose-50/50 border border-rose-100 rounded-[32px] space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-rose-700 uppercase tracking-widest">
+                                            <Banknote size={14} /> Catatan Realisasi Pembayaran
+                                        </div>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase leading-relaxed italic">"{request.realization_note}"</p>
                                     </div>
                                 )}
                             </div>
@@ -566,8 +619,13 @@ const RequestDetail: React.FC = () => {
                             </div>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <button onClick={() => handleAction('rejected', true)} disabled={actionLoading} className="flex-1 py-5 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all"><XCircle size={18} /> Kembalikan / Revisi</button>
-                                <button onClick={() => handleAction(actionConfig.targetStatus)} disabled={actionLoading} className={`flex-[2] py-5 bg-${actionConfig.color}-600 text-white hover:bg-${actionConfig.color}-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl transition-all`}>
-                                    {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />} {actionConfig.buttonLabel || 'Setujui & Teruskan'}
+                                <button 
+                                    onClick={() => handleAction(actionConfig.targetStatus)} 
+                                    disabled={actionLoading} 
+                                    className={`flex-[2] py-5 bg-${actionConfig.color}-600 text-white hover:bg-${actionConfig.color}-700 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl transition-all`}
+                                >
+                                    {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />} 
+                                    {actionConfig.buttonLabel || 'Setujui & Teruskan'}
                                 </button>
                             </div>
                         </div>
@@ -742,40 +800,50 @@ const RequestDetail: React.FC = () => {
                         <p className="text-xs font-bold text-slate-600 leading-relaxed uppercase print:text-black print:text-[8pt] text-justify break-words print:whitespace-normal print:overflow-visible">{request.description || "TIDAK ADA DESKRIPSI."}</p>
                     </div>
 
+
                     <div className="print-only mt-6 break-inside-avoid print:overflow-visible">
                         <table className="w-full border-collapse border-[1pt] border-black text-center table-fixed print:overflow-visible">
                             <thead className="bg-gray-100"><tr className="text-[8.5pt] font-black uppercase"><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI PROGRAM</th><th className="border-black py-2 w-1/3 border-[1pt]">VALIDASI TU</th><th className="border-black py-2 w-1/3 border-[1pt]">PENGESAHAN PPK</th></tr></thead>
                             <tbody>
-                                <tr className="h-20">
-                                    <td className="border-black relative border-[1pt]">
+                                <tr className="min-h-[80px]">
+                                    <td className="border-black relative border-[1pt] p-2">
                                         {isStepCompleted('reviewed_program') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-70">
-                                                <div className="border-[2pt] border-emerald-900 text-emerald-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase mb-1">TERVERIFIKASI</div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="border-[1.5pt] border-emerald-900 text-emerald-900 px-2 py-0.5 font-black text-[7pt] rotate-[-8deg] uppercase mb-2">TERVERIFIKASI</div>
+                                                {request.program_note && (
+                                                    <p className="text-[7.5pt] font-bold text-slate-800 italic leading-tight mb-2">"{request.program_note}"</p>
+                                                )}
                                                 <p className="text-[7pt] font-black text-slate-900 uppercase">{getPersonnelByRole('validator_program').map(p => p.full_name).join(', ')}</p>
                                             </div>
                                         )}
                                     </td>
-                                    <td className="border-black relative border-[1pt]">
+                                    <td className="border-black relative border-[1pt] p-2">
                                         {isStepCompleted('reviewed_tu') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-70">
-                                                <div className="border-[2pt] border-blue-900 text-blue-900 px-2 py-1 font-black text-[8pt] rotate-[-8deg] uppercase mb-1">TERVERIFIKASI</div>
-                                                <p className="text-[7pt] font-black text-slate-900 uppercase">{getPersonnelByRole('validator_tu').map(p => p.full_name).join(', ')}</p>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="border-[1.5pt] border-blue-900 text-blue-900 px-2 py-0.5 font-black text-[7pt] rotate-[-8deg] uppercase mb-2">TERVERIFIKASI</div>
+                                                {request.tu_note && (
+                                                    <p className="text-[7.5pt] font-bold text-slate-800 italic leading-tight mb-2">"{request.tu_note}"</p>
+                                                )}
+                                                <p className="text-[7pt] font-black text-slate-900 uppercase">{getOfficialNames('validator_tu') || getPersonnelByRole('validator_tu').map(p => p.full_name).join(', ')}</p>
                                             </div>
                                         )}
                                     </td>
-                                    <td className="border-black relative border-[1pt]">
+                                    <td className="border-black relative border-[1pt] p-2">
                                         {isStepCompleted('approved') && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <div className="border-[2.5pt] border-red-900 text-red-900 px-3 py-1.5 font-black text-[9.5pt] rotate-[-5deg] uppercase mb-1">DISETUJUI PPK</div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="border-[2pt] border-red-900 text-red-900 px-2 py-1 font-black text-[8pt] rotate-[-5deg] uppercase mb-2">DISETUJUI PPK</div>
+                                                {request.ppk_note && (
+                                                    <p className="text-[7.5pt] font-bold text-slate-800 italic leading-tight mb-2">"{request.ppk_note}"</p>
+                                                )}
                                                 <p className="text-[7pt] font-black text-slate-900 uppercase">{getPersonnelByRole('validator_ppk').map(p => p.full_name).join(', ')}</p>
                                             </div>
                                         )}
                                     </td>
                                 </tr>
                                 <tr className="text-[7.5pt] font-bold uppercase">
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
-                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.updated_at ? new Date(request.updated_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
+                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.program_reviewed_at ? new Date(request.program_reviewed_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
+                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.tu_reviewed_at ? new Date(request.tu_reviewed_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
+                                    <td className="border-black py-2 border-[1pt]">Tgl: {request.ppk_approved_at ? new Date(request.ppk_approved_at).toLocaleDateString('id-ID') : '... / ... / ...'}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -793,18 +861,42 @@ const RequestDetail: React.FC = () => {
                                 PIC: {getPersonnelByRole('pic_verifikator').map(p => p.full_name).join(', ') || '-'}
                             </p>
                         </div>
+                        {request.pic_note && (
+                            <div className="border-x border-b border-black p-3 bg-white">
+                                <p className="text-[8pt] font-bold text-slate-800 italic uppercase">Catatan: "{request.pic_note}"</p>
+                            </div>
+                        )}
                     </div>
+
+                    {request.status === 'realized' && request.realization_note && (
+                        <div className="print-only mt-4 break-inside-avoid print:overflow-visible">
+                            <div className="border border-black p-3 flex justify-between items-center bg-gray-50">
+                                <div className="flex items-center gap-4">
+                                    <p className="text-[8.5pt] font-black uppercase">Catatan Realisasi Pembayaran:</p>
+                                    <p className="text-[8.5pt] font-bold uppercase italic text-emerald-700">TERBAYARKAN</p>
+                                </div>
+                                <p className="text-[8.5pt] font-black uppercase">Bendahara</p>
+                            </div>
+                            <div className="border-x border-b border-black p-3 bg-white">
+                                <p className="text-[8pt] font-bold text-slate-800 italic uppercase">"{request.realization_note}"</p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="print-only mt-10 break-inside-avoid print:overflow-visible">
                         <div className="grid grid-cols-2 gap-12 text-center text-[9pt]">
                             <div className="space-y-16">
                                 <div>
                                     <p className="font-bold">Mengetahui,</p>
-                                    <p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p>
+                                    {request.requester_department === 'Bagian Tata Usaha' ? (
+                                        <p className="font-black uppercase leading-tight">KASUBAG TATA USAHA</p>
+                                    ) : (
+                                        <p className="font-black uppercase leading-tight">Kepala {request.requester_department}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <p className="font-black underline uppercase">
-                                        ( {getPersonnelByRole('kepala_bidang', request.requester_department).map(p => p.full_name).join(' / ') || '.....................................................'} )
+                                        ( {request.requester_department === 'Bagian Tata Usaha' ? 'Rina Triany' : getOfficialNames('kepala_bidang', request.requester_department) || '.....................................................'} )
                                     </p>
                                     <p className="text-[8pt] mt-1">NIP. ..................................................</p>
                                 </div>

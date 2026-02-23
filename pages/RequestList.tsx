@@ -13,7 +13,8 @@ import {
     FileText,
     Edit2,
     MessageSquareQuote,
-    RefreshCw
+    RefreshCw,
+    Clock
 } from 'lucide-react';
 import { AuthContext, isValidatorRole } from '../App.tsx';
 import { dbService } from '../services/dbService.ts';
@@ -47,6 +48,52 @@ const RequestList: React.FC = () => {
     const [requests, setRequests] = useState<BudgetRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [activeStatus, setActiveStatus] = useState<string>(statusFilter || "all");
+    const [activeDept, setActiveDept] = useState<string>(deptFilter || "all");
+
+    const statusCounts = useMemo(() => {
+        const counts: Record<string, number> = {
+            all: requests.length,
+            pending: 0,
+            reviewed_bidang: 0,
+            reviewed_program: 0,
+            reviewed_tu: 0,
+            approved: 0,
+            reviewed_pic: 0,
+            rejected: 0,
+            realized: 0,
+            draft: 0
+        };
+        requests.forEach(req => {
+            if (counts[req.status] !== undefined) {
+                counts[req.status]++;
+            }
+        });
+        return counts;
+    }, [requests]);
+
+    const myQueueStatus = useMemo(() => {
+        if (!user) return null;
+        switch (user.role) {
+            case 'kepala_bidang': return 'pending';
+            case 'validator_program': return 'reviewed_bidang';
+            case 'validator_tu': return 'reviewed_program';
+            case 'validator_ppk': return 'reviewed_tu';
+            case 'pic_verifikator': return 'approved';
+            case 'bendahara': return 'reviewed_pic';
+            default: return null;
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (statusFilter) setActiveStatus(statusFilter);
+        if (deptFilter) setActiveDept(deptFilter);
+    }, [statusFilter, deptFilter]);
+
+    const departments = useMemo(() => {
+        const depts = new Set(requests.map(r => r.requester_department).filter(Boolean));
+        return Array.from(depts).sort();
+    }, [requests]);
 
     const loadData = async () => {
         setLoading(true);
@@ -76,8 +123,9 @@ const RequestList: React.FC = () => {
             list = list.filter(req => myDepts.includes(req.requester_department?.toLowerCase() || ''));
         }
 
-        if (statusFilter) list = list.filter(req => req.status === statusFilter);
-        if (deptFilter) list = list.filter(req => req.requester_department === deptFilter);
+        if (activeStatus !== 'all') list = list.filter(req => req.status === activeStatus);
+        if (activeDept !== 'all') list = list.filter(req => req.requester_department === activeDept);
+        
         if (searchTerm) {
             list = list.filter(req => 
                 req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,7 +133,7 @@ const RequestList: React.FC = () => {
             );
         }
         return list;
-    }, [requests, statusFilter, deptFilter, searchTerm, user]);
+    }, [requests, activeStatus, activeDept, searchTerm, user]);
 
     return (
         <div className="space-y-8 page-transition print:space-y-4">
@@ -110,6 +158,14 @@ const RequestList: React.FC = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3 no-print">
+                    {myQueueStatus && (
+                        <button 
+                            onClick={() => setActiveStatus(myQueueStatus)}
+                            className={`px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl transition-all ${activeStatus === myQueueStatus ? 'bg-blue-600 text-white' : 'bg-white border text-slate-900 hover:bg-slate-50'}`}
+                        >
+                            <Clock size={18} /> Antrian Saya ({statusCounts[myQueueStatus] || 0})
+                        </button>
+                    )}
                     <button onClick={() => window.print()} className="px-6 py-4 bg-white border rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-sm transition-all hover:bg-slate-50">
                         <Printer size={18} /> Cetak Laporan
                     </button>
@@ -122,10 +178,62 @@ const RequestList: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden print:border-[1pt] print:border-black print:rounded-none break-inside-avoid">
-                <div className="p-8 border-b border-slate-100 flex items-center gap-6 no-print">
+                <div className="p-8 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center gap-6 no-print">
                     <div className="relative flex-1 group">
                         <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500" size={20} />
-                        <input type="text" placeholder="Cari kegiatan..." className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-[22px] text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all uppercase" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" placeholder="Cari kegiatan atau pengusul..." className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-transparent rounded-[22px] text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all uppercase" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Status:</span>
+                            <select 
+                                value={activeStatus} 
+                                onChange={(e) => setActiveStatus(e.target.value)}
+                                className="bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer"
+                            >
+                                <option value="all">Semua Status ({statusCounts.all})</option>
+                                <option value="pending">Antrian Kabid ({statusCounts.pending})</option>
+                                <option value="reviewed_bidang">Antrian Program ({statusCounts.reviewed_bidang})</option>
+                                <option value="reviewed_program">Antrian TU ({statusCounts.reviewed_program})</option>
+                                <option value="reviewed_tu">Antrian PPK ({statusCounts.reviewed_tu})</option>
+                                <option value="approved">Disetujui (SPJ) ({statusCounts.approved})</option>
+                                <option value="reviewed_pic">Verifikasi PIC OK ({statusCounts.reviewed_pic})</option>
+                                <option value="rejected">Ditolak/Revisi ({statusCounts.rejected})</option>
+                                <option value="realized">Selesai ({statusCounts.realized})</option>
+                                <option value="draft">Draf ({statusCounts.draft})</option>
+                            </select>
+                        </div>
+
+                        {user?.role !== 'pengaju' && user?.role !== 'kepala_bidang' && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Bidang:</span>
+                                <select 
+                                    value={activeDept} 
+                                    onChange={(e) => setActiveDept(e.target.value)}
+                                    className="bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer max-w-[200px]"
+                                >
+                                    <option value="all">Semua Bidang</option>
+                                    {departments.map(dept => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {(activeStatus !== 'all' || activeDept !== 'all' || searchTerm) && (
+                            <button 
+                                onClick={() => {
+                                    setActiveStatus('all');
+                                    setActiveDept('all');
+                                    setSearchTerm('');
+                                }}
+                                className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                title="Reset Filter"
+                            >
+                                <RefreshCw size={18} />
+                            </button>
+                        )}
                     </div>
                 </div>
 

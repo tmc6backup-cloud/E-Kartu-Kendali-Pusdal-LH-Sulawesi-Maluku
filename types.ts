@@ -91,6 +91,14 @@ export interface BudgetRequest {
   ppk_note?: string;
   pic_note?: string;
   
+  structural_reviewed_at?: string;
+  program_reviewed_at?: string;
+  tu_reviewed_at?: string;
+  ppk_approved_at?: string;
+  pic_reviewed_at?: string;
+
+  kasubbag_tu_signature_url?: string;
+  
   realization_amount?: number;
   realization_date?: string;
   realization_duration?: string;
